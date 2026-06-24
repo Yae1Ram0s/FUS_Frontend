@@ -1,0 +1,406 @@
+/* ── Layout ── */
+.login-wrap {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Panel izquierdo ── */
+.login-left {
+  flex: 0 0 44%;
+  background-color: #9F2241;
+  background-image: url('../assets/pleca.png');
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: multiply;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 2.5rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Logo */
+.ll-brand {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.ll-brand-img {
+  height: 70px;
+  width: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+
+/* Hero - título */
+.ll-hero {
+  margin-top: auto;
+  margin-bottom: 3.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.ll-sub {
+  color: rgba(255,255,255,0.78);
+  font-size: 0.80rem;
+  font-weight: 500;
+  margin: 0 0 0.65rem;
+  letter-spacing: 0.3px;
+}
+
+.ll-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.05;
+  margin: 0 0 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ll-title-rule {
+  width: 150px;
+  height: 4px;
+  background: #DDC9A3;
+  border-radius: 2px;
+}
+
+
+/* Pequeña - arriba derecha */
+.ll-sphere-a {
+  width: 52px;
+  height: 52px;
+  top: 1.75rem;
+  right: 5.5rem;
+  z-index: 3;
+}
+
+/* Mediana - borde derecho centro (recortada) */
+.ll-sphere-b {
+  width: 82px;
+  height: 82px;
+  right: -28px;
+  top: 42%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+/* Pequeña - zona inferior izquierda */
+.ll-sphere-c {
+  width: 46px;
+  height: 46px;
+  bottom: 5.5rem;
+  left: 1.25rem;
+  z-index: 3;
+}
+
+/* Grande - esquina inferior derecha (recortada) */
+.ll-sphere-d {
+  width: 175px;
+  height: 175px;
+  bottom: -58px;
+  right: -45px;
+  z-index: 3;
+}
+
+/* Cuadrícula de puntos */
+.ll-dots {
+  position: absolute;
+  bottom: 9.5rem;
+  left: 4.5rem;
+  width: 72px;
+  height: 52px;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.42) 1.5px, transparent 1.5px);
+  background-size: 10px 10px;
+  z-index: 2;
+}
+
+/* Marca × */
+.ll-xmark {
+  position: absolute;
+  bottom: 7.75rem;
+  left: 2.25rem;
+  font-size: 1.4rem;
+  color: rgba(255,255,255,0.42);
+  font-weight: 300;
+  z-index: 2;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Franja beige inferior */
+.ll-beige-strip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: #c38c28;
+  z-index: 4;
+}
+
+/* ── Esfera con flecha (unión de paneles) ── */
+.ll-arrow-sphere {
+  position: absolute;
+  left: 44%;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #e2e2e2, #c6c6c6 42%, #a0a0a0 68%, #7a7a7a);
+  box-shadow: 4px 7px 18px rgba(0,0,0,0.30), inset -2px -2px 6px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* ── Panel derecho ── */
+.login-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 3rem;
+  position: relative;
+  background:
+    linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)),
+    url('../assets/pleca.png') center / cover;
+}
+
+
+
+/* Contenedor del formulario (transparente, solo limita el ancho) */
+.login-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+  max-width: 360px;
+  position: relative;
+}
+
+.login-card-header {
+  margin-bottom: 1.75rem;
+}
+
+.login-welcome {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+/* Subtítulo oculto en este diseño */
+.login-sub { display: none; }
+
+.login-form { width: 100%; }
+
+.lf-group { margin-bottom: 1.1rem; }
+
+.lf-group label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #1a1a1a;
+  margin-bottom: 7px;
+  letter-spacing: 0.1px;
+}
+
+.lf-group input {
+  display: block;
+  width: 100%;
+  padding: 11px 20px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  color: #333;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 200ms, box-shadow 200ms;
+  box-sizing: border-box;
+}
+
+.lf-group input::placeholder { color: #b8b8b8; }
+.lf-group input:hover { border-color: #cacaca; }
+.lf-group input:focus {
+  border-color: #9F2241;
+  box-shadow: 0 0 0 3px rgba(159,34,65,0.12);
+}
+
+.login-error {
+  color: #c0392b;
+  font-size: 0.82rem;
+  margin: 0 0 0.75rem;
+  padding: 9px 16px;
+  border-radius: 9999px;
+  background: #fdf0f0;
+  border: 1px solid rgba(192,57,43,0.25);
+}
+
+.login-opts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lf-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.80rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.lf-remember input[type="checkbox"] {
+  accent-color: #9F2241;
+  width: 15px;
+  height: 15px;
+}
+
+.lf-forgot {
+  background: none;
+  border: none;
+  color: #9F2241;
+  font-size: 0.80rem;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  transition: opacity 200ms;
+}
+
+.lf-forgot:hover { opacity: 0.70; }
+
+.btn-entrar {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  background: #9F2241;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 200ms, box-shadow 200ms;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 14px rgba(159,34,65,0.35);
+}
+
+.btn-entrar:hover:not(:disabled) {
+  background: #B8294E;
+  box-shadow: 0 6px 20px rgba(159,34,65,0.45);
+}
+
+.btn-entrar:active:not(:disabled) {
+  background: #7A1A30;
+  box-shadow: 0 2px 8px rgba(159,34,65,0.28);
+}
+
+.btn-entrar:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Iconos informativos (parte inferior) */
+.ll-bottom-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.ll-bottom-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f2f2f2;
+  border: 1px solid #e6e6e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+/* Branding móvil (oculto en desktop) */
+.login-mobile-brand { display: none; }
+
+/* ══════════════════════════════════════
+   RESPONSIVO
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .login-wrap {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .login-left      { display: none; }
+  .ll-arrow-sphere { display: none; }
+
+  .login-right {
+    flex: 1;
+    padding: 0 1.5rem 2.5rem;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  /* Franja de branding en móvil */
+  .login-mobile-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    background-color: #9F2241;
+    background-image: url('../assets/pleca.png');
+    background-size: cover;
+    background-position: center;
+    background-blend-mode: multiply;
+    width: calc(100% + 3rem);
+    margin: 0 -1.5rem 2.25rem;
+    padding: 2rem 1.5rem 2.25rem;
+  }
+
+  .login-mobile-logo {
+    height: 40px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    opacity: 0.92;
+  }
+
+  .login-mobile-sys {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin: 0;
+  }
+
+  .login-card    { max-width: 100%; }
+  .login-welcome { font-size: 1.65rem; }
+}
+
+@media (max-width: 480px) {
+  .login-opts { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .login-welcome { font-size: 1.4rem; }
+  .btn-entrar { font-size: 0.875rem; padding: 12px; }
+}
+
+@media (max-width: 360px) {
+  .login-right { padding: 0 1rem 2rem; }
+  .login-mobile-brand { width: calc(100% + 2rem); margin: 0 -1rem 2rem; padding: 1.75rem 1rem 2rem; }
+}

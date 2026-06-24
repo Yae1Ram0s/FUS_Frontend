@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/*
+  Paleta institucional ANAM — tema carmín
+  ─────────────────────────────────────────────────────────────────
+  Base neumórfica: #9F2241 (carmín institucional)
+  Sombra oscura:   #611525  (L -15% en HSL)
+  Sombra clara:    #D5395B  (L +15% en HSL)
+
+  Contraste principal: blanco #FFFFFF
+  Acento secundario:   beige #DDC9A3 (institucional)
+  Acento éxito:        teal  #8EEFC8 (complementario al carmín)
+*/
+
+:root {
+  /* ── Superficie ── */
+  --bg: #9F2241;   /* carmín institucional ANAM */
+
+  /* ── Texto (blanco sobre carmín) ── */
+  --heading:     #FFFFFF;   /* blanco puro */
+  --body:        #F5E0E8;   /* blanco cálido rosado */
+  --body-subtle: #D4A0B4;   /* rosa apagado */
+  --fg-disabled: #B06070;
+
+  /* ── Colores funcionales ── */
+  --fg-brand:        #FFFFFF;   /* blanco — contraste máximo sobre carmín */
+  --fg-secondary:    #DDC9A3;   /* beige institucional / dorado */
+  --fg-danger:       #FFB3C6;   /* rosa claro (estados de error) */
+  --fg-danger-strong:#FFDDE6;   /* rosa muy claro */
+  --fg-success:      #8EEFC8;   /* teal claro — complementario al rojo */
+  --fg-warning:      #FFDFA3;   /* dorado claro */
+
+  /* ── Bordes ── */
+  --border-default: #B83050;
+  --border-medium:  #C03A5A;
+  --border-strong:  #CF4570;
+  --border-brand:   rgba(255,255,255,0.50);
+  --border-danger:  rgba(255,179,198,0.60);
+
+  /* ── Badges ── */
+  /* Brand / activo — teal sobre carmín */
+  --badge-brand-bg:     rgba(37,132,102,0.22);
+  --badge-brand-border: rgba(45,158,114,0.45);
+  --badge-brand-text:   #8EEFC8;
+
+  /* Alternativo / neutro — beige dorado */
+  --badge-alt-bg:     rgba(221,201,163,0.18);
+  --badge-alt-border: rgba(221,201,163,0.40);
+  --badge-alt-text:   #EDD8B0;
+
+  /* Secundario / info — blanco translúcido */
+  --badge-secondary-bg:     rgba(255,255,255,0.12);
+  --badge-secondary-border: rgba(255,255,255,0.28);
+  --badge-secondary-text:   #F5F0F2;
+
+  /* Peligro / concluido — borgoña profundo */
+  --badge-danger-bg:     rgba(105,28,50,0.55);
+  --badge-danger-border: rgba(180,80,110,0.55);
+  --badge-danger-text:   #FFCCD5;
+
+  /* Advertencia — olivo dorado */
+  --badge-warning-bg:     rgba(140,149,92,0.20);
+  --badge-warning-border: rgba(200,210,130,0.40);
+  --badge-warning-text:   #FFDFA3;
+
+  /* ── Sombras neumórficas (neutras sobre superficie oscura) ── */
+  /* Sistema: rgba(0,0,0,X) oscura | rgba(255,255,255,X) clara */
+  --shadow-2xs:   1px 1px 2px rgba(0,0,0,0.28),    -1px -1px 2px rgba(255,255,255,0.09);
+  --shadow-xs:    2px 2px 4px rgba(0,0,0,0.28),    -2px -2px 4px rgba(255,255,255,0.09);
+  --shadow-sm:    3px 3px 6px rgba(0,0,0,0.30),    -3px -3px 6px rgba(255,255,255,0.09);
+  --shadow-md:    6px 6px 12px rgba(0,0,0,0.33),   -6px -6px 12px rgba(255,255,255,0.09);
+  --shadow-lg:    8px 8px 16px rgba(0,0,0,0.36),   -8px -8px 16px rgba(255,255,255,0.09);
+  --shadow-xl:    10px 10px 20px rgba(0,0,0,0.38), -10px -10px 20px rgba(255,255,255,0.09);
+  --shadow-2xl:   12px 12px 24px rgba(0,0,0,0.40), -12px -12px 24px rgba(255,255,255,0.09);
+  --shadow-inset: inset 2px 2px 5px rgba(0,0,0,0.28), inset -3px -3px 7px rgba(255,255,255,0.07);
+
+  /* ── Radio ── */
+  --radius-base:    8px;
+  --radius-default: 6px;
+  --radius-sm:      2px;
+  --radius-full:    9999px;
+}
+
+body {
+  font-family: 'Nunito Sans', 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { width: 100%; min-height: 100vh; }
+
+a { color: var(--fg-brand); text-decoration: none; }
+a:hover { opacity: 0.8; }
+
+button, input, select, textarea { font-family: inherit; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

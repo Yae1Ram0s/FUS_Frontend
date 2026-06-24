@@ -1,0 +1,54 @@
+.dash-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.dash-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+}
+
+.card-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  background: var(--bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-base);
+  padding: 2.5rem 2rem 2rem;
+  width: 200px;
+  height: 200px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 200ms ease-in-out;
+}
+
+.card-menu:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-menu:active {
+  box-shadow: var(--shadow-inset);
+}
+
+.card-icon {
+  width: 80px;
+  height: 80px;
+  color: var(--fg-brand);
+}
+
+.card-icon svg { width: 100%; height: 100%; }
+
+.card-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--heading);
+  letter-spacing: 0.5px;
+  text-align: center;
+}
