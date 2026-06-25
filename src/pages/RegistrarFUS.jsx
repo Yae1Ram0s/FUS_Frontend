@@ -1,10 +1,50 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import './RegistrarFUS.css'
+
+const PRIORIDAD_INFO = {
+  Alta: {
+    color: 'alta',
+    icono: '🔴',
+    titulo: 'Alta',
+    criterios: [
+      'Posible corrupción, denuncia, falta administrativa o delito.',
+      'Solicitud directa a la persona Titular sobre asunto sensible.',
+      'Riesgo jurídico, administrativo, político, mediático, operativo o de seguridad.',
+      'Plazo urgente.',
+      'Posible afectación a derechos, recursos públicos o imagen institucional.',
+    ],
+  },
+  Media: {
+    color: 'media',
+    icono: '🟡',
+    titulo: 'Media',
+    criterios: [
+      'Sea relevante para la gestión institucional.',
+      'Requiera análisis o canalización.',
+      'No tenga riesgo inmediato.',
+      'No exija decisión urgente de la persona Titular.',
+      'Pueda resolverse por un área competente con seguimiento de la Oficina Particular.',
+      'Acceso a instalaciones, información o decisiones estratégicas.',
+    ],
+  },
+  Baja: {
+    color: 'baja',
+    icono: '🟢',
+    titulo: 'Baja',
+    criterios: [
+      'Sea informativa, protocolaria o de cortesía.',
+      'No implique riesgo institucional.',
+      'No tenga plazo crítico.',
+      'No requiera intervención de la persona Titular.',
+      'Pueda responderse con formato estándar, canalizarse o archivarse.',
+    ],
+  },
+}
 
 export default function RegistrarFUS() {
   const { user }   = useAuth()
@@ -21,10 +61,11 @@ export default function RegistrarFUS() {
     idMedioRecepcion:    '',
     medioEspecificacion: '',
     prioridad:           '',
+    criterios:           [],
     solicitante_nombre:  '',
     solicitante_tel:     '',
     solicitante_correo:  '',
-    evidencia:           null,
+    evidencias:          [],
   })
 
   useEffect(() => {
@@ -32,6 +73,38 @@ export default function RegistrarFUS() {
   }, [])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [] }))
+
+  const previewsRef = useRef([])
+
+  const agregarArchivos = (files) => {
+    const nuevos = Array.from(files).map(f => ({
+      file: f,
+      preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null,
+    }))
+    previewsRef.current = [...previewsRef.current, ...nuevos.map(n => n.preview).filter(Boolean)]
+    setForm(f => ({ ...f, evidencias: [...f.evidencias, ...nuevos] }))
+  }
+
+  const quitarArchivo = (idx) => {
+    setForm(f => {
+      const item = f.evidencias[idx]
+      if (item?.preview) URL.revokeObjectURL(item.preview)
+      return { ...f, evidencias: f.evidencias.filter((_, i) => i !== idx) }
+    })
+  }
+
+  useEffect(() => {
+    return () => previewsRef.current.forEach(url => URL.revokeObjectURL(url))
+  }, [])
+
+  const toggleCriterio = (texto) => setForm(f => ({
+    ...f,
+    criterios: f.criterios.includes(texto)
+      ? f.criterios.filter(c => c !== texto)
+      : [...f.criterios, texto],
+  }))
 
   const ahora = new Date().toLocaleString('es-MX', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -55,10 +128,11 @@ export default function RegistrarFUS() {
       fd.append('idMedioRecepcion',     form.idMedioRecepcion)
       fd.append('medioEspecificacion',  form.medioEspecificacion)
       fd.append('prioridad',            form.prioridad)
-      fd.append('solicitante_nombre',   form.solicitante_nombre)
-      fd.append('solicitante_tel',      form.solicitante_tel)
-      fd.append('solicitante_correo',   form.solicitante_correo)
-      if (form.evidencia) fd.append('evidencia', form.evidencia)
+      fd.append('criterios',            form.criterios.join(' | '))
+      fd.append('nombreExterno',    form.solicitante_nombre)
+      fd.append('telefonoExterno', form.solicitante_tel)
+      fd.append('correoExterno',   form.solicitante_correo)
+      form.evidencias.forEach(ev => fd.append('evidencias', ev.file))
 
       await api.post('/fus/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setExito('Solicitud registrada correctamente.')
@@ -187,22 +261,44 @@ export default function RegistrarFUS() {
 
               <div className="reg-row">
                 <label htmlFor="reg-prioridad">Prioridad <span className="req">*</span></label>
-                <select
-                  id="reg-prioridad"
-                  value={form.prioridad}
-                  onChange={e => set('prioridad', e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona una prioridad</option>
-                  <option value="Alta">Alta</option>
-                  <option value="Media">Media</option>
-                  <option value="Baja">Baja</option>
-                </select>
+                <div className="prioridad-wrapper">
+                  <div className="prioridad-pills">
+                    {Object.entries(PRIORIDAD_INFO).map(([valor, info]) => (
+                      <button
+                        key={valor}
+                        type="button"
+                        className={`prioridad-pill prioridad-${info.color}${form.prioridad === valor ? ' prioridad-selected' : ''}`}
+                        onClick={() => setPrioridad(valor)}
+                      >
+                        {info.icono} {info.titulo}
+                      </button>
+                    ))}
+                  </div>
+                  {form.prioridad && PRIORIDAD_INFO[form.prioridad] && (
+                    <div className={`prioridad-criterios prioridad-${PRIORIDAD_INFO[form.prioridad].color}`}>
+                      <p className="criterios-hint">Selecciona los criterios que aplican:</p>
+                      {PRIORIDAD_INFO[form.prioridad].criterios.map((texto) => {
+                        const activo = form.criterios.includes(texto)
+                        return (
+                          <button
+                            key={texto}
+                            type="button"
+                            className={`criterio-item${activo ? ' criterio-activo' : ''}`}
+                            onClick={() => toggleCriterio(texto)}
+                          >
+                            <span className="criterio-check">{activo ? '☑' : '☐'}</span>
+                            {texto}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="reg-row">
+              <div className="reg-row reg-row-evidencia">
                 <label>Evidencia</label>
-                <div className="evidencia-row">
+                <div className="evidencia-col">
                   <label className="file-btn">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -212,19 +308,40 @@ export default function RegistrarFUS() {
                     Cargar documento
                     <input
                       type="file"
+                      multiple
                       accept=".pdf,.jpg,.jpeg,.png,.docx"
                       style={{ display: 'none' }}
-                      onChange={e => set('evidencia', e.target.files[0])}
+                      onChange={e => { agregarArchivos(e.target.files); e.target.value = '' }}
                     />
                   </label>
-                  {form.evidencia && (
-                    <span className="file-name">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      {form.evidencia.name}
-                    </span>
+                  {form.evidencias.length > 0 && (
+                    <div className="ev-preview-grid">
+                      {form.evidencias.map((ev, idx) => (
+                        <div key={idx} className="ev-preview-item">
+                          {ev.preview ? (
+                            <img src={ev.preview} alt={ev.file.name} className="ev-preview-thumb" />
+                          ) : (
+                            <span className="ev-preview-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                            </span>
+                          )}
+                          <span className="ev-preview-nombre">{ev.file.name}</span>
+                          <button
+                            type="button"
+                            className="ev-preview-quitar"
+                            onClick={() => quitarArchivo(idx)}
+                            title="Quitar archivo"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

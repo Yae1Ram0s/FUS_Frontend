@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
+import { useAuth } from '../context/AuthContext'
 import './SolicitudesTurnadas.css'
 
 const FILTROS = ['Recibido', 'En_seguimiento', 'Concluido']
@@ -26,78 +28,91 @@ function useCountUp(end, duration = 900) {
 }
 
 /* ── Tarjeta de estadística ── */
-function StatCard({ icon, label, value, accent, delay }) {
+function StatCard({ icon, label, sublabel, value, accent, delay }) {
   const count = useCountUp(value)
   return (
     <div className="stat-card" style={{ '--accent': accent, animationDelay: delay }}>
-      <div className="stat-icon-wrap">
-        {icon}
-      </div>
+      <div className="stat-icon-wrap">{icon}</div>
       <div className="stat-body">
         <span className="stat-number">{count}</span>
         <span className="stat-label">{label}</span>
-      </div>
-      <div className="stat-bar">
-        <div className="stat-bar-fill" style={{ width: value > 0 ? '100%' : '0%' }} />
+        {sublabel && <span className="stat-sublabel">{sublabel}</span>}
       </div>
     </div>
   )
 }
 
-/* ── Panel de estadísticas (placeholder inteligente) ── */
+/* ── Panel de estadísticas ROL2 ── */
 function StatsPanel({ stats }) {
+  const { user } = useAuth()
+  const nombre = user?.nombre || user?.email || 'Usuario'
+  const total  = (stats.pendientes || 0) + (stats.activas || 0) + (stats.concluidas || 0)
+
   return (
     <div className="std-panel">
-      <div className="std-header">
-        <h2 className="std-title">Panel de control</h2>
-        <p className="std-sub">Resumen de tus solicitudes turnadas</p>
+
+      {/* Bienvenida */}
+      <div className="std-greeting">
+        <div className="std-avatar">{nombre.charAt(0).toUpperCase()}</div>
+        <div className="std-greeting-text">
+          <span className="std-greeting-hello">Bienvenido(a)</span>
+          <span className="std-greeting-name">{nombre}</span>
+          <span className="std-greeting-role">Titular / Enlace Estratégico · ANAM</span>
+        </div>
+        <div className="std-greeting-badge">
+          <span className="std-badge-num">{total}</span>
+          <span className="std-badge-lbl">Solicitudes turnadas</span>
+        </div>
       </div>
 
+      {/* Divisor */}
+      <div className="std-divider">
+        <span className="std-divider-line" />
+        <span className="std-divider-text">Resumen de actividad</span>
+        <span className="std-divider-line" />
+      </div>
+
+      {/* Métricas */}
       <div className="std-grid">
         <StatCard
-          delay="0ms"
-          accent="#15803d"
-          value={stats.concluidas}
-          label="Concluidas"
+          delay="0ms" accent="#9F2241"
+          value={stats.pendientes} label="Recibidas" sublabel="Pendientes de atender"
           icon={
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
             </svg>
           }
         />
         <StatCard
-          delay="120ms"
-          accent="#9F2241"
-          value={stats.activas}
-          label="Solicitudes activas"
+          delay="90ms" accent="#A07830"
+          value={stats.activas} label="En seguimiento" sublabel="Con respuesta en proceso"
           icon={
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
           }
         />
         <StatCard
-          delay="240ms"
-          accent="#b45309"
-          value={stats.pendientes}
-          label="Pendientes"
+          delay="180ms" accent="#1a7a52"
+          value={stats.concluidas} label="Concluidas" sublabel="Atendidas y cerradas"
           icon={
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           }
         />
       </div>
 
+      {/* Pista */}
       <div className="std-hint">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-          <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        Selecciona una solicitud del panel izquierdo para ver el detalle
+        Selecciona una solicitud del panel izquierdo para ver el detalle completo
       </div>
+
     </div>
   )
 }
@@ -105,7 +120,8 @@ function StatsPanel({ stats }) {
 /* ── Sección Respuestas y Seguimiento ── */
 function Seguimientos({ turnadoId, concluido }) {
   const [lista,       setLista]       = useState([])
-  const [fecha,       setFecha]       = useState('')
+  const hoy = new Date().toISOString().split('T')[0]
+  const [fecha,       setFecha]       = useState(hoy)
   const [actividad,   setActividad]   = useState('')
   const [accionTexto, setAccionTexto] = useState('')
   const [loading,     setLoading]     = useState(false)
@@ -125,7 +141,7 @@ function Seguimientos({ turnadoId, concluido }) {
         descripcionActividad: actividad,
         accionTexto,
       })
-      setFecha(''); setActividad(''); setAccionTexto('')
+      setFecha(hoy); setActividad(''); setAccionTexto('')
       cargar()
     } catch (e) {
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
@@ -211,9 +227,9 @@ function Seguimientos({ turnadoId, concluido }) {
 }
 
 /* ── Fila de detalle ── */
-function DRow({ label, value }) {
+function DRow({ label, value, tall }) {
   return (
-    <div className="drow">
+    <div className={`drow${tall ? ' drow-tall' : ''}`}>
       <span className="drow-label">{label}</span>
       <span className="drow-value">{value || '—'}</span>
     </div>
@@ -243,6 +259,8 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
     }
   }
 
+  const tieneExterno = fus.solicitante_externo?.nombre || fus.solicitante_externo?.telefono || fus.solicitante_externo?.correo
+
   return (
     <div className="dt-panel" style={{ position: 'relative' }}>
       {cargando && <Spinner label="Concluyendo asunto…" />}
@@ -253,27 +271,52 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
         Volver a la lista
       </button>
 
+      {/* ── Tarjeta unificada de datos ── */}
       <div className="seccion">
         <div className="sec-header sec-datos">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          Datos del FUS
+          {fus.folio || 'Datos del FUS'}
           <span style={{ marginLeft: 'auto' }}>
             <Badge estatus={turnado.estatusTitular} />
           </span>
         </div>
-        <div className="sec-body">
-          <DRow label="Fecha y hora"        value={fmt(fus.fechaHora)} />
-          <DRow label="Solicitante interno" value={fus.idSolicitanteInterno?.nombre || fus.idSolicitanteInterno?.email} />
-          <DRow label="Descripción"         value={fus.descripcion} />
-          <DRow label="Contexto"            value={fus.contexto} />
-          <DRow label="Remitente"           value={turnado.idRemitente ? `${turnado.idRemitente.first_name} ${turnado.idRemitente.last_name}` : undefined} />
-          <DRow label="Área"                value={turnado.area} />
+
+        {/* Datos generales */}
+        <div className="sec-subseccion">
+          <span className="sec-sublabel">Datos generales</span>
+          <div className="sec-grid-2">
+            <DRow label="Fecha y hora"        value={fmt(fus.fechaHora)} />
+            <DRow label="Solicitante interno" value={fus.idSolicitanteInterno?.nombre || fus.idSolicitanteInterno?.email} />
+            <DRow label="Remitente"           value={turnado.idRemitente ? `${turnado.idRemitente.first_name} ${turnado.idRemitente.last_name}` : undefined} />
+            <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
+            <DRow label="Prioridad"           value={fus.prioridad} />
+          </div>
         </div>
+
+        {/* Descripción */}
+        <div className="sec-subseccion">
+          <span className="sec-sublabel">Descripción de la solicitud</span>
+          <DRow label="Descripción" value={fus.descripcion} tall />
+          {fus.contexto && <DRow label="Contexto" value={fus.contexto} tall />}
+        </div>
+
+        {/* Solicitante externo */}
+        {tieneExterno && (
+          <div className="sec-subseccion sec-subseccion-externo">
+            <span className="sec-sublabel sec-sublabel-externo">Solicitante externo</span>
+            <div className="sec-grid-3">
+              {fus.solicitante_externo?.nombre   && <DRow label="Nombre"   value={fus.solicitante_externo.nombre} />}
+              {fus.solicitante_externo?.telefono && <DRow label="Teléfono" value={fus.solicitante_externo.telefono} />}
+              {fus.solicitante_externo?.correo   && <DRow label="Correo"   value={fus.solicitante_externo.correo} />}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* ── Seguimientos ── */}
       <Seguimientos turnadoId={turnado.id} concluido={turnado.estatusTitular === 'Concluido'} />
 
       {puedesConcluir && (
@@ -289,13 +332,13 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
 }
 
 /* ── Tarjeta de la lista ── */
-function TurnadoCard({ t, activo, onClick }) {
+function TurnadoCard({ t, activo, onClick, highlight }) {
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   const fus = t.idFus || {}
   return (
-    <div className={`fus-card${activo ? ' fus-card-activo' : ''}`} onClick={onClick} role="button" tabIndex={0}
+    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">{fus.folio || `Turnado #${t.id}`}</strong>
@@ -310,12 +353,17 @@ function TurnadoCard({ t, activo, onClick }) {
 
 /* ── Página principal ── */
 export default function SolicitudesTurnadas() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const folioParam = searchParams.get('folio')
+
   const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
   const [filtro,       setFiltro]       = useState('')
   const [seleccionado, setSeleccionado] = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
+  const [highlightId,  setHighlightId]  = useState(null)
+  const reordenadoRef = useRef(false)
 
   const cargarStats = () => {
     api.get('/turnados/mis-turnados/').then(r => {
@@ -329,18 +377,35 @@ export default function SolicitudesTurnadas() {
   }
 
   const cargar = () => {
+    if (reordenadoRef.current) { reordenadoRef.current = false; return }
     setCargando(true)
     const params = {}
-    if (filtro)   params.estatusTitular = filtro
-    if (busqueda) params.search = busqueda
+    if (!folioParam && filtro)   params.estatusTitular = filtro
+    if (!folioParam && busqueda) params.search = busqueda
     api.get('/turnados/mis-turnados/', { params })
-      .then(r => setLista(Array.isArray(r.data) ? r.data : r.data.results || []))
+      .then(r => {
+        const items = Array.isArray(r.data) ? r.data : r.data.results || []
+        if (folioParam) {
+          const match = items.find(t => t.idFus?.folio === folioParam)
+          if (match) {
+            setLista([match, ...items.filter(t => t.id !== match.id)])
+            setFiltro('')
+            setBusqueda('')
+            setSeleccionado(match)
+            setHighlightId(match.id)
+            reordenadoRef.current = true
+            setSearchParams({}, { replace: true })
+            return
+          }
+        }
+        setLista(items)
+      })
       .catch(() => {})
       .finally(() => setCargando(false))
   }
 
   useEffect(() => { cargarStats() }, [])
-  useEffect(() => { cargar() }, [filtro, busqueda])
+  useEffect(() => { cargar() }, [filtro, busqueda, folioParam])
 
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
@@ -393,7 +458,8 @@ export default function SolicitudesTurnadas() {
                 key={t.id}
                 t={t}
                 activo={seleccionado?.id === t.id}
-                onClick={() => setSeleccionado(t)}
+                highlight={highlightId === t.id}
+                onClick={() => { setSeleccionado(t); setHighlightId(null) }}
               />
             ))}
           </div>

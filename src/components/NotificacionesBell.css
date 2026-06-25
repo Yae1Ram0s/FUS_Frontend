@@ -163,6 +163,10 @@
   cursor: default;
 }
 
+.notif-item-clickable {
+  cursor: pointer;
+}
+
 .notif-item:last-child { border-bottom: none; }
 
 .notif-item:hover { background: rgba(255,255,255,0.05); }

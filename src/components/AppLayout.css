@@ -37,4 +37,15 @@
     z-index: 999;
     backdrop-filter: blur(1px);
   }
+
+  /* Garantiza que el área de contenido ocupe toda la altura disponible */
+  .app-body {
+    overflow: hidden;
+    height: calc(100vh - 56px); /* 56px = altura del header */
+  }
+
+  .app-main {
+    overflow: hidden;
+    height: 100%;
+  }
 }

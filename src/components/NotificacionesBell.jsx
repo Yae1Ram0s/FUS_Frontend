@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { useAuth } from '../context/AuthContext'
 import './NotificacionesBell.css'
 
 const timeAgo = (dateStr) => {
@@ -54,7 +56,9 @@ function NotifIcon({ tipo }) {
 }
 
 export default function NotificacionesBell() {
-  const ctx = useNotificaciones()
+  const ctx      = useNotificaciones()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -76,6 +80,15 @@ export default function NotificacionesBell() {
     const next = !open
     setOpen(next)
     if (next) cargar()
+  }
+
+  const handleNotifClick = async (n) => {
+    if (!n.leida) await marcarLeida(n.id)
+    setOpen(false)
+    const destino = user?.rol === 'ROL2'
+      ? `/rol2/solicitudes?folio=${encodeURIComponent(n.fusFolio)}`
+      : `/rol1/consultar-fus?folio=${encodeURIComponent(n.fusFolio)}`
+    navigate(destino)
   }
 
   return (
@@ -128,11 +141,11 @@ export default function NotificacionesBell() {
               notifs.slice(0, 25).map(n => (
                 <div
                   key={n.id}
-                  className={`notif-item${n.leida ? '' : ' notif-item-unread'}`}
-                  onClick={() => !n.leida && marcarLeida(n.id)}
-                  role={n.leida ? undefined : 'button'}
-                  tabIndex={n.leida ? undefined : 0}
-                  onKeyDown={e => e.key === 'Enter' && !n.leida && marcarLeida(n.id)}
+                  className={`notif-item notif-item-clickable${n.leida ? '' : ' notif-item-unread'}`}
+                  onClick={() => handleNotifClick(n)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && handleNotifClick(n)}
                 >
                   <span className={`notif-icon-wrap notif-icon-${n.tipo || 'default'}`}>
                     <NotifIcon tipo={n.tipo} />
