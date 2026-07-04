@@ -1,9 +1,7 @@
 import axios from 'axios'
 
-const BACKEND = `http://${window.location.hostname}:8000`
-
 const api = axios.create({
-  baseURL: `${BACKEND}/api`,
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -23,7 +21,7 @@ api.interceptors.response.use(
       if (refresh) {
         try {
           const { data } = await axios.post(
-            `${BACKEND}/api/auth/token/refresh/`,
+            '/api/auth/token/refresh/',
             { refresh }
           )
           sessionStorage.setItem('access_token', data.access)

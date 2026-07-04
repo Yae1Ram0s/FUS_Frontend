@@ -3,44 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
+import StatCard from '../components/StatCard'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import { useEstatus } from '../hooks/useEstatus'
+import { useNotificaciones } from '../context/NotificacionesContext'
+import { useResizablePanel } from '../hooks/useResizablePanel'
 import './SolicitudesTurnadas.css'
-
-const FILTROS = ['Recibido', 'En_seguimiento', 'Concluido']
-
-/* ── Hook de conteo animado ── */
-function useCountUp(end, duration = 900) {
-  const [val, setVal] = useState(0)
-  const rafRef = useRef(null)
-  useEffect(() => {
-    if (!end) { setVal(0); return }
-    const startTime = performance.now()
-    const tick = now => {
-      const p = Math.min((now - startTime) / duration, 1)
-      setVal(Math.round(p * end))
-      if (p < 1) rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [end, duration])
-  return val
-}
-
-/* ── Tarjeta de estadística ── */
-function StatCard({ icon, label, sublabel, value, accent, delay }) {
-  const count = useCountUp(value)
-  return (
-    <div className="stat-card" style={{ '--accent': accent, animationDelay: delay }}>
-      <div className="stat-icon-wrap">{icon}</div>
-      <div className="stat-body">
-        <span className="stat-number">{count}</span>
-        <span className="stat-label">{label}</span>
-        {sublabel && <span className="stat-sublabel">{sublabel}</span>}
-      </div>
-    </div>
-  )
-}
 
 /* ── Panel de estadísticas ROL2 ── */
 function StatsPanel({ stats }) {
@@ -75,7 +44,7 @@ function StatsPanel({ stats }) {
       {/* Métricas */}
       <div className="std-grid">
         <StatCard
-          delay="0ms" accent="#9F2241"
+          delay="0ms" accent="#235b4e"
           value={stats.pendientes} label="Recibidas" sublabel="Pendientes de atender"
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +54,7 @@ function StatsPanel({ stats }) {
           }
         />
         <StatCard
-          delay="90ms" accent="#A07830"
+          delay="90ms" accent="#c9a227"
           value={stats.activas} label="En seguimiento" sublabel="Con respuesta en proceso"
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -170,56 +139,53 @@ function Seguimientos({ turnadoId, concluido }) {
             Asunto concluido — las respuestas son de solo lectura
           </div>
         )}
-        <div className="table-wrap">
-          <table className="seg-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Actividad</th>
-                <th>Acción por emprender</th>
-                {!concluido && <th></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {lista.length === 0 && (
-                <tr>
-                  <td colSpan={concluido ? 3 : 4} style={{ textAlign: 'center', color: 'rgba(100,35,55,0.45)', fontStyle: 'italic' }}>
-                    Sin respuestas registradas
-                  </td>
-                </tr>
-              )}
-              {lista.map(s => (
-                <tr key={s.id}>
-                  <td className="td-nowrap">{s.fechaActividad}</td>
-                  <td>{s.descripcionActividad}</td>
-                  <td>{s.accionTexto || '—'}</td>
+
+        <div className="seg-timeline">
+          {lista.length === 0 ? (
+            <p className="seg-empty">Sin respuestas registradas aún</p>
+          ) : lista.map((s, i) => (
+            <div key={s.id} className="seg-tl-item">
+              <div className="seg-tl-track">
+                <div className="seg-tl-dot" />
+                {i < lista.length - 1 && <div className="seg-tl-connector" />}
+              </div>
+              <div className="seg-tl-content">
+                <div className="seg-tl-meta">
+                  <span className="seg-tl-fecha">{s.fechaActividad}</span>
                   {!concluido && (
-                    <td>
-                      <button className="btn-del" onClick={() => eliminar(s.id)} title="Eliminar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                          <path d="M10 11v6"/><path d="M14 11v6"/>
-                        </svg>
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {!concluido && (
-                <tr className="seg-new-row">
-                  <td><input type="date" value={fecha} onChange={e => setFecha(e.target.value)} /></td>
-                  <td><input type="text" placeholder="Describe la actividad…" value={actividad} onChange={e => setActividad(e.target.value)} /></td>
-                  <td><input type="text" placeholder="Acción por emprender…" value={accionTexto} onChange={e => setAccionTexto(e.target.value)} /></td>
-                  <td>
-                    <button className="btn-agregar" onClick={agregar} disabled={loading}>
-                      {loading ? '…' : 'Agregar'}
+                    <button className="btn-del" onClick={() => eliminar(s.id)} title="Eliminar">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                        <path d="M10 11v6"/><path d="M14 11v6"/>
+                      </svg>
                     </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  )}
+                </div>
+                <p className="seg-tl-actividad">{s.descripcionActividad}</p>
+                {s.accionTexto && (
+                  <p className="seg-tl-accion">→ {s.accionTexto}</p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
+
+        {!concluido && (
+          <div className="seg-nueva">
+            <div className="seg-nueva-inputs">
+              <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="seg-nueva-fecha" />
+              <input type="text" placeholder="Describe la actividad…" value={actividad} onChange={e => setActividad(e.target.value)} />
+              <input type="text" placeholder="Acción por emprender…" value={accionTexto} onChange={e => setAccionTexto(e.target.value)} />
+            </div>
+            <button className="btn-agregar" onClick={agregar} disabled={loading}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              {loading ? 'Guardando…' : 'Agregar'}
+            </button>
+          </div>
+        )}
+
         {error && <p className="sec-error" role="alert">{error}</p>}
       </div>
     </div>
@@ -238,16 +204,19 @@ function DRow({ label, value, tall }) {
 
 /* ── Detalle del turnado (ROL2) ── */
 function DetalleTurnado({ turnado, onConcluido, onBack }) {
-  const [cargando, setCargando] = useState(false)
-  const [error,    setError]    = useState('')
+  const [cargando,      setCargando]      = useState(false)
+  const [error,         setError]         = useState('')
+  const [modalConcluir, setModalConcluir] = useState(false)
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   const fus = turnado.idFus || {}
   const puedesConcluir = turnado.estatusTitular !== 'Concluido'
 
-  const handleConcluir = async () => {
-    if (!window.confirm('¿Confirmas que este asunto ha sido concluido?')) return
+  const handleConcluir = () => setModalConcluir(true)
+
+  const handleConfirmar = async () => {
+    setModalConcluir(false)
     setCargando(true); setError('')
     try {
       await api.post(`/turnados/${turnado.id}/concluir/`)
@@ -259,11 +228,33 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
     }
   }
 
-  const tieneExterno = fus.solicitante_externo?.nombre || fus.solicitante_externo?.telefono || fus.solicitante_externo?.correo
+  const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
 
   return (
     <div className="dt-panel" style={{ position: 'relative' }}>
       {cargando && <Spinner label="Concluyendo asunto…" />}
+
+      {modalConcluir && (
+        <div className="concluir-overlay" onClick={() => setModalConcluir(false)}>
+          <div className="concluir-modal" onClick={e => e.stopPropagation()}>
+            <div className="concluir-modal-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+              </svg>
+            </div>
+            <h3 className="concluir-modal-title">Concluir asunto</h3>
+            <p className="concluir-modal-body">¿Confirmas que este asunto ha sido atendido y puede marcarse como concluido? Esta acción no se puede deshacer.</p>
+            <div className="concluir-modal-actions">
+              <button className="concluir-btn-cancel" onClick={() => setModalConcluir(false)}>
+                Cancelar
+              </button>
+              <button className="concluir-btn-confirm" onClick={handleConfirmar}>
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <button className="btn-volver-mobile" onClick={onBack} aria-label="Volver a la lista">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
@@ -308,9 +299,9 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
           <div className="sec-subseccion sec-subseccion-externo">
             <span className="sec-sublabel sec-sublabel-externo">Solicitante externo</span>
             <div className="sec-grid-3">
-              {fus.solicitante_externo?.nombre   && <DRow label="Nombre"   value={fus.solicitante_externo.nombre} />}
-              {fus.solicitante_externo?.telefono && <DRow label="Teléfono" value={fus.solicitante_externo.telefono} />}
-              {fus.solicitante_externo?.correo   && <DRow label="Correo"   value={fus.solicitante_externo.correo} />}
+              {fus.nombreExterno   && <DRow label="Nombre"   value={fus.nombreExterno} />}
+              {fus.telefonoExterno && <DRow label="Teléfono" value={fus.telefonoExterno} />}
+              {fus.correoExterno   && <DRow label="Correo"   value={fus.correoExterno} />}
             </div>
           </div>
         )}
@@ -356,6 +347,9 @@ export default function SolicitudesTurnadas() {
   const [searchParams, setSearchParams] = useSearchParams()
   const folioParam = searchParams.get('folio')
 
+  const { estatus: estatusROL2 } = useEstatus('TITULAR')
+  const notifCtx = useNotificaciones()
+
   const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
   const [filtro,       setFiltro]       = useState('')
@@ -363,11 +357,14 @@ export default function SolicitudesTurnadas() {
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
   const [highlightId,  setHighlightId]  = useState(null)
+  const [pagina,       setPagina]       = useState(1)
+  const [totalItems,   setTotalItems]   = useState(0)
+  const PAGE_SIZE = 30
   const reordenadoRef = useRef(false)
 
   const cargarStats = () => {
-    api.get('/turnados/mis-turnados/').then(r => {
-      const todos = Array.isArray(r.data) ? r.data : r.data.results || []
+    api.get('/turnados/mis-turnados/', { params: { page: 1, page_size: 500 } }).then(r => {
+      const todos = r.data.results || []
       setStats({
         concluidas:  todos.filter(t => t.estatusTitular === 'Concluido').length,
         activas:     todos.filter(t => t.estatusTitular === 'En_seguimiento').length,
@@ -376,15 +373,16 @@ export default function SolicitudesTurnadas() {
     }).catch(() => {})
   }
 
-  const cargar = () => {
+  const cargar = (pag = 1, append = false) => {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
     setCargando(true)
-    const params = {}
+    const params = { page: pag, page_size: PAGE_SIZE }
     if (!folioParam && filtro)   params.estatusTitular = filtro
     if (!folioParam && busqueda) params.search = busqueda
     api.get('/turnados/mis-turnados/', { params })
       .then(r => {
-        const items = Array.isArray(r.data) ? r.data : r.data.results || []
+        const items = r.data.results || []
+        setTotalItems(r.data.total || 0)
         if (folioParam) {
           const match = items.find(t => t.idFus?.folio === folioParam)
           if (match) {
@@ -398,72 +396,124 @@ export default function SolicitudesTurnadas() {
             return
           }
         }
-        setLista(items)
+        setLista(prev => append ? [...prev, ...items] : items)
+        setPagina(pag)
       })
       .catch(() => {})
       .finally(() => setCargando(false))
   }
 
+  const cargarMas = () => cargar(pagina + 1, true)
+
   useEffect(() => { cargarStats() }, [])
-  useEffect(() => { cargar() }, [filtro, busqueda, folioParam])
+  useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
+
+  /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
+  useEffect(() => {
+    if (!notifCtx?.turnadoKey) return
+    cargar(1)
+    cargarStats()
+  }, [notifCtx?.turnadoKey])
 
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
+  /* ── Resize panel izquierdo ── */
+  const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
+
+  useEffect(() => {
+    const handleInicio = () => { setPanelAbierto(false); setSeleccionado(null) }
+    const handleConsultar = () => { setPanelAbierto(true) }
+    window.addEventListener('scs:inicio', handleInicio)
+    window.addEventListener('scs:consultar', handleConsultar)
+    return () => {
+      window.removeEventListener('scs:inicio', handleInicio)
+      window.removeEventListener('scs:consultar', handleConsultar)
+    }
+  }, [])
+  const { leftWidth, containerRef, startResize } = useResizablePanel('st-left-width')
+
   return (
     <AppLayout>
-      <div className={`st-inner${seleccionado ? ' has-detail' : ''}`}>
+      <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
 
         {/* ── Panel izquierdo ── */}
-        <div className="st-left">
+        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={{ width: panelAbierto ? leftWidth : 44 }}>
           <div className="panel-header">
-            <h3 className="panel-title">Solicitudes turnadas</h3>
-          </div>
-
-          <div className="left-search">
-            <svg className="search-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              placeholder="Buscar por folio, descripción…"
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
-          </div>
-
-          <div className="left-filtros">
-            <button
-              className={`filtro-chip${filtro === '' ? ' filtro-chip-active' : ''}`}
-              onClick={() => setFiltro('')}
-            >
-              Todos
+            {panelAbierto && <h3 className="panel-title">Solicitudes turnadas</h3>}
+            <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {panelAbierto
+                  ? <polyline points="15 18 9 12 15 6" />
+                  : <polyline points="9 18 15 12 9 6" />}
+              </svg>
             </button>
-            {FILTROS.map(f => (
-              <button
-                key={f}
-                className={`filtro-chip filtro-chip-${f.toLowerCase().replace('_', '-')}${filtro === f ? ' filtro-chip-active' : ''}`}
-                onClick={() => toggleFiltro(f)}
-              >
-                {f === 'En_seguimiento' ? 'En seguimiento' : f}
-              </button>
-            ))}
           </div>
 
-          <div className="left-lista">
-            {cargando && <p className="left-msg">Cargando solicitudes…</p>}
-            {!cargando && lista.length === 0 && (
-              <p className="left-msg">No hay solicitudes turnadas.</p>
-            )}
-            {lista.map(t => (
-              <TurnadoCard
-                key={t.id}
-                t={t}
-                activo={seleccionado?.id === t.id}
-                highlight={highlightId === t.id}
-                onClick={() => { setSeleccionado(t); setHighlightId(null) }}
+          <div className={`panel-content${!panelAbierto ? ' panel-content-oculto' : ''}`}>
+            <div className="left-search">
+              <svg className="search-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                placeholder="Buscar por folio, descripción…"
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
               />
-            ))}
+            </div>
+
+            <div className="left-filtros">
+              <button
+                className={`filtro-chip${filtro === '' ? ' filtro-chip-active' : ''}`}
+                onClick={() => setFiltro('')}
+              >
+                Todos
+              </button>
+              {estatusROL2.map(e => (
+                <button
+                  key={e.clave}
+                  className={`filtro-chip filtro-chip-${e.clave.toLowerCase().replace('_', '-')}${filtro === e.clave ? ' filtro-chip-active' : ''}`}
+                  onClick={() => toggleFiltro(e.clave)}
+                >
+                  {e.nombre}
+                </button>
+              ))}
+            </div>
+
+            <div className="left-lista">
+              {cargando && <Spinner overlay={false} label="Cargando solicitudes…" />}
+              {!cargando && lista.length === 0 && (
+                <div className="empty-state">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                  </svg>
+                  <p className="empty-state-title">Sin asignaciones</p>
+                  <p className="empty-state-sub">{busqueda || filtro ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
+                </div>
+              )}
+              {lista.map(t => (
+                <TurnadoCard
+                  key={t.id}
+                  t={t}
+                  activo={seleccionado?.id === t.id}
+                  highlight={highlightId === t.id}
+                  onClick={() => { setSeleccionado(t); setHighlightId(null); if (window.innerWidth <= 768) setPanelAbierto(false) }}
+                />
+              ))}
+              {!cargando && lista.length < totalItems && (
+                <button className="btn-cargar-mas" onClick={cargarMas}>
+                  Cargar más ({lista.length} de {totalItems})
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* ── Handle de resize ── */}
+        {panelAbierto && (
+          <div className="resize-handle" onMouseDown={startResize} onTouchStart={startResize}>
+            <span className="resize-dots" />
+          </div>
+        )}
 
         {/* ── Panel derecho ── */}
         <div className="st-right">

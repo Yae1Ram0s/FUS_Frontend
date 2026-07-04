@@ -74,7 +74,22 @@ export default function NotificacionesBell() {
 
   if (!ctx) return null
 
-  const { notifs, noLeidas, cargar, marcarLeida, marcarTodas } = ctx
+  const {
+    notifs, noLeidas, cargar, marcarLeida, marcarTodas,
+    browserNotif, activarBrowserNotif, desactivarBrowserNotif,
+  } = ctx
+
+  const soloHttps       = window.location.protocol === 'https:'
+  const browserBloqueado   = soloHttps && typeof Notification !== 'undefined' && Notification.permission === 'denied'
+  const browserNoSoportado = !soloHttps || typeof Notification === 'undefined'
+
+  const toggleBrowser = () => {
+    if (browserNotif === 'on') {
+      desactivarBrowserNotif()
+    } else {
+      activarBrowserNotif()
+    }
+  }
 
   const toggle = () => {
     const next = !open
@@ -160,11 +175,22 @@ export default function NotificacionesBell() {
             )}
           </div>
 
-          {notifs.length > 0 && (
-            <div className="notif-panel-foot">
+          <div className="notif-panel-foot">
+            {notifs.length > 0 && (
               <span className="notif-foot-txt">Mostrando las últimas {Math.min(notifs.length, 25)}</span>
-            </div>
-          )}
+            )}
+            {!browserNoSoportado && (
+              <button
+                className={`notif-browser-toggle ${browserNotif === 'on' ? 'notif-browser-on' : 'notif-browser-off'}`}
+                onClick={toggleBrowser}
+                disabled={browserBloqueado && browserNotif !== 'on'}
+                title={browserBloqueado && browserNotif !== 'on' ? 'Bloqueadas en el navegador — ve a Configuración del sitio' : ''}
+              >
+                <span className="notif-toggle-dot" />
+                {browserNotif === 'on' ? 'Notificaciones activas' : 'Notificaciones desactivadas'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,68 +1,95 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap');
+/* ══════════════════════════════════════════════════════════════
+   FUENTES LOCALES — Noto Sans (identidad tipográfica exclusiva)
+   • Display  → Condensed ExtraBold  — títulos, botones, nav, tablas
+   • Accent   → ExtraBold Italic     — folios, nombre, énfasis, toasts
+   • Thin     → Condensed Thin       — BODY, formularios, párrafos
+══════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: 'NotoSans Display';
+  src: url('./assets/fonts/NotoSans_Condensed-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NotoSans Accent';
+  src: url('./assets/fonts/NotoSans-ExtraBoldItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NotoSans Thin';
+  src: url('./assets/fonts/NotoSans_Condensed-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /*
-  Paleta institucional ANAM — tema carmín
+  Paleta institucional ANAM — tema verde
   ─────────────────────────────────────────────────────────────────
-  Base neumórfica: #9F2241 (carmín institucional)
-  Sombra oscura:   #611525  (L -15% en HSL)
-  Sombra clara:    #D5395B  (L +15% en HSL)
+  Base principal:  #235b4e (verde institucional)
+  Sombra oscura:   #152e28
+  Sombra clara:    #2e8a70
 
   Contraste principal: blanco #FFFFFF
-  Acento secundario:   beige #DDC9A3 (institucional)
-  Acento éxito:        teal  #8EEFC8 (complementario al carmín)
+  Acento dorado:       #DDC9A3 (institucional beige/oro)
 */
 
 :root {
   /* ── Superficie ── */
-  --bg: #9F2241;   /* carmín institucional ANAM */
+  --bg: #235b4e;
 
-  /* ── Texto (blanco sobre carmín) ── */
-  --heading:     #FFFFFF;   /* blanco puro */
-  --body:        #F5E0E8;   /* blanco cálido rosado */
-  --body-subtle: #D4A0B4;   /* rosa apagado */
-  --fg-disabled: #B06070;
+  /* ── Texto (blanco sobre verde) ── */
+  --heading:     #FFFFFF;
+  --body:        #ddeee9;
+  --body-subtle: #8ab5ad;
+  --fg-disabled: #5a8a82;
 
   /* ── Colores funcionales ── */
-  --fg-brand:        #FFFFFF;   /* blanco — contraste máximo sobre carmín */
-  --fg-secondary:    #DDC9A3;   /* beige institucional / dorado */
-  --fg-danger:       #FFB3C6;   /* rosa claro (estados de error) */
-  --fg-danger-strong:#FFDDE6;   /* rosa muy claro */
-  --fg-success:      #8EEFC8;   /* teal claro — complementario al rojo */
-  --fg-warning:      #FFDFA3;   /* dorado claro */
+  --fg-brand:        #FFFFFF;
+  --fg-secondary:    #DDC9A3;   /* dorado institucional — acento */
+  --fg-danger:       #FFB3C6;
+  --fg-danger-strong:#FFDDE6;
+  --fg-success:      #8EEFC8;
+  --fg-warning:      #FFDFA3;
 
   /* ── Bordes ── */
-  --border-default: #B83050;
-  --border-medium:  #C03A5A;
-  --border-strong:  #CF4570;
+  --border-default: #1e7060;
+  --border-medium:  #268c76;
+  --border-strong:  #2ea088;
   --border-brand:   rgba(255,255,255,0.50);
   --border-danger:  rgba(255,179,198,0.60);
 
   /* ── Badges ── */
-  /* Brand / activo — teal sobre carmín */
-  --badge-brand-bg:     rgba(37,132,102,0.22);
-  --badge-brand-border: rgba(45,158,114,0.45);
-  --badge-brand-text:   #8EEFC8;
+  /* Brand / activo — dorado sobre verde */
+  --badge-brand-bg:     rgba(221,201,163,0.18);
+  --badge-brand-border: rgba(221,201,163,0.45);
+  --badge-brand-text:   #DDC9A3;
 
-  /* Alternativo / neutro — beige dorado */
-  --badge-alt-bg:     rgba(221,201,163,0.18);
-  --badge-alt-border: rgba(221,201,163,0.40);
-  --badge-alt-text:   #EDD8B0;
+  /* Alternativo / neutro — blanco translúcido */
+  --badge-alt-bg:     rgba(255,255,255,0.12);
+  --badge-alt-border: rgba(255,255,255,0.28);
+  --badge-alt-text:   #F5F0F2;
 
-  /* Secundario / info — blanco translúcido */
-  --badge-secondary-bg:     rgba(255,255,255,0.12);
-  --badge-secondary-border: rgba(255,255,255,0.28);
-  --badge-secondary-text:   #F5F0F2;
+  /* Secundario / info — teal */
+  --badge-secondary-bg:     rgba(37,132,102,0.22);
+  --badge-secondary-border: rgba(45,158,114,0.45);
+  --badge-secondary-text:   #8EEFC8;
 
-  /* Peligro / concluido — borgoña profundo */
-  --badge-danger-bg:     rgba(105,28,50,0.55);
+  /* Peligro */
+  --badge-danger-bg:     rgba(120,28,50,0.55);
   --badge-danger-border: rgba(180,80,110,0.55);
   --badge-danger-text:   #FFCCD5;
 
-  /* Advertencia — olivo dorado */
-  --badge-warning-bg:     rgba(140,149,92,0.20);
-  --badge-warning-border: rgba(200,210,130,0.40);
+  /* Advertencia — dorado */
+  --badge-warning-bg:     rgba(201,162,39,0.18);
+  --badge-warning-border: rgba(201,162,39,0.40);
   --badge-warning-text:   #FFDFA3;
 
   /* ── Sombras neumórficas (neutras sobre superficie oscura) ── */
@@ -81,22 +108,41 @@
   --radius-default: 6px;
   --radius-sm:      2px;
   --radius-full:    9999px;
+
+  /* ── Tipografía ── */
+  /* Display/Accent: Noto Sans locales — títulos, botones, nav, énfasis. */
+  /* Thin: fuente nativa del sistema — cuerpo, formularios, metadatos (legibilidad). */
+  --font-body:    system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: 'NotoSans Display', sans-serif;
+  --font-accent:  'NotoSans Accent', sans-serif;
+  --font-thin:    system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* La app es de viewport único — todo el scroll ocurre en contenedores
+   internos dedicados (app-main-scroll, listas, etc.), nunca en la página. */
+html, body {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-  font-family: 'Nunito Sans', 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
   background: var(--bg);
   color: var(--body);
-  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-#root { width: 100%; min-height: 100vh; }
+#root { width: 100%; height: 100%; }
 
 a { color: var(--fg-brand); text-decoration: none; }
 a:hover { opacity: 0.8; }
 
-button, input, select, textarea { font-family: inherit; }
+/* Buttons use Display — CTA authority. Inputs/selects/textareas inherit Thin from body. */
+button { font-family: var(--font-display); font-weight: 800; }
+input, select, textarea { font-family: var(--font-thin); font-weight: 400; }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }

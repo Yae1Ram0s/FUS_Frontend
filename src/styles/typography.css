@@ -1,0 +1,491 @@
+/*
+ * ════════════════════════════════════════════════════════════════════
+ *  IDENTIDAD TIPOGRÁFICA EJECUTIVA — SISTEMA ANAM
+ *
+ *  ① NotoSans Display  (Condensed ExtraBold 800) ← DOMINANTE
+ *      Autoridad · Impacto · Institucional
+ *      → h1/h2/h3, títulos, botones CTA, nav (activo e inactivo),
+ *        encabezados tabla, stats, chips, badges, modales,
+ *        nombre de usuario, panel title, login, toasts, divisores
+ *
+ *  ② NotoSans Accent   (ExtraBold Italic 800) ← RESTRINGIDO
+ *      Solo textos de ayuda secundaria y estados vacíos
+ *      → empty-state, hints de búsqueda, folio ID únicos
+ *      NUNCA en: menús, nombre de usuario, títulos de panel,
+ *                controles de estado, botones, nav items
+ *
+ *  ③ THIN — fuente nativa del sistema (system-ui) ← LECTURA
+ *      Textos de lectura · Formularios · Metadatos
+ *      → body, párrafos, labels, inputs, descripciones,
+ *        timestamps, texto de tabla, notificaciones, pies
+ * ════════════════════════════════════════════════════════════════════
+ */
+
+
+/* ──────────────────────────────────────────────────────────────
+   ③ THIN — fuente del sistema (FUENTE DE LECTURA BASE)
+   body hereda Thin desde index.css. Aquí ajustamos tamaño
+   y espaciado por zona de uso para garantizar legibilidad.
+────────────────────────────────────────────────────────────── */
+
+/* Párrafos y descripciones largas */
+p,
+.fus-desc,
+.empty-state-p,
+.det-section p,
+.bglob-item-desc {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.92rem;
+  letter-spacing: 0.025em;
+  line-height: 1.65;
+}
+
+/* Etiquetas de formulario */
+label,
+.reg-row > label,
+.cfus-filter-label,
+.adm-modal-form label,
+.seg-form label,
+.concluir-modal label {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+}
+
+/* Inputs, selects y textareas */
+input,
+select,
+textarea,
+.reg-input,
+.seg-textarea {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+}
+
+/* Metadata de tarjeta FUS */
+.fus-meta,
+.fus-meta span {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.83rem;
+  letter-spacing: 0.025em;
+}
+
+/* EXCEPCIÓN: <b> dentro de .fus-meta → Display para evitar faux-bold sobre Thin */
+.fus-meta b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+/* Timestamps y fechas */
+.notif-time,
+.bita-fecha,
+.seg-tl-date,
+.seg-item-date,
+.det-fecha,
+.fus-fecha-registro {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+
+/* Etiquetas de stat / badge */
+.std-badge-lbl,
+.adm-stat-lbl,
+.stat-label {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Rol del usuario en sidebar */
+.sidebar-user-role {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+/* "BIENVENIDO(A)," — Thin con alto espaciado */
+.std-greeting-hello {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+
+/* Celdas de datos en tablas */
+.bita-table tbody td,
+.adm-table tbody td {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
+/* Texto de items de notificación */
+.notif-item-text,
+.notif-body {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+}
+
+/* Pie de panel y totales */
+.notif-foot-txt,
+.bita-total {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+/* Folio de búsqueda (contexto, no identificador) */
+.bglob-item-folio {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+/* Hint ESC en buscador */
+.bglob-esc {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+/* Acciones de texto ligero */
+.notif-read-all,
+.bita-limpiar {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.84rem;
+  letter-spacing: 0.05em;
+}
+
+/* Contenido de línea de tiempo */
+.seg-tl-content,
+.seg-item-obs {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+/* Opciones de select */
+option {
+  font-family: var(--font-thin);
+  font-weight: 400;
+}
+
+
+/* ──────────────────────────────────────────────────────────────
+   ① DISPLAY — NotoSans Condensed ExtraBold
+   Comandos visuales: títulos, botones, nav, encabezados,
+   presentación del usuario, mensajes del sistema.
+   font-style: normal en TODOS los elementos de esta zona.
+────────────────────────────────────────────────────────────── */
+
+/* Encabezados globales */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.01em;
+}
+
+/* Títulos de página */
+.bita-header-left h1,
+.adm-header-left h1,
+.reg-page-title,
+.header-titulo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+/* Encabezados de sección interior */
+.sec-header h3,
+.det-section-title,
+.detalle-titulo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.01em;
+}
+
+/* Modales — títulos */
+.modal-title,
+.adm-modal-title,
+.concluir-modal h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.01em;
+}
+
+/* Nombre del usuario en saludo — firme, institucional */
+.std-greeting-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.015em;
+}
+
+/* Título del panel izquierdo — recto, no cursiva */
+.panel-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.005em;
+}
+
+/* Login — primera impresión institucional */
+.login-titulo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Notificaciones — título del panel */
+.notif-panel-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Divisor de sección (RESUMEN DE SOLICITUDES, etc.) */
+.std-divider-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Toast — mensajes del sistema, directos y claros */
+.toast-msg {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.005em;
+}
+
+/* Divisor de sección de contenido */
+.std-divider-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Sidebar — ítems de navegación (activo e inactivo) */
+.sidebar-item {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: 0.9rem;
+  letter-spacing: -0.005em;
+}
+
+/* Ítem activo: mismo Display recto, diferenciado solo por color/borde */
+.sidebar-item-active {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Etiqueta de sección sidebar (MÓDULO, SISTEMA…) */
+.sidebar-section-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+/* Botones CTA principales */
+.btn-primary,
+.btn-turnar,
+.adm-btn-add,
+.adm-btn-save,
+.btn-concluir,
+.btn-agregar {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.btn-primary  { font-size: 0.9rem; }
+.btn-turnar   { font-size: 0.85rem; }
+.adm-btn-add  { font-size: 0.9rem; }
+.adm-btn-save { font-size: 0.88rem; }
+.btn-concluir { font-size: 0.88rem; }
+.btn-agregar  { font-size: 0.85rem; }
+
+/* Chips de filtro — limpios y rectos */
+.filtro-chip {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: 0.8rem;
+  letter-spacing: 0.005em;
+}
+
+/* Números grandes de estadísticas */
+.stat-number,
+.adm-stat-num,
+.std-badge-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.03em;
+}
+
+.adm-stat-num { font-size: 1.5rem; }
+
+/* Encabezados de tabla */
+.bita-table thead th,
+.adm-table thead th {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.07em;
+}
+
+/* Badges de acción / rol / estado en tabla */
+.bita-accion,
+.bita-rol,
+.adm-cuenta,
+.adm-estado,
+.adm-toggle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.04em;
+}
+
+/* Botones de exportar */
+.bita-export-btn {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.02em;
+}
+
+/* Labels de tarjeta en dashboard */
+.card-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+
+/* ──────────────────────────────────────────────────────────────
+   ② ACCENT — NotoSans ExtraBold Italic  (USO RESTRINGIDO)
+   Solo textos de ayuda secundaria y estados vacíos.
+   NUNCA en navegación, nombre de usuario, control de estados.
+────────────────────────────────────────────────────────────── */
+
+/* Folios — identificadores únicos de solicitud */
+.fus-folio,
+.cfus-left .fus-folio,
+.detalle-folio,
+.bita-folio {
+  font-family: var(--font-accent);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+/* Estado vacío — el único contexto narrativo de ayuda en la vista */
+.empty-state-title {
+  font-family: var(--font-accent);
+  font-weight: 800;
+  font-style: italic;
+}
+
+/* Buscador — texto de ayuda cuando no hay resultados o hay hint */
+.bglob-hint,
+.bglob-empty {
+  font-family: var(--font-accent);
+  font-weight: 800;
+  font-style: italic;
+}
+
+
+/* ──────────────────────────────────────────────────────────────
+   RESPONSIVO — ajuste de fuentes en pantallas pequeñas
+────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .std-greeting-name  { font-size: 1rem; }
+  .std-greeting-hello { font-size: 0.85rem; letter-spacing: 0.03em; }
+  .stat-number        { letter-spacing: -0.02em; }
+  .std-badge-num      { letter-spacing: -0.02em; }
+  .panel-title        { font-size: 0.85rem; }
+  .sidebar-item       { font-size: 0.875rem; }
+
+  p, .fus-desc, .empty-state-p {
+    font-size: 0.87rem;
+    letter-spacing: 0.022em;
+  }
+
+  label,
+  .reg-row > label,
+  .adm-modal-form label {
+    font-size: 0.82rem;
+    letter-spacing: 0.025em;
+  }
+
+  input, select, textarea { font-size: 0.87rem; }
+
+  .bita-table tbody td,
+  .adm-table tbody td { font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+  .std-greeting-name  { font-size: 0.95rem; }
+  .std-greeting-hello { font-size: 0.82rem; }
+  .adm-stat-num       { font-size: 1.25rem; }
+  .bita-limpiar       { font-size: 0.8rem; }
+  .notif-read-all     { font-size: 0.78rem; }
+
+  p, .fus-desc {
+    font-size: 0.85rem;
+    letter-spacing: 0.025em;
+  }
+
+  label, .reg-row > label {
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
+}

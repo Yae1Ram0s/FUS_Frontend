@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
+import BottomNav from './BottomNav'
+import NotifBrowserPrompt from './NotifBrowserPrompt'
 import './AppLayout.css'
 
 export default function AppLayout({ children, mainClass = '' }) {
@@ -22,6 +24,8 @@ export default function AppLayout({ children, mainClass = '' }) {
         )}
         <main className={`app-main ${mainClass}`}>{children}</main>
       </div>
+      <BottomNav />
+      <NotifBrowserPrompt />
     </div>
   )
 }

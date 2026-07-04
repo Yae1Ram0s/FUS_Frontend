@@ -1,0 +1,615 @@
+/* ══════════════════════════════════════
+   TABS PRINCIPALES
+══════════════════════════════════════ */
+.bita-tabs {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.52);
+  border-radius: 18px;
+  padding: 8px 10px;
+  box-shadow:
+    6px  6px  18px rgba(35,91,78,0.10),
+   -4px -4px  12px rgba(255,255,255,0.72),
+    inset 0 1px 0   rgba(255,255,255,0.75);
+}
+
+.bita-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(10,30,20,0.55);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, box-shadow 150ms;
+}
+.bita-tab:hover {
+  background: rgba(255,255,255,0.45);
+  color: #0a1e14;
+}
+.bita-tab-active {
+  background: rgba(35,91,78,0.88);
+  color: #ffffff;
+  border-color: rgba(35,91,78,0.20);
+  box-shadow: 0 3px 10px rgba(35,91,78,0.25);
+}
+.bita-tab svg { opacity: 0.80; }
+
+/* ══════════════════════════════════════
+   SUB-TABS (Usuarios y Accesos)
+══════════════════════════════════════ */
+.ua-subtabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ua-subtab {
+  padding: 7px 18px;
+  border: 1px solid rgba(35,91,78,0.18);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.28);
+  color: rgba(10,30,20,0.55);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+.ua-subtab:hover { background: rgba(255,255,255,0.55); color: #0a1e14; }
+.ua-subtab-active {
+  background: rgba(35,91,78,0.12);
+  color: #1F5647;
+  border-color: rgba(35,91,78,0.30);
+}
+
+/* ══════════════════════════════════════
+   STATS — Usuarios y Accesos
+══════════════════════════════════════ */
+.ua-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.ua-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 22px;
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 16px;
+  box-shadow: 5px 5px 14px rgba(35,91,78,0.10), -3px -3px 10px rgba(255,255,255,0.70);
+  min-width: 90px;
+}
+.ua-stat-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: #235b4e;
+  letter-spacing: -0.03em;
+}
+.ua-stat-lbl {
+  font-family: var(--font-thin);
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: rgba(10,30,20,0.55);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ua-stat-r .ua-stat-num { color: #1F5647; }
+.ua-stat-c .ua-stat-num { color: #8a6820; }
+.ua-stat-d .ua-stat-num { color: #691C32; }
+
+/* ── Botón desplegar tabla ── */
+.ua-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: rgba(255,255,255,0.28);
+  border: 1px solid rgba(35,91,78,0.22);
+  border-radius: 14px;
+  color: #1F5647;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms, color 150ms;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    5px  5px  14px rgba(35,91,78,0.10),
+   -3px -3px  10px rgba(255,255,255,0.70);
+  align-self: flex-start;
+}
+.ua-toggle-btn:hover {
+  background: rgba(35,91,78,0.08);
+  box-shadow:
+    7px  7px  18px rgba(35,91,78,0.13),
+   -4px -4px  12px rgba(255,255,255,0.75);
+}
+.ua-toggle-btn:active {
+  box-shadow:
+    inset 3px 3px 8px rgba(35,91,78,0.12),
+    inset -2px -2px 6px rgba(255,255,255,0.65);
+}
+
+.ua-chevron {
+  margin-left: 2px;
+  transition: transform 220ms ease;
+}
+.ua-chevron-open { transform: rotate(180deg); }
+
+/* ══════════════════════════════════════
+   BADGES CRUD
+══════════════════════════════════════ */
+.ua-crud-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.70rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.crud-c { background: rgba(188,149,92,0.12); color: #8a6820; border: 1px solid rgba(188,149,92,0.32); }
+.crud-r { background: rgba(37,132,102,0.12); color: #1F5647; border: 1px solid rgba(37,132,102,0.28); }
+.crud-d { background: rgba(105,28,50,0.10);  color: #691C32; border: 1px solid rgba(105,28,50,0.25); }
+
+/* Email en columna de tabla */
+.bita-email-col {
+  font-size: 0.80rem;
+  color: rgba(10,30,20,0.65);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════
+   FONDO — pleca + base neomorphism
+══════════════════════════════════════ */
+.bita-bg {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #e8f4f1;
+  background-image: url('../assets/pleca.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-blend-mode: multiply;
+}
+
+/* ══════════════════════════════════════
+   CONTENEDOR PRINCIPAL
+══════════════════════════════════════ */
+.bita-wrap {
+  padding: 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-height: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════
+   HEADER — neomorphism elevado + glass
+══════════════════════════════════════ */
+.bita-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(195, 212, 207, 0.65);
+  border-radius: 20px;
+  padding: 18px 24px;
+  box-shadow:
+    8px  8px  22px rgba(35, 91, 78, 0.13),
+   -5px -5px  14px rgba(190, 208, 203, 0.75),
+    inset 0 1px 0   rgba(190, 208, 203, 0.80);
+}
+
+.bita-header-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.bita-header-left svg { color: #235b4e; opacity: .75; }
+.bita-header-left h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0a1e14;
+}
+
+.bita-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bita-total {
+  font-size: .78rem;
+  font-weight: 600;
+  color: rgba(10, 30, 20, 0.55);
+  background: rgba(35, 91, 78, 0.08);
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  border-radius: 20px;
+  padding: 4px 13px;
+}
+
+/* ══════════════════════════════════════
+   BOTONES DE EXPORTACIÓN
+══════════════════════════════════════ */
+.bita-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  padding: 7px 15px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  letter-spacing: .3px;
+  transition: opacity 150ms, transform 100ms, box-shadow 150ms;
+  box-shadow:
+    3px  3px  8px  rgba(35, 91, 78, 0.10),
+   -2px -2px  6px  rgba(190, 208, 203, 0.70);
+}
+.bita-export-btn:hover  { opacity: .82; }
+.bita-export-btn:active {
+  transform: scale(.97);
+  box-shadow:
+    inset 2px 2px 6px rgba(35, 91, 78, 0.12),
+    inset -1px -1px 4px rgba(190, 208, 203, 0.65);
+}
+.bita-export-excel { background: rgba(22,163,74,0.10);  color: #15803d; border-color: rgba(22,163,74,0.28); }
+.bita-export-pdf   { background: rgba(220,38,38,0.09);  color: #b91c1c; border-color: rgba(220,38,38,0.25); }
+
+/* ══════════════════════════════════════
+   FILTROS — neomorphism suave + glass
+══════════════════════════════════════ */
+.bita-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(195, 212, 207, 0.62);
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-shadow:
+    6px  6px  18px rgba(35, 91, 78, 0.10),
+   -4px -4px  12px rgba(190, 208, 203, 0.72),
+    inset 0 1px 0   rgba(190, 208, 203, 0.75);
+}
+
+.bita-input {
+  background: rgba(255, 255, 255, 0.40);
+  border: 1px solid rgba(35, 91, 78, 0.20);
+  border-radius: 10px;
+  padding: 8px 13px;
+  color: #0a1e14;
+  font-size: .83rem;
+  font-weight: 500;
+  outline: none;
+  min-width: 160px;
+  transition: border-color 150ms, background 150ms, box-shadow 150ms;
+  box-shadow:
+    inset 2px 2px 5px rgba(35, 91, 78, 0.07),
+    inset -1px -1px 3px rgba(190, 208, 203, 0.80);
+  backdrop-filter: blur(8px);
+}
+.bita-input:focus {
+  border-color: rgba(35, 91, 78, 0.45);
+  background: rgba(255, 255, 255, 0.70);
+  box-shadow:
+    0 0 0 3px rgba(35, 91, 78, 0.09),
+    inset 2px 2px 5px rgba(35, 91, 78, 0.06),
+    inset -1px -1px 3px rgba(190, 208, 203, 0.80);
+}
+.bita-input::placeholder { color: rgba(10, 30, 20, 0.38); }
+.bita-input option       { background: #f0fff8; color: #0a1e14; }
+
+.bita-fechas { display: flex; align-items: center; gap: 6px; }
+.bita-sep { color: rgba(10, 30, 20, 0.35); font-size: .82rem; font-weight: 600; }
+
+.bita-limpiar {
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(180, 83, 9, 0.30);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: #b45309;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms;
+  box-shadow:
+    3px  3px  8px  rgba(180, 83, 9, 0.08),
+   -2px -2px  6px  rgba(190, 208, 203, 0.65);
+}
+.bita-limpiar:hover {
+  background: rgba(180, 83, 9, 0.07);
+  box-shadow: 4px 4px 12px rgba(180, 83, 9, 0.12), -2px -2px 8px rgba(190, 208, 203, 0.65);
+}
+
+/* ══════════════════════════════════════
+   TABLA — glassmorphism traslúcido
+══════════════════════════════════════ */
+.bita-table-wrap {
+  flex: 1;
+  overflow: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(195, 212, 207, 0.52);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    10px  10px  30px rgba(35, 91, 78, 0.13),
+    -6px  -6px  18px rgba(190, 208, 203, 0.72),
+    inset 0   1px 0   rgba(190, 208, 203, 0.75);
+  min-height: 180px;
+}
+
+.bita-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .80rem;
+}
+
+.bita-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(35, 91, 78, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 2px solid rgba(195, 212, 207, 0.22);
+  white-space: nowrap;
+  font-size: .73rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.20);
+}
+
+.bita-table tbody tr {
+  border-bottom: 1px solid rgba(35, 91, 78, 0.07);
+  transition: background 120ms;
+}
+.bita-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.12); }
+.bita-table tbody tr:last-child { border-bottom: none; }
+.bita-table tbody tr:hover { background: rgba(35, 91, 78, 0.05); }
+
+.bita-table td {
+  padding: 10px 14px;
+  vertical-align: top;
+  color: rgba(10, 30, 20, 0.82);
+}
+
+/* ══════════════════════════════════════
+   COLUMNAS ESPECIALES
+══════════════════════════════════════ */
+.bita-fecha {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: rgba(10, 30, 20, 0.50);
+  font-size: .74rem;
+}
+.bita-usuario {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #0a1e14;
+  font-weight: 600;
+}
+.bita-folio {
+  font-family: 'Courier New', monospace;
+  font-size: .73rem;
+  color: rgba(10, 30, 20, 0.60);
+  white-space: nowrap;
+}
+.bita-ip {
+  font-family: 'Courier New', monospace;
+  font-size: .71rem;
+  color: rgba(10, 30, 20, 0.38);
+  white-space: nowrap;
+}
+.bita-obs    { max-width: 200px; color: rgba(10, 30, 20, 0.55); }
+.bita-accion { font-weight: 700; white-space: nowrap; }
+
+/* ── Columna PDF ── */
+.bita-col-pdf { text-align: center; width: 42px; padding: 4px 6px !important; }
+
+.bita-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(195, 212, 207, 0.55);
+  background: rgba(255, 255, 255, 0.70);
+  color: #1F5647;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms, color 150ms;
+  box-shadow: 2px 2px 6px rgba(35,91,78,0.10), -1px -1px 4px rgba(190,208,203,0.40);
+}
+
+.bita-dl-btn:hover {
+  background: #1F5647;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(35,91,78,0.30);
+  border-color: #1F5647;
+}
+
+.bita-no-pdf { color: rgba(10,30,20,0.25); font-size: 0.8rem; }
+
+/* ══════════════════════════════════════
+   COLORES DE ACCIONES — Paleta Institucional ANAM
+   #235B4E #10312B #1F5647 #24725D #258466  (verdes)
+   #DDC9A3 #BC955C                           (dorados)
+   #9F2241 #691C32 #AF1B46 #82163A           (carmines)
+══════════════════════════════════════ */
+.bita-accion-REGISTRO_FUS       { color: #258466; }
+.bita-accion-TURNAR_FUS         { color: #BC955C; }
+.bita-accion-ASIGNACION_ESTADO  { color: #24725D; }
+.bita-accion-REGISTRO_RESPUESTA { color: #1F5647; }
+.bita-accion-REGISTRO_ACCION    { color: #235B4E; }
+.bita-accion-CONCLUSION_FUS     { color: #10312B; }
+.bita-accion-INICIO_SESION      { color: rgba(37, 132, 102, 0.50); }
+.bita-accion-CIERRE_SESION      { color: rgba(37, 132, 102, 0.38); }
+.bita-accion-ELIMINACION        { color: #9F2241; }
+
+/* ══════════════════════════════════════
+   BADGES DE ROL — Paleta Institucional
+══════════════════════════════════════ */
+.bita-rol {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: .70rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.bita-rol-rol1 { background: rgba(188,149,92,0.12);  color: #8a6820; border: 1px solid rgba(188,149,92,0.32); }  /* BC955C dorado */
+.bita-rol-rol2 { background: rgba(105,28,50,0.10);   color: #691C32; border: 1px solid rgba(105,28,50,0.25); }  /* 691C32 carmine */
+
+/* ══════════════════════════════════════
+   VACÍO / CARGANDO
+══════════════════════════════════════ */
+.bita-loading,
+.bita-empty {
+  text-align: center;
+  padding: 3rem;
+  color: rgba(10, 30, 20, 0.32);
+  font-size: .85rem;
+}
+
+/* ══════════════════════════════════════
+   CARGAR MÁS — neomorphism botón
+══════════════════════════════════════ */
+.bita-mas {
+  flex-shrink: 0;
+  padding: 11px 20px;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  border-radius: 14px;
+  color: rgba(10, 30, 20, 0.65);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms, color 150ms;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    5px  5px  14px rgba(35, 91, 78, 0.10),
+   -3px -3px  10px rgba(190, 208, 203, 0.70);
+  align-self: center;
+  min-width: 200px;
+  text-align: center;
+}
+.bita-mas:hover {
+  background: rgba(255, 255, 255, 0.55);
+  color: #0a1e14;
+  box-shadow:
+    7px  7px  18px rgba(35, 91, 78, 0.13),
+   -4px -4px  12px rgba(190, 208, 203, 0.75);
+}
+.bita-mas:active {
+  box-shadow:
+    inset 3px 3px 8px rgba(35, 91, 78, 0.12),
+    inset -2px -2px 6px rgba(190, 208, 203, 0.65);
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVO
+══════════════════════════════════════ */
+@media (max-width: 900px) {
+  .bita-wrap { padding: 1.5rem 1.25rem; gap: .9rem; }
+  .bita-table { font-size: .76rem; }
+  .bita-table thead th { padding: 10px 10px; font-size: .68rem; }
+  .bita-table td { padding: 8px 10px; }
+  .bita-export-btn { padding: 6px 12px; font-size: .72rem; }
+}
+
+@media (max-width: 768px) {
+  .bita-wrap    { padding: 1rem; gap: .8rem; }
+  .bita-filtros { flex-direction: column; padding: 12px; }
+  .bita-input   { min-width: unset; width: 100%; box-sizing: border-box; }
+  .bita-fechas  { flex-direction: column; align-items: stretch; }
+  .bita-fechas .bita-sep { display: none; }
+  .bita-header  { padding: 12px 14px; gap: 8px; }
+  .bita-header-left h1 { font-size: .95rem; }
+  .bita-header-right { gap: 6px; }
+  .bita-total { font-size: .72rem; padding: 3px 10px; }
+  /* Ocultar columnas menos críticas en tablet */
+  .bita-table th:nth-child(8),
+  .bita-table td:nth-child(8),
+  .bita-table th:nth-child(9),
+  .bita-table td:nth-child(9) { display: none; }
+  .bita-mas { min-width: unset; width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .bita-wrap { padding: .75rem; gap: .65rem; }
+  .bita-header { flex-direction: column; align-items: flex-start; }
+  .bita-header-right { width: 100%; justify-content: flex-end; }
+  .bita-table { font-size: .72rem; }
+  .bita-table thead th { padding: 8px 8px; font-size: .64rem; }
+  .bita-table td { padding: 7px 8px; }
+  /* En móvil, ocultar Estado anterior, Estado nuevo, IP, Observaciones */
+  .bita-table th:nth-child(6),
+  .bita-table td:nth-child(6),
+  .bita-table th:nth-child(7),
+  .bita-table td:nth-child(7),
+  .bita-table th:nth-child(8),
+  .bita-table td:nth-child(8),
+  .bita-table th:nth-child(9),
+  .bita-table td:nth-child(9) { display: none; }
+  .bita-usuario { max-width: 110px; font-size: .70rem; }
+  .bita-folio { font-size: .66rem; }
+  .bita-export-btn span { display: none; }
+  .bita-export-btn { padding: 7px 10px; }
+}
+
+@media (max-width: 360px) {
+  .bita-wrap { padding: .5rem; }
+  .bita-table thead th { padding: 7px 6px; font-size: .60rem; }
+  .bita-table td { padding: 6px 6px; }
+  /* En 360px solo Fecha, Acción y Folio */
+  .bita-table th:nth-child(2),
+  .bita-table td:nth-child(2),
+  .bita-table th:nth-child(3),
+  .bita-table td:nth-child(3) { display: none; }
+}

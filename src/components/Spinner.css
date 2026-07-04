@@ -1,12 +1,8 @@
-/* ── Recuadro contenedor de las barras ── */
+/* ── Contenedor de las barras — sin fondo, solo el loader ── */
 .spinner {
   position: relative;
   width: 120px;
   height: 60px;
-  border-radius: 12px;
-  background: rgba(159, 34, 65, 0.06);
-  border: 1px solid rgba(159, 34, 65, 0.20);
-  overflow: hidden;
 }
 
 .spinner span {
@@ -15,10 +11,10 @@
   left: var(--left);
   width: 35px;
   height: 7px;
-  background: #9F2241;
+  background: #BC955C;
   border-radius: 3px;
   animation: dominos 1s ease infinite;
-  box-shadow: 1px 1px 4px rgba(100, 10, 30, 0.25);
+  box-shadow: 1px 1px 4px rgba(188, 149, 92, 0.30);
 }
 
 .spinner span:nth-child(1) { --left: 80px; animation-delay: 0.125s; }
@@ -36,26 +32,34 @@
   80%  { opacity: 1; }
 }
 
-/* ── Overlay glassmorphism ── */
+/* ── Overlay — cubre toda la página, sin color de fondo, solo difumina ── */
 .spinner-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.70);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 20px;
-  z-index: 50;
-  border-radius: 20px;
+  z-index: 2000;
+}
+
+/* ── Inline — el loader en el flujo normal, sustituye un texto "Cargando…" ── */
+.spinner-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0;
 }
 
 .spinner-label {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #9F2241;
+  color: #BC955C;
   letter-spacing: 0.10em;
   text-transform: uppercase;
 }

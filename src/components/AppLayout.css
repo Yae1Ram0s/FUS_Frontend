@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* viewport dinámico — evita que la barra de Safari/Chrome mueva header/bottom-nav al hacer scroll */
   background: var(--bg);
 }
 
@@ -29,23 +30,33 @@
 }
 
 @media (max-width: 768px) {
+  /* Sidebar reemplazado por bottom nav — ocultar overlay */
   .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 999;
-    backdrop-filter: blur(1px);
+    display: none !important;
   }
 
-  /* Garantiza que el área de contenido ocupe toda la altura disponible */
   .app-body {
     overflow: hidden;
-    height: calc(100vh - 56px); /* 56px = altura del header */
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
   }
 
   .app-main {
     overflow: hidden;
-    height: 100%;
+    overflow-x: hidden;
+    /* Espacio para bottom nav fijo — los child con height:100% se ajustan automáticamente */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Para páginas que hacen scroll en el main (RegistrarFUS) */
+  .app-main.app-main-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
+
+@media (max-width: 480px) {
+  .app-wrap { overflow-x: hidden; }
+}
+
+/* Touch targets: tabs de navegación inferior ya tienen altura definida */
