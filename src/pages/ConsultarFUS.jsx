@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
@@ -12,7 +13,7 @@ import './ConsultarFUS.css'
 
 function descargar(url, nombre) {
   const token = sessionStorage.getItem('access_token')
-  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then(r => r.blob())
     .then(blob => {
       const a = document.createElement('a')
@@ -25,7 +26,7 @@ function descargar(url, nombre) {
 }
 
 /* ── Panel de estadísticas ROL1 ── */
-function StatsPanel({ stats, onStatClick }) {
+function StatsPanel({ stats, cargando, onStatClick }) {
   const { user } = useAuth()
   const nombre = user?.nombre || user?.email || 'Usuario'
   const total  = (stats.pendientes || 0) + (stats.turnadas || 0) + (stats.atendidas || 0) + (stats.concluidas || 0)
@@ -40,7 +41,7 @@ function StatsPanel({ stats, onStatClick }) {
         <div className="std-greeting-text">
           <span className="std-greeting-hello">Bienvenido(a)</span>
           <span className="std-greeting-name">{nombre}</span>
-          <span className="std-greeting-role">Particular del Titular · ANAM</span>
+          <span className="std-greeting-role">{user?.unidadAdministrativa || 'Sin unidad asignada'} · ANAM</span>
         </div>
         <div className="std-greeting-badge">
           <span className="std-badge-num">{total}</span>
@@ -55,12 +56,14 @@ function StatsPanel({ stats, onStatClick }) {
         <span className="std-divider-line" />
       </div>
 
-      {/* Métricas 2×2 — clicables en móvil */}
-      <div className="std-grid std-grid-2x2">
+      {/* Métricas 2×2 — clicables, filtran la lista por categoría */}
+      {cargando
+        ? <div className="std-stats-loading"><Spinner overlay={false} label="Cargando resumen…" /></div>
+        : <div className="std-grid std-grid-2x2">
         <StatCard
           delay="0ms" accent="#235b4e"
           value={stats.pendientes} label="Registradas" sublabel="En espera de trámite"
-          onClick={esMobile ? () => onStatClick?.('Registrado') : undefined}
+          onClick={() => onStatClick?.('Registrado')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -73,7 +76,7 @@ function StatsPanel({ stats, onStatClick }) {
           delay="80ms" accent="#c9a227"
           value={stats.turnadas} label="Turnadas" sublabel="Enviadas al área responsable"
           live
-          onClick={esMobile ? () => onStatClick?.('Turnado') : undefined}
+          onClick={() => onStatClick?.('Turnado')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/>
@@ -84,7 +87,7 @@ function StatsPanel({ stats, onStatClick }) {
         <StatCard
           delay="160ms" accent="#1a7a52"
           value={stats.atendidas} label="En atención" sublabel="Con respuesta en proceso"
-          onClick={esMobile ? () => onStatClick?.('Atendido') : undefined}
+          onClick={() => onStatClick?.('Atendido')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -94,7 +97,7 @@ function StatsPanel({ stats, onStatClick }) {
         <StatCard
           delay="240ms" accent="#1a7a52"
           value={stats.concluidas} label="Concluidas" sublabel="Atendidas y cerradas"
-          onClick={esMobile ? () => onStatClick?.('Concluido') : undefined}
+          onClick={() => onStatClick?.('Concluido')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -102,7 +105,7 @@ function StatsPanel({ stats, onStatClick }) {
             </svg>
           }
         />
-      </div>
+      </div>}
 
       {/* Pista */}
       <div className="std-hint">
@@ -111,7 +114,7 @@ function StatsPanel({ stats, onStatClick }) {
         </svg>
         {esMobile
           ? 'Toca una categoría para ver las solicitudes'
-          : 'Selecciona una solicitud del panel izquierdo para ver el detalle completo'
+          : 'Haz clic en una categoría para filtrar las solicitudes, o selecciona una del panel izquierdo para ver el detalle completo'
         }
       </div>
 
@@ -144,7 +147,7 @@ function ModalTurnar({ fus, onClose, onDone }) {
     if (yaExiste) return
     setLista(l => [...l, {
       userId: u.id,
-      nombre: `${u.first_name} ${u.last_name}`,
+      nombre: u.nombre,
       medioId: m.id,
       medioNombre: m.nombreMedio,
     }])
@@ -175,7 +178,6 @@ function ModalTurnar({ fus, onClose, onDone }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-card">
-        {loading && <Spinner label="Turnando solicitud…" />}
         <div className="modal-header">
           <h3 className="modal-title">Turnar solicitud</h3>
           <button className="modal-close" onClick={onClose} aria-label="Cerrar">
@@ -192,9 +194,14 @@ function ModalTurnar({ fus, onClose, onDone }) {
               <select id="modal-user" value={selUser} onChange={e => setSelUser(e.target.value)}>
                 <option value="">Selecciona un destinatario</option>
                 {usuarios.map(u => (
-                  <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
                 ))}
               </select>
+              <button type="button" className="btn-add-dest" onClick={agregar} title="Agregar destinatario">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -205,11 +212,6 @@ function ModalTurnar({ fus, onClose, onDone }) {
                 <option value="">Selecciona un medio</option>
                 {medios.map(m => <option key={m.id} value={m.id}>{m.nombreMedio}</option>)}
               </select>
-              <button type="button" className="btn-add-dest" onClick={agregar} title="Agregar destinatario">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
             </div>
           </div>
 
@@ -257,9 +259,10 @@ function ModalTurnar({ fus, onClose, onDone }) {
         </div>
 
         <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
           <button className="btn-turnar" onClick={handleTurnar} disabled={loading}>
-            {loading ? 'Turnando...' : 'Turnar solicitud'}
+            {loading && <span className="btn-spinner" />}
+            {loading ? 'Turnando…' : 'Turnar solicitud'}
           </button>
         </div>
       </div>
@@ -279,6 +282,37 @@ function Row({ label, value, tall }) {
     <div className={`det-row${tall ? ' det-row-tall' : ''}`}>
       <span className="det-label">{label}</span>
       <span className="det-value">{value || '—'}</span>
+    </div>
+  )
+}
+
+/* ── Prioridad — pills de solo lectura, resalta la seleccionada ── */
+const PRIORIDAD_NIVELES = [
+  { valor: 'Alta',  color: '#b91c1c' },
+  { valor: 'Media', color: '#92400e' },
+  { valor: 'Baja',  color: '#15803d' },
+]
+
+function PrioridadPills({ valor, criterios }) {
+  const listaCriterios = criterios ? criterios.split('|').map(c => c.trim()).filter(Boolean) : []
+  return (
+    <div>
+      <div className="det-prioridad-pills">
+        {PRIORIDAD_NIVELES.map(p => (
+          <span
+            key={p.valor}
+            className={`det-prioridad-pill${valor === p.valor ? ' det-prioridad-pill-selected' : ''}`}
+            style={{ '--c': p.color }}
+          >
+            {p.valor}
+          </span>
+        ))}
+      </div>
+      {listaCriterios.length > 0 && (
+        <ul className="det-criterios-lista">
+          {listaCriterios.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
+      )}
     </div>
   )
 }
@@ -319,6 +353,7 @@ function EvidenciaList({ evidencias }) {
                 </span>
               )}
               <span className="ev-nombre">{ev.nombreArchivo}</span>
+              {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
             </a>
           )
         })}
@@ -329,7 +364,7 @@ function EvidenciaList({ evidencias }) {
 
 const ESTATUS_TURNADO_LABEL = {
   Recibido:       { label: 'Recibido',       color: '#b45309' },
-  En_seguimiento: { label: 'En seguimiento', color: '#1d4ed8' },
+  En_seguimiento: { label: 'En seguimiento', color: '#9F2241' },
   Concluido:      { label: 'Concluido',      color: '#15803d' },
 }
 
@@ -364,16 +399,16 @@ function TimelineActividad({ fusId }) {
           <div key={t.id} className="act-turnado">
             <div className="act-turnado-header">
               <div className="act-turnado-dot" />
-              <div className="act-turnado-info">
-                <span className="act-turnado-dest">
-                  {t.idDestinatario?.first_name} {t.idDestinatario?.last_name}
-                </span>
-                <span className="act-turnado-fecha">{fmt(t.fechaHoraTurnado)}</span>
-                <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
-              </div>
+              <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
+            </div>
+            <div className="det-grid-2 act-turnado-datos">
+              <Row label="Nombre" value={t.idDestinatario?.nombre} />
+              <Row label="Área" value={t.idDestinatario?.area} />
+              <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
+              <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
             </div>
             {t.solicitudTexto && (
-              <p className="act-solicitud-txt">"{t.solicitudTexto}"</p>
+              <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
             )}
 
             {/* Seguimientos */}
@@ -436,14 +471,73 @@ function TimelineActividad({ fusId }) {
   )
 }
 
+/* ── Modal: elegir con/sin imágenes al descargar el PDF ── */
+function ModalDescargarPDF({ onCancelar, onConfirmar }) {
+  const [conImagenes, setConImagenes] = useState(true)
+  const [cargando, setCargando] = useState(false)
+
+  const confirmar = () => {
+    setCargando(true)
+    Promise.resolve(onConfirmar(conImagenes)).finally(() => setCargando(false))
+  }
+
+  return createPortal(
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-card modal-card-pdf">
+        <div className="modal-header">
+          <h3 className="modal-title">Descargar solicitud en PDF</h3>
+          <button className="modal-close" onClick={onCancelar} aria-label="Cerrar" disabled={cargando}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <p className="modal-pdf-sub">Elige si deseas incluir las imágenes de evidencia adjuntas.</p>
+
+          <label className={`modal-pdf-opcion${conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
+            <input type="radio" name="pdf-imagenes" checked={conImagenes} onChange={() => setConImagenes(true)} disabled={cargando} />
+            <span>Descargar con imágenes de evidencia</span>
+          </label>
+          <label className={`modal-pdf-opcion${!conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
+            <input type="radio" name="pdf-imagenes" checked={!conImagenes} onChange={() => setConImagenes(false)} disabled={cargando} />
+            <span>Descargar sin imágenes</span>
+          </label>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onCancelar} disabled={cargando}>Cancelar</button>
+          <button className="btn-turnar" onClick={confirmar} disabled={cargando}>
+            {cargando ? <span className="btn-spinner" /> : null}
+            {cargando ? 'Generando…' : 'Descargar'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 /* ── Panel de detalle FUS ── */
 function DetalleFUS({ fus, onTurnar, onBack }) {
+  const navigate = useNavigate()
+  const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   const puedesTurnar   = fus.estatusParticular === 'Registrado' || fus.estatusParticular === 'Turnado'
+  const puedesEditar   = fus.estatusParticular === 'Registrado'
   const tieneActividad = fus.estatusParticular !== 'Registrado'
-  const tieneExterno   = fus.solicitante_externo?.nombre || fus.solicitante_externo?.telefono || fus.solicitante_externo?.correo
+  const tieneExterno   = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
+  const nombreSolicitante = fus.idSolicitanteInterno?.nombre
+
+  const descargarPdf = (conImagenes) => {
+    const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
+    const query = conImagenes ? '?imagenes=1' : ''
+    return descargar(`/api/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`)
+      .finally(() => setMostrarModalPdf(false))
+  }
 
   return (
     <div className="detalle-panel">
@@ -461,16 +555,51 @@ function DetalleFUS({ fus, onTurnar, onBack }) {
             <h2 className="detalle-title">Detalle de la solicitud</h2>
             <span className="detalle-folio">{fus.folio}</span>
           </div>
-          <Badge estatus={fus.estatusParticular} />
+          <div className="detalle-header-acciones">
+            <button
+              className="btn-descargar-fus"
+              onClick={() => setMostrarModalPdf(true)}
+              title="Descargar PDF"
+              aria-label="Descargar PDF"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            {puedesEditar && (
+              <button
+                className="btn-editar-fus"
+                onClick={() => navigate(`/rol1/registrar-fus?editar=${fus.id}`)}
+                title="Editar solicitud"
+                aria-label="Editar solicitud"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            )}
+            <Badge estatus={fus.estatusParticular} />
+          </div>
         </div>
       </div>
+
+      {mostrarModalPdf && (
+        <ModalDescargarPDF
+          onCancelar={() => setMostrarModalPdf(false)}
+          onConfirmar={descargarPdf}
+        />
+      )}
 
       {/* ── Sección: Datos generales ── */}
       <div className="det-section">
         <span className="det-section-legend">Datos generales</span>
         <div className="det-grid-2">
           <Row label="Fecha y hora"        value={fmt(fus.fechaHora)} />
-          <Row label="Solicitante interno" value={fus.idSolicitanteInterno?.nombre || fus.idSolicitanteInterno?.email} />
+          <Row label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
+          <Row label="Solicitante interno" value={nombreSolicitante} />
         </div>
       </div>
 
@@ -478,39 +607,41 @@ function DetalleFUS({ fus, onTurnar, onBack }) {
       <div className="det-section">
         <span className="det-section-legend">Descripción de la solicitud</span>
         <Row label="Descripción" value={fus.descripcion} tall />
-        {fus.contexto && <Row label="Contexto" value={fus.contexto} tall />}
+        {fus.contexto && <Row label="Datos o antecedentes de contexto de la solicitud" value={fus.contexto} tall />}
       </div>
 
-      {/* ── Sección: Solicitante externo ── */}
+      {/* ── Sección: Datos de contacto de solicitante externo ── */}
       {tieneExterno && (
         <div className="det-section">
-          <span className="det-section-legend">Solicitante externo</span>
+          <span className="det-section-legend">Datos de contacto de solicitante externo</span>
           <div className="det-grid-3">
-            {fus.solicitante_externo?.nombre   && <Row label="Nombre"    value={fus.solicitante_externo.nombre} />}
-            {fus.solicitante_externo?.telefono && <Row label="Teléfono"  value={fus.solicitante_externo.telefono} />}
-            {fus.solicitante_externo?.correo   && <Row label="Correo"    value={fus.solicitante_externo.correo} />}
+            {fus.nombreExterno   && <Row label="Nombre"            value={fus.nombreExterno} />}
+            {fus.telefonoExterno && <Row label="Teléfono/Celular"  value={fus.telefonoExterno} />}
+            {fus.correoExterno   && <Row label="Correo"            value={fus.correoExterno} />}
           </div>
         </div>
       )}
 
-      {/* ── Sección: Clasificación ── */}
+      {/* ── Sección: Evidencia ── */}
       <div className="det-section">
-        <span className="det-section-legend">Clasificación</span>
-        <div className="det-grid-2">
-          <Row label="Medio de recepción" value={fus.idMedioRecepcion?.nombreMedio} />
-          <Row label="Prioridad"          value={fus.prioridad} />
-        </div>
+        <span className="det-section-legend">Evidencia</span>
         <EvidenciaList evidencias={fus.evidencias} />
       </div>
 
-      {/* ── Sección: Actividad ── */}
+      {/* ── Sección: Prioridad ── */}
+      <div className="det-section">
+        <span className="det-section-legend">Prioridad</span>
+        <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
+      </div>
+
+      {/* ── Sección: Se turnó ── */}
       {tieneActividad && (
         <div className="det-section">
           <span className="det-section-legend det-section-legend-activity">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            Actividad y respuestas
+            Se turnó
           </span>
           <TimelineActividad fusId={fus.id} />
         </div>
@@ -560,6 +691,7 @@ export default function ConsultarFUS() {
   const [turnarFUS,    setTurnarFUS]    = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, turnadas: 0, atendidas: 0, pendientes: 0 })
+  const [statsCargando, setStatsCargando] = useState(true)
   const [highlightId,  setHighlightId]  = useState(null)
   const [pagina,       setPagina]       = useState(1)
   const [totalItems,   setTotalItems]   = useState(0)
@@ -575,7 +707,7 @@ export default function ConsultarFUS() {
         atendidas:  todos.filter(f => f.estatusParticular === 'Atendido').length,
         concluidas: todos.filter(f => f.estatusParticular === 'Concluido').length,
       })
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setStatsCargando(false))
   }
 
   const cargar = (pag = 1, append = false) => {
@@ -628,11 +760,11 @@ export default function ConsultarFUS() {
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
   /* ── Panel izquierdo: cerrado por defecto (modo dashboard) ── */
-  const [panelAbierto, setPanelAbierto] = useState(false)
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista')
 
   useEffect(() => {
     const handleInicio = () => { setPanelAbierto(false); setSeleccionado(null) }
-    const handleConsultar = () => { setPanelAbierto(true) }
+    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
     window.addEventListener('scs:inicio', handleInicio)
     window.addEventListener('scs:consultar', handleConsultar)
     return () => {
@@ -656,7 +788,10 @@ export default function ConsultarFUS() {
               </div>
             )}
             <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className={panelAbierto ? 'panel-toggle-icon-open' : 'panel-toggle-icon-closed'}
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              >
                 {panelAbierto
                   ? <polyline points="15 18 9 12 15 6" />
                   : <polyline points="9 18 15 12 9 6" />}
@@ -718,9 +853,10 @@ export default function ConsultarFUS() {
 
                 />
               ))}
-              {!cargando && lista.length < totalItems && (
-                <button className="btn-cargar-mas" onClick={cargarMas}>
-                  Cargar más ({lista.length} de {totalItems})
+              {lista.length < totalItems && (
+                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando}>
+                  {cargando && <span className="btn-spinner" />}
+                  {cargando ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
                 </button>
               )}
             </div>
@@ -755,7 +891,7 @@ export default function ConsultarFUS() {
                   <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
                 </div>
               )
-              : <StatsPanel stats={stats} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
+              : <StatsPanel stats={stats} cargando={statsCargando} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
           }
         </div>
       </div>

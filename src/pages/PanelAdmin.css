@@ -5,7 +5,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: #e8f4f1;
+  background-color: #ffffff;
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -88,9 +88,9 @@
   flex-direction: column;
   align-items: center;
   padding: 14px 24px 14px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(195, 212, 207, 0.80);
   border-top: 3px solid rgba(35, 91, 78, 0.45);
   border-radius: 16px;
@@ -100,6 +100,7 @@
     5px  5px  14px rgba(35, 91, 78, 0.13),
    -3px -3px  10px rgba(190, 208, 203, 0.45),
     inset 0 1px 0   rgba(255, 255, 255, 0.90);
+  transform: translateZ(0);
 }
 .adm-stat-num {
   font-size: 1.85rem;
@@ -107,7 +108,6 @@
   color: #0a2018;
   line-height: 1;
   letter-spacing: -0.02em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.80);
 }
 .adm-stat-lbl {
   font-size: .60rem;
@@ -115,8 +115,9 @@
   color: #234d3a;
   text-transform: uppercase;
   letter-spacing: .10em;
-  white-space: nowrap;
-  text-shadow: 0 1px 0 rgba(12, 36, 19, 0.7);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
 }
 .adm-stat-green .adm-stat-num { color: #15803d; }
 .adm-stat-red   .adm-stat-num { color: #b91c1c; }
@@ -222,7 +223,7 @@
   font-weight: 700;
   text-align: left;
   padding: 12px 14px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 2px solid rgba(195, 212, 207, 0.22);
   white-space: nowrap;
   font-size: .73rem;
   letter-spacing: .06em;
@@ -252,8 +253,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.adm-unidad {
+  font-size: .78rem;
+  color: rgba(10, 30, 20, 0.65);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Header de tarjeta — solo se muestran en mobile (ver @media más abajo) */
+.adm-card-avatar  { display: none; }
+.adm-card-nombre  { display: none; }
+.adm-card-headtext { display: contents; }
 
 .adm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
   text-align: center;
   padding: 3rem;
   color: rgba(10, 30, 20, 0.32);
@@ -323,20 +341,23 @@
   flex-wrap: wrap;
 }
 
-/* Botón Editar */
-.adm-btn-edit {
-  padding: 4px 12px;
+/* Botón Editar — icono */
+.adm-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid rgba(35, 91, 78, 0.30);
   background: rgba(35, 91, 78, 0.08);
   color: #1F5647;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.74rem;
   cursor: pointer;
+  flex-shrink: 0;
   transition: background 150ms, box-shadow 150ms;
 }
-.adm-btn-edit:hover {
+.adm-btn-icon:hover {
   background: rgba(35, 91, 78, 0.15);
   box-shadow: 0 2px 6px rgba(35, 91, 78, 0.15);
 }
@@ -361,32 +382,44 @@
 .adm-estado-inactivo { background: rgba(185,28,28,0.10);  color: #b91c1c; border: 1px solid rgba(185,28,28,0.25); }
 
 /* ══════════════════════════════════════
-   BOTÓN TOGGLE (activar/desactivar)
+   TOGGLE SWITCH (activar/desactivar)
 ══════════════════════════════════════ */
-.adm-toggle {
-  padding: 5px 13px;
-  border-radius: 8px;
-  font-size: .75rem;
-  font-weight: 600;
+.adm-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
   cursor: pointer;
-  border: 1px solid;
-  transition: background 150ms, box-shadow 150ms;
-  box-shadow:
-    2px 2px 6px rgba(0,0,0,0.06),
-   -1px -1px 4px rgba(190,208,203,0.50);
 }
-.adm-toggle-des {
-  background: rgba(185, 28, 28, 0.10);
-  border-color: rgba(185, 28, 28, 0.28);
-  color: #b91c1c;
+.adm-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
-.adm-toggle-des:hover { background: rgba(185, 28, 28, 0.18); }
-.adm-toggle-act {
-  background: rgba(22, 163, 74, 0.10);
-  border-color: rgba(22, 163, 74, 0.28);
-  color: #15803d;
+.adm-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(185, 28, 28, 0.45);
+  border-radius: 34px;
+  transition: background-color 200ms ease;
 }
-.adm-toggle-act:hover { background: rgba(22, 163, 74, 0.18); }
+.adm-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 200ms ease;
+}
+.adm-toggle-input:checked + .adm-toggle-slider { background-color: #15803d; }
+.adm-toggle-input:checked + .adm-toggle-slider::before { transform: translateX(16px); }
+.adm-toggle-input:focus-visible + .adm-toggle-slider { box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.30); }
 
 /* ══════════════════════════════════════
    MODAL — glass oscuro
@@ -535,6 +568,144 @@
   .adm-stat    { padding: 11px 16px 10px; min-width: 66px; }
   .adm-stat-num { font-size: 1.45rem; }
   .adm-modal   { padding: 1.25rem; border-radius: 18px; }
+
+  /* ── Tabla → tarjetas (solo mobile) ── */
+  thead { display: none; }
+  .adm-table, .adm-table tbody, .adm-table tr, .adm-table td { display: block; width: 100%; }
+  .adm-table { border-spacing: 0; }
+
+  .adm-table tbody tr {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(195, 212, 207, 0.55);
+    margin-bottom: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(35, 91, 78, 0.12);
+  }
+  .adm-row-inactivo { opacity: 0.72; }
+
+  /* Header de la card: avatar + nombre + email */
+  .adm-table tbody tr td:first-child {
+    position: relative;
+    background: linear-gradient(135deg, #1F5647, #235b4e);
+    color: #ffffff;
+    padding: 14px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    border-bottom: none;
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+  }
+  .adm-table tbody tr td:first-child::before { content: none; }
+  .adm-card-avatar {
+    display: flex;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    align-items: center;
+    justify-content: center;
+    font-size: .88rem;
+    font-weight: 800;
+    color: #ffffff;
+  }
+  .adm-card-headtext {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .adm-card-nombre {
+    display: block;
+    font-size: .86rem;
+    font-weight: 800;
+    color: #ffffff;
+    word-break: break-word;
+  }
+  .adm-card-email {
+    display: block;
+    font-size: .72rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+    word-break: break-all;
+  }
+
+  /* La fila "Nombre" ya se muestra en el header — se oculta para no repetir */
+  .adm-table tbody tr td:nth-child(2) { display: none; }
+
+  /* Acciones — banda inferior del header, mismo verde, separada por una línea sutil */
+  .adm-table tbody tr td[data-label="Acciones:"] {
+    background: rgba(31, 86, 71, 0.94);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .adm-table tbody tr td[data-label="Acciones:"]::before { display: none; }
+
+  /* Filas internas */
+  .adm-table tbody tr td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(35, 91, 78, 0.07);
+    font-size: .84rem;
+  }
+  .adm-table tbody tr td:nth-of-type(2n) { background: rgba(35, 91, 78, 0.03); }
+  .adm-table tbody tr td:last-child { border-bottom: none; }
+  .adm-table tbody tr td.adm-loading {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Que ningún valor se corte — se permite el salto de línea */
+  .adm-table tbody tr td.adm-unidad {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .adm-table tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: .66rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: rgba(10, 30, 20, 0.48);
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+
+  /* Email y Acciones ya van en el header de la card */
+  .adm-table tbody tr td:first-child,
+  .adm-table tbody tr td[data-label="Acciones:"] {
+    order: -1;
+  }
+
+  /* Botón editar — contraste sobre la banda verde oscura de Acciones */
+  .adm-table tbody tr td[data-label="Acciones:"] .adm-btn-icon {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+  }
+  .adm-table tbody tr td[data-label="Acciones:"] .adm-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
 }
 
 @media (max-width: 480px) {
@@ -545,25 +716,12 @@
   .adm-stats { flex-wrap: wrap; }
   .adm-stat { flex: 1; min-width: 72px; padding: 9px 10px 8px; }
   .adm-stat-num { font-size: 1.25rem; }
-  .adm-table { font-size: .74rem; }
-  .adm-table thead th { padding: 8px 8px; font-size: .64rem; }
-  .adm-table td { padding: 7px 8px; }
-  /* Ocultar columna Email en móvil */
-  .adm-table th:nth-child(2),
-  .adm-table td:nth-child(2) { display: none; }
-  .adm-email { display: none; }
   .adm-modal { padding: 1rem; max-width: calc(100% - 1.5rem); }
   .adm-modal-title { font-size: .95rem; margin-bottom: 1rem; }
   .adm-modal-actions { flex-direction: column-reverse; }
-  .adm-toggle { padding: 6px 10px; font-size: .72rem; }
 }
 
 @media (max-width: 360px) {
   .adm-wrap { padding: .5rem; }
   .adm-stat-lbl { font-size: .62rem; }
-  .adm-table thead th { padding: 7px 6px; font-size: .60rem; }
-  .adm-table td { padding: 6px 6px; }
-  /* Ocultar también Cuenta en 360px */
-  .adm-table th:nth-child(4),
-  .adm-table td:nth-child(4) { display: none; }
 }

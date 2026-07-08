@@ -5,27 +5,35 @@ import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
 import './PanelAdmin.css'
 
-const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular / Enlace' }
+const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular/Enlace Estratégico' }
 const ROL_COLORS = { ROL1: '#1F5647',    ROL2: '#691C32'          }
 
 export default function PanelAdmin() {
   const { user: yo } = useAuth()
 
   const [correos,    setCorreos]    = useState([])
+  const [unidades,   setUnidades]   = useState([])
   const [cargando,   setCargando]   = useState(true)
   const [busqueda,   setBusqueda]   = useState('')
   const [filtroRol,  setFiltroRol]  = useState('')
   const [modal,      setModal]      = useState(false)   // 'agregar' | 'editar' | false
-  const [form,       setForm]       = useState({ email: '', nombre: '', rol: 'ROL1' })
+  const [form,       setForm]       = useState({ email: '', nombre: '', rol: 'ROL1', unidadAdministrativa: '' })
   const [editando,   setEditando]   = useState(null)
-  const [formEdit,   setFormEdit]   = useState({ nombre: '', email: '', rol: 'ROL1' })
+  const [formEdit,   setFormEdit]   = useState({ nombre: '', email: '', rol: 'ROL1', unidadAdministrativa: '' })
   const [guardando,  setGuardando]  = useState(false)
   const [error,      setError]      = useState('')
   const [errorCarga, setErrorCarga] = useState('')
   const [exito,      setExito]      = useState('')
   const [reload,     setReload]     = useState(0)
+  const [toggleandoId, setToggleandoId] = useState(null)
 
   const cargar = () => setReload(n => n + 1)
+
+  useEffect(() => {
+    api.get('/catalogos/unidades-administrativas/')
+      .then(r => setUnidades(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     setCargando(true)
@@ -39,9 +47,12 @@ export default function PanelAdmin() {
       .finally(() => setCargando(false))
   }, [busqueda, filtroRol, reload])
 
+  const direccionesGenerales = unidades.filter(u => u.esUnidadDeNegocio)
+  const aduanas              = unidades.filter(u => u.esUnidadAdministrativa)
+
   const abrirEditar = (c) => {
     setEditando(c)
-    setFormEdit({ nombre: c.nombre, email: c.email, rol: c.rol })
+    setFormEdit({ nombre: c.nombre, email: c.email, rol: c.rol, unidadAdministrativa: c.unidadAdministrativa || '' })
     setError('')
     setModal('editar')
   }
@@ -68,8 +79,16 @@ export default function PanelAdmin() {
       setErrorCarga('No puedes desactivar tu propia cuenta.')
       return
     }
-    await api.patch(`/auth/correos-autorizados/${c.id}/`, { activo: c.activo ? 0 : 1 })
-    cargar()
+    setErrorCarga('')
+    setToggleandoId(c.id)
+    try {
+      await api.patch(`/auth/correos-autorizados/${c.id}/`, { activo: c.activo ? 0 : 1 })
+      cargar()
+    } catch (err) {
+      setErrorCarga(err.response?.data?.detail || 'No se pudo actualizar el estado de la cuenta.')
+    } finally {
+      setToggleandoId(null)
+    }
   }
 
   const agregarCorreo = async (e) => {
@@ -79,7 +98,7 @@ export default function PanelAdmin() {
       await api.post('/auth/correos-autorizados/', form)
       setExito('Correo agregado correctamente.')
       setModal(false)
-      setForm({ email: '', nombre: '', rol: 'ROL1' })
+      setForm({ email: '', nombre: '', rol: 'ROL1', unidadAdministrativa: '' })
       cargar()
       setTimeout(() => setExito(''), 3000)
     } catch (err) {
@@ -150,7 +169,7 @@ export default function PanelAdmin() {
           <select className="adm-select" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
             <option value="">Todos los roles</option>
             <option value="ROL1">Particular</option>
-            <option value="ROL2">Titular / Enlace</option>
+            <option value="ROL2">Titular/Enlace Estratégico</option>
           </select>
         </div>
 
@@ -162,6 +181,7 @@ export default function PanelAdmin() {
                 <th>Email</th>
                 <th>Nombre</th>
                 <th>Rol</th>
+                <th>Unidad administrativa</th>
                 <th>Cuenta</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -169,41 +189,59 @@ export default function PanelAdmin() {
             </thead>
             <tbody>
               {cargando && (
-                <tr><td colSpan={6} className="adm-loading"><Spinner overlay={false} /></td></tr>
+                <tr><td colSpan={7} className="adm-loading"><Spinner overlay={false} /></td></tr>
               )}
               {!cargando && correos.length === 0 && (
-                <tr><td colSpan={6} className="adm-loading">Sin resultados.</td></tr>
+                <tr><td colSpan={7} className="adm-loading">Sin resultados.</td></tr>
               )}
               {correos.map(c => (
                 <tr key={c.id} className={!c.activo ? 'adm-row-inactivo' : ''}>
-                  <td className="adm-email">{c.email}</td>
-                  <td>{c.nombre}</td>
-                  <td>
+                  <td className="adm-email" data-label="Email:">
+                    <span className="adm-card-avatar">{(c.nombre || c.email || '?').charAt(0).toUpperCase()}</span>
+                    <span className="adm-card-headtext">
+                      <span className="adm-card-nombre">{c.nombre}</span>
+                      <span className="adm-card-email">{c.email}</span>
+                    </span>
+                  </td>
+                  <td data-label="Nombre:">{c.nombre}</td>
+                  <td data-label="Rol:">
                     <span className={`adm-rol-badge adm-rol-badge-${c.rol?.toLowerCase()}`}>
                       {ROL_LABELS[c.rol] || c.rol}
                     </span>
                   </td>
-                  <td>
+                  <td className="adm-unidad" data-label="Unidad:">{c.unidadAdministrativaNombre || '—'}</td>
+                  <td data-label="Cuenta:">
                     <span className={`adm-cuenta ${c.tiene_cuenta ? 'adm-cuenta-si' : 'adm-cuenta-no'}`}>
                       {c.tiene_cuenta ? 'Registrado' : 'Sin cuenta'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Estado:">
                     <span className={`adm-estado ${c.activo ? 'adm-estado-activo' : 'adm-estado-inactivo'}`}>
                       {c.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Acciones:">
                     <div className="adm-acciones-cell">
-                      <button className="adm-btn-edit" onClick={() => abrirEditar(c)}>
-                        Editar
+                      <button className="adm-btn-icon" onClick={() => abrirEditar(c)} title="Editar" aria-label="Editar">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
                       </button>
-                      <button
-                        className={`adm-toggle ${c.activo ? 'adm-toggle-des' : 'adm-toggle-act'}`}
-                        onClick={() => toggleActivo(c)}
+                      <label
+                        className="adm-toggle-switch"
+                        title={c.activo ? 'Desactivar' : 'Activar'}
                       >
-                        {c.activo ? 'Desactivar' : 'Activar'}
-                      </button>
+                        <input
+                          type="checkbox"
+                          className="adm-toggle-input"
+                          checked={!!c.activo}
+                          onChange={() => toggleActivo(c)}
+                          disabled={toggleandoId === c.id}
+                          aria-label={c.activo ? 'Desactivar cuenta' : 'Activar cuenta'}
+                        />
+                        <span className="adm-toggle-slider" />
+                      </label>
                     </div>
                   </td>
                 </tr>
@@ -233,13 +271,34 @@ export default function PanelAdmin() {
                 <label>Rol
                   <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}>
                     <option value="ROL1">Particular del Titular</option>
-                    <option value="ROL2">Titular / Enlace</option>
+                    <option value="ROL2">Titular/Enlace Estratégico</option>
+                  </select>
+                </label>
+                <label>Unidad administrativa
+                  <select value={form.unidadAdministrativa}
+                    onChange={e => setForm(f => ({ ...f, unidadAdministrativa: e.target.value }))}>
+                    <option value="">Sin asignar</option>
+                    <optgroup label="Direcciones generales">
+                      {direccionesGenerales.map(u => (
+                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                          {u.clave} — {u.unidadAdministrativa}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Aduanas">
+                      {aduanas.map(u => (
+                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                          {u.clave} — {u.unidadAdministrativa}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </label>
                 {error && <p className="adm-modal-error">{error}</p>}
                 <div className="adm-modal-actions">
-                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)}>Cancelar</button>
+                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
                   <button type="submit" className="adm-btn-save" disabled={guardando}>
+                    {guardando && <span className="btn-spinner" />}
                     {guardando ? 'Guardando…' : 'Agregar'}
                   </button>
                 </div>
@@ -270,13 +329,34 @@ export default function PanelAdmin() {
                   <select value={formEdit.rol}
                     onChange={e => setFormEdit(f => ({ ...f, rol: e.target.value }))}>
                     <option value="ROL1">Particular del Titular</option>
-                    <option value="ROL2">Titular / Enlace</option>
+                    <option value="ROL2">Titular/Enlace Estratégico</option>
+                  </select>
+                </label>
+                <label>Unidad administrativa
+                  <select value={formEdit.unidadAdministrativa}
+                    onChange={e => setFormEdit(f => ({ ...f, unidadAdministrativa: e.target.value }))}>
+                    <option value="">Sin asignar</option>
+                    <optgroup label="Direcciones generales">
+                      {direccionesGenerales.map(u => (
+                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                          {u.clave} — {u.unidadAdministrativa}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Aduanas">
+                      {aduanas.map(u => (
+                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                          {u.clave} — {u.unidadAdministrativa}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </label>
                 {error && <p className="adm-modal-error">{error}</p>}
                 <div className="adm-modal-actions">
-                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)}>Cancelar</button>
+                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
                   <button type="submit" className="adm-btn-save" disabled={guardando}>
+                    {guardando && <span className="btn-spinner" />}
                     {guardando ? 'Guardando…' : 'Guardar cambios'}
                   </button>
                 </div>

@@ -1,7 +1,7 @@
 const VARIANTS = {
   // ── FUS (estatusParticular) — dark background ────────────────────────────
   Registrado:     { tint: 'rgba(200,205,215,', text: '#dde1ea', glow: 'rgba(200,205,215,' },
-  Turnado:        { tint: 'rgba(96,165,250,',  text: '#bfdbfe', glow: 'rgba(96,165,250,' },
+  Turnado:        { tint: 'rgba(159,34,65,',   text: '#fecdd3', glow: 'rgba(159,34,65,' },
   Atendido:       { tint: 'rgba(251,191,36,',  text: '#fde68a', glow: 'rgba(251,191,36,' },
   Concluido:      { tint: 'rgba(52,211,153,',  text: '#a7f3d0', glow: 'rgba(52,211,153,' },
   // ── Turnado / pivot (estatusTitular) ────────────────────────────────────

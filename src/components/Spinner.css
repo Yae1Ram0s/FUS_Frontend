@@ -1,35 +1,48 @@
-/* ── Contenedor de las barras — sin fondo, solo el loader ── */
-.spinner {
-  position: relative;
-  width: 120px;
-  height: 60px;
+/* ── Bolitas — loader inline, colores institucionales ── */
+.spinner-balls {
+  animation: spinner-balls-rotate 1s infinite;
+  height: 33px;
+  width: 33px;
 }
 
-.spinner span {
-  position: absolute;
-  top: 50%;
-  left: var(--left);
-  width: 35px;
-  height: 7px;
-  background: #BC955C;
-  border-radius: 3px;
-  animation: dominos 1s ease infinite;
-  box-shadow: 1px 1px 4px rgba(188, 149, 92, 0.30);
+.spinner-balls::before,
+.spinner-balls::after {
+  border-radius: 50%;
+  content: '';
+  display: block;
+  height: 13px;
+  width: 13px;
 }
 
-.spinner span:nth-child(1) { --left: 80px; animation-delay: 0.125s; }
-.spinner span:nth-child(2) { --left: 70px; animation-delay: 0.3s;   }
-.spinner span:nth-child(3) { left: 60px;   animation-delay: 0.425s; }
-.spinner span:nth-child(4) { left: 50px;   animation-delay: 0.54s;  }
-.spinner span:nth-child(5) { left: 40px;   animation-delay: 0.665s; }
-.spinner span:nth-child(6) { left: 30px;   animation-delay: 0.79s;  }
-.spinner span:nth-child(7) { left: 20px;   animation-delay: 0.915s; }
-.spinner span:nth-child(8) { left: 10px; }
+.spinner-balls::before {
+  animation: spinner-ball1 1s infinite;
+  background-color: #BC955C;
+  box-shadow: 20px 0 0 #1F5647;
+  margin-bottom: 7px;
+}
 
-@keyframes dominos {
-  50%  { opacity: 0.7; }
-  75%  { transform: rotate(90deg); }
-  80%  { opacity: 1; }
+.spinner-balls::after {
+  animation: spinner-ball2 1s infinite;
+  background-color: #9F2241;
+  box-shadow: 20px 0 0 #235b4e;
+}
+
+@keyframes spinner-balls-rotate {
+  0%   { transform: rotate(0deg)   scale(0.8); }
+  50%  { transform: rotate(360deg) scale(1.2); }
+  100% { transform: rotate(720deg) scale(0.8); }
+}
+
+@keyframes spinner-ball1 {
+  0%   { box-shadow: 20px 0 0 #1F5647; }
+  50%  { box-shadow: 0 0 0 #1F5647; margin-bottom: 0; transform: translate(10px, 10px); }
+  100% { box-shadow: 20px 0 0 #1F5647; margin-bottom: 7px; }
+}
+
+@keyframes spinner-ball2 {
+  0%   { box-shadow: 20px 0 0 #235b4e; }
+  50%  { box-shadow: 0 0 0 #235b4e; margin-top: -13px; transform: translate(10px, 10px); }
+  100% { box-shadow: 20px 0 0 #235b4e; margin-top: 0; }
 }
 
 /* ── Overlay — cubre toda la página, sin color de fondo, solo difumina ── */
@@ -63,3 +76,69 @@
   letter-spacing: 0.10em;
   text-transform: uppercase;
 }
+
+/* ── Anillos institucionales — loader de pantalla completa (overlay) ── */
+.spinner-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.spinner-ring-svg {
+  width: 100%;
+  height: 100%;
+  animation: spinner-rotate-svg 2s linear infinite;
+  transform-origin: center center;
+}
+
+.spinner-ring-circle {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.spinner-ring-circle-1 {
+  stroke-dasharray: 251.3274;
+  stroke-dashoffset: 251.3274;
+  animation: spinner-dash-circle1 1.5s cubic-bezier(0.66, 0, 0.34, 1) infinite alternate;
+}
+
+.spinner-ring-circle-2 {
+  stroke-dasharray: 188.4956;
+  stroke-dashoffset: 0;
+  animation: spinner-dash-circle2 1.5s cubic-bezier(0.66, 0, 0.34, 1) infinite alternate;
+}
+
+@keyframes spinner-rotate-svg { 100% { transform: rotate(360deg); } }
+@keyframes spinner-dash-circle1 { 0% { stroke-dashoffset: 251.3274; } 100% { stroke-dashoffset: 0; } }
+@keyframes spinner-dash-circle2 { 0% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 188.4956; } }
+
+.spinner-ring-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #ffffff;
+  padding: 4px;
+  box-shadow: 0 2px 10px rgba(31, 86, 71, 0.30);
+}
+
+/* ── Micro-spinner de botón — reutilizable en toda la app (evita duplicar
+   por página). El arco activo usa currentColor (se adapta al texto del
+   botón); el aro de fondo usa un gris neutro visible sobre fondos claros
+   y oscuros por igual. ── */
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spinner-rotate 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes btn-spinner-rotate { to { transform: rotate(360deg); } }

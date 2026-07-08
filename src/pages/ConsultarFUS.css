@@ -39,24 +39,11 @@
 .resize-handle:active { background: rgba(35,91,78,0.15); }
 
 .resize-dots {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  pointer-events: none;
-}
-.resize-dots::before,
-.resize-dots::after {
-  content: '';
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #bea882;
-}
-.resize-dots {
   width: 3px;
   height: 24px;
   border-radius: 2px;
-  background: #c8b48e;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
 }
 
 /* ── Panel izquierdo — glassmorphism verde translúcido ── */
@@ -71,8 +58,8 @@
   background-repeat: no-repeat;
   background-position: center;
   background-blend-mode: multiply;
-  backdrop-filter: blur(100px);
-  -webkit-backdrop-filter: blur(100px);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
   border-right: 1px solid rgba(195, 212, 207, 0.20);
   box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25);
   overflow: hidden;
@@ -427,6 +414,12 @@
 .std-grid-2x2 {
   grid-template-columns: repeat(2, 1fr);
 }
+.std-stats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
 
 .stat-card {
   background: rgba(240, 251, 248, 0.96);
@@ -629,6 +622,33 @@
   gap: 12px;
 }
 
+.detalle-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-editar-fus,
+.btn-descargar-fus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 150ms ease-in-out;
+}
+.btn-editar-fus:hover,
+.btn-descargar-fus:hover  { background: rgba(255, 255, 255, 0.20); }
+.btn-editar-fus:active,
+.btn-descargar-fus:active { background: rgba(255, 255, 255, 0.06); }
+
 .detalle-title {
   font-size: 1rem;
   font-weight: 700;
@@ -673,8 +693,8 @@
 }
 
 .det-section-legend-activity {
-  background: rgba(29, 78, 216, 0.80);
-  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.20);
+  background: rgba(159, 34, 65, 0.80);
+  box-shadow: 0 2px 6px rgba(159, 34, 65, 0.20);
 }
 
 /* Grids de filas */
@@ -688,6 +708,42 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+}
+
+/* Prioridad — pills de solo lectura */
+.det-prioridad-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.det-prioridad-pill {
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--c) 30%, transparent);
+  color: var(--c);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.40);
+  opacity: 0.45;
+}
+
+.det-prioridad-pill-selected {
+  opacity: 1;
+  background: color-mix(in srgb, var(--c) 14%, white);
+  border-color: var(--c);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+.det-criterios-lista {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: rgba(10, 30, 20, 0.75);
+  line-height: 1.4;
 }
 
 /* Filas */
@@ -815,6 +871,15 @@
   color: rgba(10, 30, 20, 0.70);
 }
 
+.ev-comentario {
+  font-size: 0.64rem;
+  text-align: center;
+  font-style: italic;
+  line-height: 1.3;
+  max-width: 84px;
+  color: rgba(10, 30, 20, 0.50);
+}
+
 .act-msg {
   font-size: 0.82rem;
   color: rgba(10, 30, 20, 0.50);
@@ -855,22 +920,8 @@
   flex-shrink: 0;
 }
 
-.act-turnado-info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.act-turnado-dest {
-  font-size: 0.83rem;
-  font-weight: 700;
-  color: #0d2218;
-}
-
-.act-turnado-fecha {
-  font-size: 0.75rem;
-  color: rgba(10, 30, 20, 0.50);
+.act-turnado-datos {
+  margin-bottom: 8px;
 }
 
 .act-estatus-pill {
@@ -881,17 +932,6 @@
   background: color-mix(in srgb, var(--c) 12%, transparent);
   color: var(--c);
   border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
-}
-
-.act-solicitud-txt {
-  font-size: 0.80rem;
-  color: rgba(10, 30, 20, 0.65);
-  font-style: normal;
-  margin: 0 0 8px;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.30);
-  border-radius: 8px;
-  border-left: 3px solid rgba(35, 91, 78, 0.30);
 }
 
 /* Secciones internas */
@@ -911,9 +951,9 @@
 }
 
 .act-title-respuesta {
-  background: rgba(29, 78, 216, 0.10);
-  color: #1d4ed8;
-  border: 1px solid rgba(29, 78, 216, 0.22);
+  background: rgba(159, 34, 65, 0.10);
+  color: #9F2241;
+  border: 1px solid rgba(159, 34, 65, 0.22);
 }
 
 .act-title-accion {
@@ -1047,6 +1087,9 @@
 .btn-turnar:hover:not(:disabled)  { background: rgba(28, 70, 60, 0.96); box-shadow: 0 4px 16px rgba(35,91,78,0.40); }
 .btn-turnar:active:not(:disabled) { background: rgba(22, 65, 55, 1); }
 .btn-turnar:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-turnar .btn-spinner { border-color: rgba(255,255,255,0.30); border-top-color: #ffffff; margin-right: 2px; }
+
+.modal-close:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-secondary {
   background: rgba(255, 255, 255, 0.45);
@@ -1063,6 +1106,7 @@
 
 .btn-secondary:hover  { background: rgba(255,255,255,0.88); border-color: rgba(35,91,78,0.50); }
 .btn-secondary:active { background: rgba(255,255,255,0.40); }
+.btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Modal — glass ── */
 .modal-overlay {
@@ -1074,7 +1118,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+  z-index: 200;
   padding: 1rem;
 }
 
@@ -1223,6 +1267,40 @@
   background: #ffffff;
   color: #0d2218;
 }
+
+/* ── Modal: descargar PDF (con/sin imágenes) ── */
+.modal-card-pdf { width: 460px; }
+
+.modal-pdf-sub {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 6px;
+}
+
+.modal-pdf-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  background: rgba(255, 255, 255, 0.52);
+  color: #0d2218;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+}
+
+.modal-pdf-opcion:hover { background: rgba(255, 255, 255, 0.80); border-color: rgba(35, 91, 78, 0.40); }
+
+.modal-pdf-opcion-activa {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #235b4e;
+  box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.12);
+}
+
+.modal-pdf-opcion input[type="radio"] { accent-color: #235b4e; width: 16px; height: 16px; flex-shrink: 0; }
 
 .btn-add-dest {
   background: rgba(255, 255, 255, 0.52);
@@ -1376,6 +1454,46 @@
     transition: max-height 220ms 100ms cubic-bezier(0.4,0,0.2,1) !important;
   }
 
+  /* Flecha del toggle — en móvil el ícono se reorienta con un rebote (spring
+     overshoot) que se reproduce una sola vez por cambio de estado y luego se
+     mantiene fijo (animation-fill-mode: both, sin "infinite"). Cerrado queda
+     apuntando hacia arriba; abierto, hacia abajo (180° respecto al cerrado,
+     ya que el polyline base también se invierte entre ambos estados). El
+     rebote es puramente rotacional — sin translate — para que el ícono quede
+     perfectamente centrado, sin ningún desplazamiento residual. */
+  .panel-toggle-icon-closed,
+  .panel-toggle-icon-open {
+    transform-origin: center;
+  }
+  .panel-toggle-icon-closed {
+    animation: cfus-arrow-settle-closed 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .panel-toggle-icon-open {
+    animation: cfus-arrow-settle-open 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes cfus-arrow-settle-closed {
+    0%   { transform: rotate(0deg); }
+    60%  { transform: rotate(-105deg); }
+    100% { transform: rotate(-90deg); }
+  }
+
+  @keyframes cfus-arrow-settle-open {
+    0%   { transform: rotate(0deg); }
+    60%  { transform: rotate(-105deg); }
+    100% { transform: rotate(-90deg); }
+  }
+
+  /* Lista de solicitudes FUS — entrada con desvanecido hacia abajo al abrir el panel */
+  .cfus-left:not(.panel-cerrado) .panel-content {
+    animation: cfus-fade-down 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes cfus-fade-down {
+    from { opacity: 0; transform: translateY(-14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   .cfus-right {
     flex: 1;
     width: 100%;
@@ -1406,12 +1524,12 @@
 
   .modal-card {
     width: 100%;
-    max-height: 95vh;
-    border-radius: 20px 20px 0 0;
-    align-self: flex-end;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 20px;
   }
 
-  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-overlay { align-items: center; padding: 0.75rem; }
   .modal-row-inline { flex-wrap: wrap; }
   .modal-row-inline select { flex: 1; min-width: 0; }
 
@@ -1479,8 +1597,6 @@
   .act-tl-dot   { width: 9px; height: 9px; left: -5px; }
   .act-turnado  { margin-bottom: 14px; }
   .act-turnado-header { gap: 8px; }
-  .act-turnado-dest { font-size: .82rem; }
-  .act-turnado-fecha { font-size: .70rem; }
   .act-estatus-pill { font-size: .68rem; padding: 2px 8px; }
 
   /* Botón acción en detalle */
@@ -1505,7 +1621,6 @@
 
 @media (max-width: 360px) {
   .ev-item-name { max-width: 110px; font-size: .70rem; }
-  .act-turnado-dest { font-size: .76rem; }
   .dest-table th,
   .dest-table td  { padding: 5px 6px; font-size: .68rem; }
 }

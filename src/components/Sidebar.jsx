@@ -81,11 +81,6 @@ const NAV_ROL2 = [
   { path: '/rol2/bitacora', label: 'Búsqueda Avanzada', icon: ICON_BITACORA },
 ]
 
-const ROLE_LABELS = {
-  ROL1: 'Particular del Titular',
-  ROL2: 'Titular / Enlace Estratégico',
-}
-
 export default function Sidebar({ isOpen, onClose, onToggle }) {
   const { user } = useAuth()
   const navigate  = useNavigate()
@@ -140,7 +135,7 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
         <div className="sidebar-avatar">{initials}</div>
         <div className="sidebar-user-info">
           <span className="sidebar-user-name">{user?.nombre || user?.email}</span>
-          <span className="sidebar-user-role">{ROLE_LABELS[user?.rol] || user?.rol}</span>
+          <span className="sidebar-user-role">{user?.unidadAdministrativa || 'Sin unidad asignada'}</span>
         </div>
       </div>
 

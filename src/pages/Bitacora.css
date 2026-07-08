@@ -188,7 +188,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: #e8f4f1;
+  background-color: #ffffff;
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -254,6 +254,9 @@
 }
 
 .bita-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: .78rem;
   font-weight: 600;
   color: rgba(10, 30, 20, 0.55);
@@ -262,6 +265,9 @@
   border-radius: 20px;
   padding: 4px 13px;
 }
+.bita-total-spinner { width: 10px; height: 10px; color: #235b4e; }
+
+.bita-table-refrescando .bita-table tbody { opacity: 0.5; pointer-events: none; transition: opacity 150ms ease; }
 
 /* ══════════════════════════════════════
    BOTONES DE EXPORTACIÓN
@@ -290,11 +296,14 @@
 }
 .bita-export-excel { background: rgba(22,163,74,0.10);  color: #15803d; border-color: rgba(22,163,74,0.28); }
 .bita-export-pdf   { background: rgba(220,38,38,0.09);  color: #b91c1c; border-color: rgba(220,38,38,0.25); }
+.bita-export-btn:disabled { opacity: .65; cursor: not-allowed; }
 
 /* ══════════════════════════════════════
    FILTROS — neomorphism suave + glass
 ══════════════════════════════════════ */
 .bita-filtros {
+  position: relative;
+  z-index: 15;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -341,6 +350,17 @@
 .bita-fechas { display: flex; align-items: center; gap: 6px; }
 .bita-sep { color: rgba(10, 30, 20, 0.35); font-size: .82rem; font-weight: 600; }
 
+.bita-fecha-grupo { display: flex; align-items: center; gap: 7px; }
+.bita-fecha-lbl {
+  font-size: .74rem;
+  font-weight: 700;
+  color: rgba(10, 30, 20, 0.50);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .bita-limpiar {
   background: rgba(255, 255, 255, 0.32);
   border: 1px solid rgba(180, 83, 9, 0.30);
@@ -359,6 +379,11 @@
   background: rgba(180, 83, 9, 0.07);
   box-shadow: 4px 4px 12px rgba(180, 83, 9, 0.12), -2px -2px 8px rgba(190, 208, 203, 0.65);
 }
+
+/* ── Toggle de filtros — solo móvil ── */
+.bita-filtros-toggle { display: none; }
+.bita-mobile-badge   { display: none; }
+.cols-toggle-bar     { display: none; }
 
 /* ══════════════════════════════════════
    TABLA — glassmorphism traslúcido
@@ -403,6 +428,27 @@
   text-shadow: 0 1px 3px rgba(0,0,0,0.20);
 }
 
+/* Ordenamiento inteligente — encabezados clicables (solo escritorio) */
+.bita-th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms;
+}
+.bita-th-sort:hover { background: rgba(35, 91, 78, 0.95); }
+.bita-th-sort:hover .bita-sort-arrow { color: rgba(255, 255, 255, 0.90); }
+.bita-sort-arrow {
+  display: inline-block;
+  min-width: 12px;
+  margin-left: 5px;
+  font-size: .75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.bita-sort-arrow-activa {
+  color: #BC955C;
+  font-size: .68rem;
+  font-weight: 900;
+}
+
 .bita-table tbody tr {
   border-bottom: 1px solid rgba(35, 91, 78, 0.07);
   transition: background 120ms;
@@ -440,6 +486,16 @@
   color: rgba(10, 30, 20, 0.60);
   white-space: nowrap;
 }
+.bita-folio-link {
+  color: #235b4e;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(35, 91, 78, 0.45);
+  cursor: pointer;
+  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
+}
+.bita-folio-link:hover  { color: #16362d; border-bottom-color: #16362d; }
+.bita-folio-link:active { opacity: 0.75; }
 .bita-ip {
   font-family: 'Courier New', monospace;
   font-size: .71rem;
@@ -473,8 +529,108 @@
   box-shadow: 0 3px 10px rgba(35,91,78,0.30);
   border-color: #1F5647;
 }
+.bita-dl-btn:disabled { opacity: .65; cursor: not-allowed; background: rgba(255, 255, 255, 0.70); color: #1F5647; box-shadow: none; }
 
 .bita-no-pdf { color: rgba(10,30,20,0.25); font-size: 0.8rem; }
+
+.bita-acciones-icons { display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+.bita-eye-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(195, 212, 207, 0.55);
+  background: rgba(255, 255, 255, 0.70);
+  color: #1F5647;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms, color 150ms;
+  box-shadow: 2px 2px 6px rgba(35,91,78,0.10), -1px -1px 4px rgba(190,208,203,0.40);
+}
+.bita-eye-btn:hover {
+  background: #1F5647;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(35,91,78,0.30);
+  border-color: #1F5647;
+}
+
+/* ── Menú de columnas ── */
+.bita-col-menu { position: relative; }
+
+.bita-col-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.40);
+  border: 1px solid rgba(35, 91, 78, 0.20);
+  border-radius: 10px;
+  padding: 8px 13px;
+  color: #1F5647;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms;
+  box-shadow:
+    inset 2px 2px 5px rgba(35, 91, 78, 0.07),
+    inset -1px -1px 3px rgba(190, 208, 203, 0.80);
+}
+.bita-col-menu-btn:hover { background: rgba(255, 255, 255, 0.70); }
+
+.bita-col-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 190px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(195, 212, 207, 0.62);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(10, 30, 20, 0.18);
+}
+
+.bita-col-opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #0a1e14;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.bita-col-opcion:hover { background: rgba(35, 91, 78, 0.08); }
+.bita-col-opcion input { accent-color: #1F5647; width: 15px; height: 15px; cursor: pointer; }
+
+/* ── Modal: previsualización de PDF ── */
+.bita-modal-preview { width: min(900px, 92vw); height: min(85vh, 1000px); }
+
+.bita-modal-preview-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 12px;
+  background: rgba(235, 248, 244, 0.07);
+}
+.bita-modal-preview-body iframe {
+  flex: 1;
+  align-self: stretch;
+  width: 100%;
+  border: 1px solid rgba(195, 212, 207, 0.45);
+  border-radius: 12px;
+  background: #ffffff;
+}
 
 /* ══════════════════════════════════════
    COLORES DE ACCIONES — Paleta Institucional ANAM
@@ -511,6 +667,10 @@
 ══════════════════════════════════════ */
 .bita-loading,
 .bita-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
   text-align: center;
   padding: 3rem;
   color: rgba(10, 30, 20, 0.32);
@@ -565,51 +725,156 @@
 
 @media (max-width: 768px) {
   .bita-wrap    { padding: 1rem; gap: .8rem; }
-  .bita-filtros { flex-direction: column; padding: 12px; }
-  .bita-input   { min-width: unset; width: 100%; box-sizing: border-box; }
-  .bita-fechas  { flex-direction: column; align-items: stretch; }
-  .bita-fechas .bita-sep { display: none; }
   .bita-header  { padding: 12px 14px; gap: 8px; }
   .bita-header-left h1 { font-size: .95rem; }
   .bita-header-right { gap: 6px; }
   .bita-total { font-size: .72rem; padding: 3px 10px; }
-  /* Ocultar columnas menos críticas en tablet */
-  .bita-table th:nth-child(8),
-  .bita-table td:nth-child(8),
-  .bita-table th:nth-child(9),
-  .bita-table td:nth-child(9) { display: none; }
   .bita-mas { min-width: unset; width: 100%; }
+
+  /* ── Filtros colapsables ── */
+  .bita-filtros-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #1F5647;
+    border: none;
+    border-radius: 10px;
+    font-size: .83rem;
+    font-weight: 500;
+    color: #ffffff;
+    cursor: pointer;
+  }
+  .bita-filtros-toggle svg { color: #ffffff; }
+  .bita-filtros-badge {
+    background: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    margin-left: auto;
+  }
+  .bita-filtros-chevron { color: #ffffff; flex-shrink: 0; transition: transform 220ms ease; }
+  .bita-filtros-chevron.open { transform: rotate(180deg); }
+
+  .bita-filtros {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .bita-filtros.bita-filtros-open { display: flex; }
+  .bita-input   { min-width: unset; width: 100%; box-sizing: border-box; }
+  .bita-fechas  { flex-direction: column; align-items: stretch; }
+  .bita-fechas .bita-sep { display: none; }
+  .bita-fecha-grupo { width: 100%; }
+  .bita-fecha-grupo .bita-input { width: auto; flex: 1; min-width: 0; }
+
+  /* ── Barra de columnas rápidas (chips) ── */
+  .cols-toggle-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .col-toggle-btn {
+    font-size: .74rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(35, 91, 78, 0.30);
+    background: #ffffff;
+    color: #1F5647;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .col-toggle-btn.activa { background: #1F5647; border-color: #1F5647; color: #ffffff; }
+
+  .desktop-only { display: none; }
+
+  /* ── Tabla → tarjetas ── */
+  .bita-table-wrap { background: transparent; border: none; box-shadow: none; backdrop-filter: none; overflow: visible; }
+  .bita-table { border-collapse: collapse; }
+  .bita-table thead { display: none; }
+  .bita-table tbody tr {
+    display: block;
+    border: 1px solid rgba(195, 212, 207, 0.55);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 3px 12px rgba(35, 91, 78, 0.10);
+    margin-bottom: 15px;
+  }
+  .bita-table tbody tr:last-child { margin-bottom: 0; }
+  .bita-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.85); }
+  .bita-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 14px !important;
+    border-bottom: 1px solid rgba(35, 91, 78, 0.08);
+    text-align: right;
+    white-space: normal;
+    max-width: none;
+  }
+  .bita-table td:last-child { border-bottom: none; }
+  .bita-table td.bita-loading,
+  .bita-table td.bita-empty {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+  .bita-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: rgba(10, 30, 20, 0.50);
+    flex-shrink: 0;
+    text-align: left;
+  }
+  .bita-table td[data-label=""]::before { display: none; }
+
+  /* Folio: encabezado de la tarjeta */
+  .bita-table td.bita-folio {
+    background: #235b4e;
+    justify-content: space-between;
+    padding: 10px 14px !important;
+  }
+  .bita-table td.bita-folio::before { display: none; }
+  .bita-folio-link { color: #ffffff; border-bottom-color: rgba(255, 255, 255, 0.55); font-size: .78rem; }
+  .bita-folio-link:hover { color: #ffffff; border-bottom-color: #ffffff; }
+  .bita-mobile-badge {
+    display: inline-block;
+    font-size: .64rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  .bita-col-pdf { width: auto; justify-content: center; }
+  .bita-col-pdf::before { display: none; }
+  .bita-obs, .bita-usuario, .bita-email-col { max-width: none; }
 }
 
 @media (max-width: 480px) {
   .bita-wrap { padding: .75rem; gap: .65rem; }
   .bita-header { flex-direction: column; align-items: flex-start; }
   .bita-header-right { width: 100%; justify-content: flex-end; }
-  .bita-table { font-size: .72rem; }
-  .bita-table thead th { padding: 8px 8px; font-size: .64rem; }
-  .bita-table td { padding: 7px 8px; }
-  /* En móvil, ocultar Estado anterior, Estado nuevo, IP, Observaciones */
-  .bita-table th:nth-child(6),
-  .bita-table td:nth-child(6),
-  .bita-table th:nth-child(7),
-  .bita-table td:nth-child(7),
-  .bita-table th:nth-child(8),
-  .bita-table td:nth-child(8),
-  .bita-table th:nth-child(9),
-  .bita-table td:nth-child(9) { display: none; }
-  .bita-usuario { max-width: 110px; font-size: .70rem; }
-  .bita-folio { font-size: .66rem; }
   .bita-export-btn span { display: none; }
   .bita-export-btn { padding: 7px 10px; }
 }
 
 @media (max-width: 360px) {
   .bita-wrap { padding: .5rem; }
-  .bita-table thead th { padding: 7px 6px; font-size: .60rem; }
-  .bita-table td { padding: 6px 6px; }
-  /* En 360px solo Fecha, Acción y Folio */
-  .bita-table th:nth-child(2),
-  .bita-table td:nth-child(2),
-  .bita-table th:nth-child(3),
-  .bita-table td:nth-child(3) { display: none; }
 }

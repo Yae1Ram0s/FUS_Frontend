@@ -37,6 +37,9 @@
   .sidebar:not(.sidebar-open) .sidebar-item    { justify-content: center; padding: 11px; }
   .sidebar:not(.sidebar-open) .sidebar-user    { justify-content: center; padding: 18px 8px; gap: 0; }
   .sidebar:not(.sidebar-open) .sidebar-toggle-row { justify-content: center; }
+
+  /* Sin borde izquierdo en modo icono — evita que el ícono se desplace del centro */
+  .sidebar:not(.sidebar-open) .sidebar-item-active { border-left: none; }
 }
 
 /* ── Botón toggle ── */

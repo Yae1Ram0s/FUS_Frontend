@@ -12,7 +12,7 @@ import { useResizablePanel } from '../hooks/useResizablePanel'
 import './SolicitudesTurnadas.css'
 
 /* ── Panel de estadísticas ROL2 ── */
-function StatsPanel({ stats }) {
+function StatsPanel({ stats, cargando }) {
   const { user } = useAuth()
   const nombre = user?.nombre || user?.email || 'Usuario'
   const total  = (stats.pendientes || 0) + (stats.activas || 0) + (stats.concluidas || 0)
@@ -26,7 +26,7 @@ function StatsPanel({ stats }) {
         <div className="std-greeting-text">
           <span className="std-greeting-hello">Bienvenido(a)</span>
           <span className="std-greeting-name">{nombre}</span>
-          <span className="std-greeting-role">Titular / Enlace Estratégico · ANAM</span>
+          <span className="std-greeting-role">{user?.unidadAdministrativa || 'Sin unidad asignada'} · ANAM</span>
         </div>
         <div className="std-greeting-badge">
           <span className="std-badge-num">{total}</span>
@@ -42,7 +42,9 @@ function StatsPanel({ stats }) {
       </div>
 
       {/* Métricas */}
-      <div className="std-grid">
+      {cargando
+        ? <div className="std-stats-loading"><Spinner overlay={false} label="Cargando resumen…" /></div>
+        : <div className="std-grid">
         <StatCard
           delay="0ms" accent="#235b4e"
           value={stats.pendientes} label="Recibidas" sublabel="Pendientes de atender"
@@ -72,7 +74,7 @@ function StatsPanel({ stats }) {
             </svg>
           }
         />
-      </div>
+      </div>}
 
       {/* Pista */}
       <div className="std-hint">
@@ -94,6 +96,7 @@ function Seguimientos({ turnadoId, concluido }) {
   const [actividad,   setActividad]   = useState('')
   const [accionTexto, setAccionTexto] = useState('')
   const [loading,     setLoading]     = useState(false)
+  const [eliminandoId,setEliminandoId] = useState(null)
   const [error,       setError]       = useState('')
 
   const cargar = () =>
@@ -118,12 +121,14 @@ function Seguimientos({ turnadoId, concluido }) {
   }
 
   const eliminar = async id => {
-    try { await api.delete(`/seguimientos/${id}/`); cargar() } catch {}
+    setEliminandoId(id)
+    try { await api.delete(`/seguimientos/${id}/`); cargar() }
+    catch (e) { setError(e.response?.data?.detail || 'No se pudo eliminar. Intenta nuevamente.') }
+    finally { setEliminandoId(null) }
   }
 
   return (
     <div className="seccion">
-      {loading && <Spinner label="Guardando…" />}
       <div className="sec-header sec-resp">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -153,11 +158,13 @@ function Seguimientos({ turnadoId, concluido }) {
                 <div className="seg-tl-meta">
                   <span className="seg-tl-fecha">{s.fechaActividad}</span>
                   {!concluido && (
-                    <button className="btn-del" onClick={() => eliminar(s.id)} title="Eliminar">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                        <path d="M10 11v6"/><path d="M14 11v6"/>
-                      </svg>
+                    <button className="btn-del" onClick={() => eliminar(s.id)} disabled={eliminandoId === s.id} title="Eliminar">
+                      {eliminandoId === s.id
+                        ? <span className="btn-spinner" />
+                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6"/><path d="M14 11v6"/>
+                          </svg>}
                     </button>
                   )}
                 </div>
@@ -178,9 +185,11 @@ function Seguimientos({ turnadoId, concluido }) {
               <input type="text" placeholder="Acción por emprender…" value={accionTexto} onChange={e => setAccionTexto(e.target.value)} />
             </div>
             <button className="btn-agregar" onClick={agregar} disabled={loading}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
+              {loading
+                ? <span className="btn-spinner" />
+                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>}
               {loading ? 'Guardando…' : 'Agregar'}
             </button>
           </div>
@@ -202,6 +211,76 @@ function DRow({ label, value, tall }) {
   )
 }
 
+function esImagen(mime) {
+  return mime && mime.startsWith('image/')
+}
+
+/* ── Lista de evidencias ── */
+function EvidenciaList({ evidencias }) {
+  if (!evidencias?.length) return (
+    <div className="drow">
+      <span className="drow-label">Evidencia</span>
+      <span className="drow-value">—</span>
+    </div>
+  )
+
+  return (
+    <div className="ev-lista">
+      {evidencias.map(ev => {
+        const url = `/media/${ev.rutaArchivo}`
+        const imagen = esImagen(ev.tipoMime)
+        return (
+          <a key={ev.id} href={url} target="_blank" rel="noopener noreferrer" className="ev-item" title={ev.nombreArchivo}>
+            {imagen ? (
+              <img src={url} alt={ev.nombreArchivo} className="ev-thumb" />
+            ) : (
+              <span className="ev-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+              </span>
+            )}
+            <span className="ev-nombre">{ev.nombreArchivo}</span>
+            {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── Prioridad — pills de solo lectura ── */
+const PRIORIDAD_NIVELES = [
+  { valor: 'Alta',  color: '#b91c1c' },
+  { valor: 'Media', color: '#92400e' },
+  { valor: 'Baja',  color: '#15803d' },
+]
+
+function PrioridadPills({ valor, criterios }) {
+  const listaCriterios = criterios ? criterios.split('|').map(c => c.trim()).filter(Boolean) : []
+  return (
+    <div>
+      <div className="dt-prioridad-pills">
+        {PRIORIDAD_NIVELES.map(p => (
+          <span
+            key={p.valor}
+            className={`dt-prioridad-pill${valor === p.valor ? ' dt-prioridad-pill-selected' : ''}`}
+            style={{ '--c': p.color }}
+          >
+            {p.valor}
+          </span>
+        ))}
+      </div>
+      {listaCriterios.length > 0 && (
+        <ul className="dt-criterios-lista">
+          {listaCriterios.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 /* ── Detalle del turnado (ROL2) ── */
 function DetalleTurnado({ turnado, onConcluido, onBack }) {
   const [cargando,      setCargando]      = useState(false)
@@ -216,26 +295,27 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
   const handleConcluir = () => setModalConcluir(true)
 
   const handleConfirmar = async () => {
-    setModalConcluir(false)
     setCargando(true); setError('')
     try {
       await api.post(`/turnados/${turnado.id}/concluir/`)
+      setModalConcluir(false)
       onConcluido()
     } catch (e) {
       setError(e.response?.data?.detail || 'No se pudo concluir. Intenta nuevamente.')
+      setModalConcluir(false)
     } finally {
       setCargando(false)
     }
   }
 
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
+  const nombreSolicitante = fus.idSolicitanteInterno?.nombre
 
   return (
     <div className="dt-panel" style={{ position: 'relative' }}>
-      {cargando && <Spinner label="Concluyendo asunto…" />}
 
       {modalConcluir && (
-        <div className="concluir-overlay" onClick={() => setModalConcluir(false)}>
+        <div className="concluir-overlay" onClick={() => !cargando && setModalConcluir(false)}>
           <div className="concluir-modal" onClick={e => e.stopPropagation()}>
             <div className="concluir-modal-icon">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -245,11 +325,12 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
             <h3 className="concluir-modal-title">Concluir asunto</h3>
             <p className="concluir-modal-body">¿Confirmas que este asunto ha sido atendido y puede marcarse como concluido? Esta acción no se puede deshacer.</p>
             <div className="concluir-modal-actions">
-              <button className="concluir-btn-cancel" onClick={() => setModalConcluir(false)}>
+              <button className="concluir-btn-cancel" onClick={() => setModalConcluir(false)} disabled={cargando}>
                 Cancelar
               </button>
-              <button className="concluir-btn-confirm" onClick={handleConfirmar}>
-                Confirmar
+              <button className="concluir-btn-confirm" onClick={handleConfirmar} disabled={cargando}>
+                {cargando && <span className="btn-spinner" />}
+                {cargando ? 'Concluyendo…' : 'Confirmar'}
               </button>
             </div>
           </div>
@@ -280,10 +361,8 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
           <span className="sec-sublabel">Datos generales</span>
           <div className="sec-grid-2">
             <DRow label="Fecha y hora"        value={fmt(fus.fechaHora)} />
-            <DRow label="Solicitante interno" value={fus.idSolicitanteInterno?.nombre || fus.idSolicitanteInterno?.email} />
-            <DRow label="Remitente"           value={turnado.idRemitente ? `${turnado.idRemitente.first_name} ${turnado.idRemitente.last_name}` : undefined} />
             <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
-            <DRow label="Prioridad"           value={fus.prioridad} />
+            <DRow label="Solicitante interno" value={nombreSolicitante} />
           </div>
         </div>
 
@@ -291,20 +370,32 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
         <div className="sec-subseccion">
           <span className="sec-sublabel">Descripción de la solicitud</span>
           <DRow label="Descripción" value={fus.descripcion} tall />
-          {fus.contexto && <DRow label="Contexto" value={fus.contexto} tall />}
+          {fus.contexto && <DRow label="Datos o antecedentes de contexto de la solicitud" value={fus.contexto} tall />}
         </div>
 
         {/* Solicitante externo */}
         {tieneExterno && (
           <div className="sec-subseccion sec-subseccion-externo">
-            <span className="sec-sublabel sec-sublabel-externo">Solicitante externo</span>
+            <span className="sec-sublabel sec-sublabel-externo">Datos de contacto de solicitante externo</span>
             <div className="sec-grid-3">
-              {fus.nombreExterno   && <DRow label="Nombre"   value={fus.nombreExterno} />}
-              {fus.telefonoExterno && <DRow label="Teléfono" value={fus.telefonoExterno} />}
-              {fus.correoExterno   && <DRow label="Correo"   value={fus.correoExterno} />}
+              {fus.nombreExterno   && <DRow label="Nombre"           value={fus.nombreExterno} />}
+              {fus.telefonoExterno && <DRow label="Teléfono/Celular" value={fus.telefonoExterno} />}
+              {fus.correoExterno   && <DRow label="Correo"           value={fus.correoExterno} />}
             </div>
           </div>
         )}
+
+        {/* Evidencia */}
+        <div className="sec-subseccion">
+          <span className="sec-sublabel">Evidencia</span>
+          <EvidenciaList evidencias={fus.evidencias} />
+        </div>
+
+        {/* Prioridad */}
+        <div className="sec-subseccion">
+          <span className="sec-sublabel">Prioridad</span>
+          <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
+        </div>
       </div>
 
       {/* ── Seguimientos ── */}
@@ -356,6 +447,7 @@ export default function SolicitudesTurnadas() {
   const [seleccionado, setSeleccionado] = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
+  const [statsCargando, setStatsCargando] = useState(true)
   const [highlightId,  setHighlightId]  = useState(null)
   const [pagina,       setPagina]       = useState(1)
   const [totalItems,   setTotalItems]   = useState(0)
@@ -370,7 +462,7 @@ export default function SolicitudesTurnadas() {
         activas:     todos.filter(t => t.estatusTitular === 'En_seguimiento').length,
         pendientes:  todos.filter(t => t.estatusTitular === 'Recibido').length,
       })
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setStatsCargando(false))
   }
 
   const cargar = (pag = 1, append = false) => {
@@ -418,11 +510,11 @@ export default function SolicitudesTurnadas() {
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
   /* ── Resize panel izquierdo ── */
-  const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista')
 
   useEffect(() => {
     const handleInicio = () => { setPanelAbierto(false); setSeleccionado(null) }
-    const handleConsultar = () => { setPanelAbierto(true) }
+    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
     window.addEventListener('scs:inicio', handleInicio)
     window.addEventListener('scs:consultar', handleConsultar)
     return () => {
@@ -499,9 +591,10 @@ export default function SolicitudesTurnadas() {
                   onClick={() => { setSeleccionado(t); setHighlightId(null); if (window.innerWidth <= 768) setPanelAbierto(false) }}
                 />
               ))}
-              {!cargando && lista.length < totalItems && (
-                <button className="btn-cargar-mas" onClick={cargarMas}>
-                  Cargar más ({lista.length} de {totalItems})
+              {lista.length < totalItems && (
+                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando}>
+                  {cargando && <span className="btn-spinner" />}
+                  {cargando ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
                 </button>
               )}
             </div>
@@ -523,7 +616,7 @@ export default function SolicitudesTurnadas() {
                 onConcluido={() => { cargar(); cargarStats(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
               />
-            : <StatsPanel stats={stats} />
+            : <StatsPanel stats={stats} cargando={statsCargando} />
           }
         </div>
       </div>

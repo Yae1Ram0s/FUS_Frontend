@@ -57,15 +57,12 @@
 }
 .bglob-input::placeholder { color: rgba(255,255,255,0.30); }
 
-.bglob-spin {
+.bglob-spin.btn-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.15);
   border-top-color: rgba(255,255,255,0.55);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 .bglob-esc {
   flex-shrink: 0;

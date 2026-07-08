@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
+import './Spinner.css'
 import './BuscadorGlobal.css'
 
 export default function BuscadorGlobal({ onClose }) {
@@ -66,8 +67,8 @@ export default function BuscadorGlobal({ onClose }) {
   }
 
   const ESTATUS_COLORS = {
-    Registrado: '#60a5fa', Turnado: '#a78bfa', Atendido: '#fbbf24',
-    Concluido: '#4ade80', Recibido: '#60a5fa', En_seguimiento: '#fbbf24',
+    Registrado: '#9F2241', Turnado: '#a78bfa', Atendido: '#fbbf24',
+    Concluido: '#4ade80', Recibido: '#9F2241', En_seguimiento: '#fbbf24',
   }
 
   return (
@@ -85,7 +86,7 @@ export default function BuscadorGlobal({ onClose }) {
             onChange={e => { setQuery(e.target.value); setActivo(-1) }}
             onKeyDown={onKey}
           />
-          {cargando && <span className="bglob-spin" />}
+          {cargando && <span className="btn-spinner bglob-spin" />}
           <kbd className="bglob-esc" onClick={onClose}>Esc</kbd>
         </div>
 

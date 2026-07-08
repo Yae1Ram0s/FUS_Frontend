@@ -44,7 +44,7 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background-color: rgba(108, 135, 129, 0.8);
+  background-color: rgba(79, 119, 109, 0.8);
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -277,7 +277,7 @@
 .st-right {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1.75rem 2rem;
   background-color: #ffffff;
   background-image:
     linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.86)),
@@ -363,13 +363,19 @@
 /* Divisor */
 .std-divider { display: flex; align-items: center; gap: 10px; }
 .std-divider-line { flex: 1; height: 1px; background: rgba(35,91,78,0.14); }
-.std-divider-text { font-size: 0.67rem; font-weight: 700; color: #c9a227; text-transform: uppercase; letter-spacing: 0.13em; white-space: nowrap; opacity: 0.90; }
+.std-divider-text { font-size: 0.67rem; font-weight: 700; color: #235b4e; text-transform: uppercase; letter-spacing: 0.13em; white-space: nowrap; opacity: 0.62; }
 
 /* Grid */
 .std-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+}
+.std-stats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
 }
 
 /* Stat card neumórfico — base blanca */
@@ -547,11 +553,11 @@
   box-shadow: 0 2px 6px rgba(35, 91, 78, 0.25);
 }
 
-.sec-subseccion-externo { background: rgba(235, 242, 255, 0.35); }
+.sec-subseccion-externo { background: rgba(255, 235, 240, 0.35); }
 
 .sec-sublabel-externo {
-  background: rgba(29, 78, 216, 0.80);
-  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.20);
+  background: rgba(159, 34, 65, 0.80);
+  box-shadow: 0 2px 6px rgba(159, 34, 65, 0.20);
 }
 
 /* Grids en sec-body */
@@ -565,6 +571,108 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+}
+
+/* Evidencia */
+.ev-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.ev-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  color: #0d2218;
+  max-width: 100px;
+  transition: all 160ms ease-in-out;
+}
+
+.ev-item:hover {
+  background: rgba(255, 255, 255, 0.90);
+  border-color: rgba(35, 91, 78, 0.40);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.ev-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 7px;
+  display: block;
+}
+
+.ev-icon {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(35, 91, 78, 0.07);
+  border-radius: 7px;
+  color: #235b4e;
+}
+
+.ev-nombre {
+  font-size: 0.68rem;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.3;
+  max-width: 84px;
+  color: rgba(10, 30, 20, 0.70);
+}
+
+.ev-comentario {
+  font-size: 0.64rem;
+  text-align: center;
+  font-style: italic;
+  line-height: 1.3;
+  max-width: 84px;
+  color: rgba(10, 30, 20, 0.50);
+}
+
+/* Prioridad — pills de solo lectura */
+.dt-prioridad-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dt-prioridad-pill {
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--c) 30%, transparent);
+  color: var(--c);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.40);
+  opacity: 0.45;
+}
+
+.dt-prioridad-pill-selected {
+  opacity: 1;
+  background: color-mix(in srgb, var(--c) 14%, white);
+  border-color: var(--c);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+.dt-criterios-lista {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: rgba(10, 30, 20, 0.75);
+  line-height: 1.4;
 }
 
 /* Filas datos */

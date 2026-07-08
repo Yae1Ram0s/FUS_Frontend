@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
@@ -49,11 +49,15 @@ const PRIORIDAD_INFO = {
 export default function RegistrarFUS() {
   const { user }   = useAuth()
   const navigate   = useNavigate()
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('editar')
 
   const [medios,  setMedios]  = useState([])
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
   const [exito,   setExito]   = useState('')
+  const [cargandoFus, setCargandoFus] = useState(!!editId)
+  const [evidenciasExistentes, setEvidenciasExistentes] = useState([])
 
   const [form, setForm] = useState({
     descripcion:         '',
@@ -72,6 +76,29 @@ export default function RegistrarFUS() {
     api.get('/catalogos/medios/').then(r => setMedios(r.data)).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (!editId) return
+    setCargandoFus(true)
+    api.get(`/fus/${editId}/`).then(r => {
+      const f = r.data
+      setForm({
+        descripcion:         f.descripcion || '',
+        contexto:            f.contexto || '',
+        idMedioRecepcion:    f.idMedioRecepcion?.id || '',
+        medioEspecificacion: f.medioEspecificacion || '',
+        prioridad:           f.prioridad || '',
+        criterios:           f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : [],
+        solicitante_nombre:  f.nombreExterno || '',
+        solicitante_tel:     f.telefonoExterno || '',
+        solicitante_correo:  f.correoExterno || '',
+        evidencias:          [],
+      })
+      setEvidenciasExistentes(f.evidencias || [])
+    }).catch(() => {
+      setError('No se pudo cargar la solicitud a editar.')
+    }).finally(() => setCargandoFus(false))
+  }, [editId])
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [] }))
@@ -82,6 +109,7 @@ export default function RegistrarFUS() {
     const nuevos = Array.from(files).map(f => ({
       file: f,
       preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null,
+      comentario: '',
     }))
     previewsRef.current = [...previewsRef.current, ...nuevos.map(n => n.preview).filter(Boolean)]
     setForm(f => ({ ...f, evidencias: [...f.evidencias, ...nuevos] }))
@@ -93,6 +121,13 @@ export default function RegistrarFUS() {
       if (item?.preview) URL.revokeObjectURL(item.preview)
       return { ...f, evidencias: f.evidencias.filter((_, i) => i !== idx) }
     })
+  }
+
+  const setComentarioEvidencia = (idx, texto) => {
+    setForm(f => ({
+      ...f,
+      evidencias: f.evidencias.map((ev, i) => i === idx ? { ...ev, comentario: texto } : ev),
+    }))
   }
 
   useEffect(() => {
@@ -133,13 +168,17 @@ export default function RegistrarFUS() {
       fd.append('telefonoExterno', form.solicitante_tel)
       fd.append('correoExterno',   form.solicitante_correo)
       form.evidencias.forEach(ev => fd.append('evidencias', ev.file))
+      fd.append('comentariosEvidencias', JSON.stringify(form.evidencias.map(ev => ev.comentario || '')))
 
-      await api.post('/fus/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      setExito('Solicitud registrada correctamente.')
-      setTimeout(() => navigate('/rol1/consultar-fus'), 1500)
+      const { data } = editId
+        ? await api.patch(`/fus/${editId}/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        : await api.post('/fus/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      setExito(editId ? 'Solicitud actualizada correctamente.' : 'Solicitud registrada correctamente.')
+      setTimeout(() => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(data.folio)}`), 1200)
+      // se mantiene loading=true a propósito: el formulario queda deshabilitado
+      // hasta que ocurre la navegación, para evitar un doble envío en ese lapso.
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo guardar la solicitud. Intenta nuevamente.')
-    } finally {
       setLoading(false)
     }
   }
@@ -156,16 +195,18 @@ export default function RegistrarFUS() {
               <line x1="12" y1="11" x2="12" y2="17"/>
               <line x1="9" y1="14" x2="15" y2="14"/>
             </svg>
-            <h1>Nueva solicitud FUS</h1>
+            <h1>{editId ? 'Editar solicitud FUS' : 'Nueva solicitud FUS'}</h1>
           </div>
           <div className="reg-header-right">
-            <span className="reg-header-sub">Completa los campos para registrar la solicitud.</span>
+            <span className="reg-header-sub">
+              {editId ? 'Modifica los campos y guarda los cambios.' : 'Completa los campos para registrar la solicitud.'}
+            </span>
           </div>
         </div>
 
         <div className="reg-form-card">
-          {loading && <Spinner label="Guardando solicitud…" />}
-          <form className="reg-form" onSubmit={handleSubmit} noValidate>
+          {cargandoFus && <Spinner overlay={false} />}
+          {!cargandoFus && <form className="reg-form" onSubmit={handleSubmit} noValidate>
 
             <fieldset className="reg-fieldset">
               <legend className="reg-legend">Datos generales</legend>
@@ -179,62 +220,6 @@ export default function RegistrarFUS() {
                 <label htmlFor="reg-solicitante">Solicitante interno</label>
                 <input id="reg-solicitante" type="text" value={user?.nombre || user?.email || ''} readOnly className="input-readonly" />
               </div>
-            </fieldset>
-
-            <fieldset className="reg-fieldset">
-              <legend className="reg-legend">Descripción de la solicitud</legend>
-
-              <div className="reg-row reg-row-tall">
-                <label htmlFor="reg-descripcion">Descripción <span className="req">*</span></label>
-                <textarea
-                  id="reg-descripcion"
-                  rows={4}
-                  placeholder="Describe detalladamente la solicitud (mínimo 20 caracteres)"
-                  value={form.descripcion}
-                  onChange={e => set('descripcion', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="reg-row reg-row-tall">
-                <label htmlFor="reg-contexto">Contexto</label>
-                <textarea
-                  id="reg-contexto"
-                  rows={3}
-                  placeholder="Antecedentes o información adicional relevante (opcional)"
-                  value={form.contexto}
-                  onChange={e => set('contexto', e.target.value)}
-                />
-              </div>
-            </fieldset>
-
-            <fieldset className="reg-fieldset">
-              <legend className="reg-legend">Solicitante externo (opcional)</legend>
-
-              <div className="reg-row reg-externo">
-                <label>Datos de contacto</label>
-                <div className="externo-grid">
-                  <input
-                    placeholder="Nombre completo"
-                    value={form.solicitante_nombre}
-                    onChange={e => set('solicitante_nombre', e.target.value)}
-                  />
-                  <input
-                    placeholder="Teléfono"
-                    value={form.solicitante_tel}
-                    onChange={e => set('solicitante_tel', e.target.value)}
-                  />
-                  <input
-                    placeholder="Correo electrónico"
-                    value={form.solicitante_correo}
-                    onChange={e => set('solicitante_correo', e.target.value)}
-                  />
-                </div>
-              </div>
-            </fieldset>
-
-            <fieldset className="reg-fieldset">
-              <legend className="reg-legend">Clasificación</legend>
 
               <div className="reg-row">
                 <label htmlFor="reg-medio">Medio de recepción <span className="req">*</span></label>
@@ -268,9 +253,141 @@ export default function RegistrarFUS() {
                   )}
                 </div>
               </div>
+            </fieldset>
+
+            <fieldset className="reg-fieldset">
+              <legend className="reg-legend">Descripción de la solicitud</legend>
+
+              <div className="reg-row reg-row-tall">
+                <label htmlFor="reg-descripcion">Descripción <span className="req">*</span></label>
+                <textarea
+                  id="reg-descripcion"
+                  rows={4}
+                  placeholder="Describe detalladamente la solicitud (mínimo 20 caracteres)"
+                  value={form.descripcion}
+                  onChange={e => set('descripcion', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="reg-row reg-row-tall">
+                <label htmlFor="reg-contexto">Contexto</label>
+                <textarea
+                  id="reg-contexto"
+                  rows={3}
+                  placeholder="Antecedentes o información adicional relevante (opcional)"
+                  value={form.contexto}
+                  onChange={e => set('contexto', e.target.value)}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset className="reg-fieldset">
+              <legend className="reg-legend">Datos de contacto de solicitante externo (opcional)</legend>
+
+              <div className="reg-row reg-externo">
+                <label>Datos de contacto</label>
+                <div className="externo-grid">
+                  <input
+                    placeholder="Nombre completo"
+                    value={form.solicitante_nombre}
+                    onChange={e => set('solicitante_nombre', e.target.value)}
+                  />
+                  <input
+                    placeholder="Teléfono/Celular"
+                    value={form.solicitante_tel}
+                    onChange={e => set('solicitante_tel', e.target.value)}
+                  />
+                  <input
+                    placeholder="Correo electrónico"
+                    value={form.solicitante_correo}
+                    onChange={e => set('solicitante_correo', e.target.value)}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="reg-fieldset">
+              <legend className="reg-legend">Evidencia</legend>
+
+              <div className="reg-row reg-row-evidencia">
+                <label>Cargar evidencia</label>
+                <div className="evidencia-col">
+                  {evidenciasExistentes.length > 0 && (
+                    <div className="ev-existentes-list">
+                      {evidenciasExistentes.map(ev => (
+                        <a key={ev.id} href={`/media/${ev.rutaArchivo}`} target="_blank" rel="noopener noreferrer" className="ev-existente-item">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                          {ev.nombreArchivo}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  <label className="file-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Cargar documento
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.jpg,.jpeg,.png,.docx"
+                      style={{ display: 'none' }}
+                      onChange={e => { agregarArchivos(e.target.files); e.target.value = '' }}
+                    />
+                  </label>
+                  {form.evidencias.length > 0 && (
+                    <div className="ev-preview-list">
+                      {form.evidencias.map((ev, idx) => (
+                        <div key={idx} className="ev-preview-row">
+                          {ev.preview ? (
+                            <img src={ev.preview} alt={ev.file.name} className="ev-preview-thumb" />
+                          ) : (
+                            <span className="ev-preview-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                            </span>
+                          )}
+                          <div className="ev-preview-datos">
+                            <span className="ev-preview-nombre">{ev.file.name}</span>
+                            <input
+                              type="text"
+                              className="ev-preview-comentario"
+                              placeholder="Comentarios o notas relevantes (opcional)"
+                              value={ev.comentario}
+                              onChange={e => setComentarioEvidencia(idx, e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="ev-preview-quitar"
+                            onClick={() => quitarArchivo(idx)}
+                            title="Quitar archivo"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="reg-fieldset">
+              <legend className="reg-legend">Prioridad</legend>
 
               <div className="reg-row">
-                <label htmlFor="reg-prioridad">Prioridad <span className="req">*</span></label>
+                <label htmlFor="reg-prioridad">Seleccione la prioridad <span className="req">*</span></label>
                 <div className="prioridad-wrapper">
                   <div className="prioridad-pills">
                     {Object.entries(PRIORIDAD_INFO).map(([valor, info]) => (
@@ -305,70 +422,21 @@ export default function RegistrarFUS() {
                   )}
                 </div>
               </div>
-
-              <div className="reg-row reg-row-evidencia">
-                <label>Evidencia</label>
-                <div className="evidencia-col">
-                  <label className="file-btn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Cargar documento
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png,.docx"
-                      style={{ display: 'none' }}
-                      onChange={e => { agregarArchivos(e.target.files); e.target.value = '' }}
-                    />
-                  </label>
-                  {form.evidencias.length > 0 && (
-                    <div className="ev-preview-grid">
-                      {form.evidencias.map((ev, idx) => (
-                        <div key={idx} className="ev-preview-item">
-                          {ev.preview ? (
-                            <img src={ev.preview} alt={ev.file.name} className="ev-preview-thumb" />
-                          ) : (
-                            <span className="ev-preview-icon">
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                              </svg>
-                            </span>
-                          )}
-                          <span className="ev-preview-nombre">{ev.file.name}</span>
-                          <button
-                            type="button"
-                            className="ev-preview-quitar"
-                            onClick={() => quitarArchivo(idx)}
-                            title="Quitar archivo"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </fieldset>
 
             {error && <p className="reg-error" role="alert">{error}</p>}
             {exito && <p className="reg-ok"  role="status">{exito}</p>}
 
             <div className="reg-actions">
-              <button type="button" className="btn-secondary" onClick={() => navigate('/rol1/consultar-fus')}>
+              <button type="button" className="btn-secondary" onClick={() => navigate('/rol1/consultar-fus')} disabled={loading}>
                 Cancelar
               </button>
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Guardando…' : 'Guardar solicitud'}
+                {loading && <span className="btn-spinner" />}
+                {loading ? 'Guardando…' : (editId ? 'Guardar cambios' : 'Guardar solicitud')}
               </button>
             </div>
-          </form>
+          </form>}
         </div>
       </div>
       </div>

@@ -23,6 +23,7 @@ export default function Login() {
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
   const [reenvioMsg,  setReenvioMsg]  = useState('')
+  const [reenviando,  setReenviando]  = useState(false)
   const [isRecovery,  setIsRecovery]  = useState(false)
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
@@ -135,7 +136,8 @@ export default function Login() {
 
   /* ── Reenviar OTP ── */
   const handleReenviar = async () => {
-    setReenvioMsg(''); setError('')
+    if (reenviando) return
+    setReenvioMsg(''); setError(''); setReenviando(true)
     try {
       const endpoint = isRecovery ? '/auth/recuperar-contrasena/' : '/auth/reenviar-otp/'
       await api.post(endpoint, { email })
@@ -143,6 +145,8 @@ export default function Login() {
       setReenvioMsg('Nuevo código enviado a tu correo.')
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo reenviar el código.')
+    } finally {
+      setReenviando(false)
     }
   }
 
@@ -264,8 +268,9 @@ export default function Login() {
           <button type="button" className="lf-link" onClick={() => { resetAll(); setStep(isRecovery ? STEP_PASS : STEP_EMAIL) }}>
             ← {isRecovery ? 'Volver al login' : 'Cambiar correo'}
           </button>
-          <button type="button" className="lf-link" onClick={handleReenviar}>
-            Reenviar código
+          <button type="button" className="lf-link" onClick={handleReenviar} disabled={reenviando}>
+            {reenviando && <span className="btn-spinner" />}
+            {reenviando ? 'Reenviando…' : 'Reenviar código'}
           </button>
         </div>
       </form>
@@ -342,7 +347,7 @@ export default function Login() {
           </div>
           <div className="ll-hero">
             <p className="ll-sub">Agencia Nacional de Aduanas de México</p>
-            <h1 className="ll-title">Sistema de<br />Control de<br />Solicitudes</h1>
+            <h1 className="ll-title">Sistema de Control de Solicitudes</h1>
             <div className="ll-title-rule" />
           </div>
         </div>
