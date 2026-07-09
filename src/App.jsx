@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider }          from './context/AuthContext'
 import { NotificacionesProvider } from './context/NotificacionesContext'
@@ -16,6 +17,22 @@ import Bitacora            from './pages/Bitacora'
 import PanelAdmin          from './pages/PanelAdmin'
 
 export default function App() {
+  // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
+  // móvil). Lo usan los modales (.modal-card, .bita-modal-preview, .mdet-modal) en vez
+  // de vh/dvh para no quedar cortados/descentrados en Safari iOS y webviews.
+  useEffect(() => {
+    const setAppVh = () => {
+      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`)
+    }
+    setAppVh()
+    window.addEventListener('resize', setAppVh)
+    window.visualViewport?.addEventListener('resize', setAppVh)
+    return () => {
+      window.removeEventListener('resize', setAppVh)
+      window.visualViewport?.removeEventListener('resize', setAppVh)
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <ErrorBoundary>

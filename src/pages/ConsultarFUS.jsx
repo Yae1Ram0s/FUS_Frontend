@@ -175,7 +175,7 @@ function ModalTurnar({ fus, onClose, onDone }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-card">
         <div className="modal-header">
@@ -266,7 +266,8 @@ function ModalTurnar({ fus, onClose, onDone }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

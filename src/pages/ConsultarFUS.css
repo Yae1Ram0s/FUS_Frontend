@@ -1115,26 +1115,30 @@
   background: rgba(10, 30, 20, 0.65);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 1rem;
+  z-index: 9999;
 }
 
+/* Centrado por position:fixed + transform (no depende de flex del overlay ni
+   de vh/dvh — usa --app-vh, alto real de viewport seteado en App.jsx). Así el
+   modal nunca queda cortado ni descentrado en Safari iOS / webviews. */
 .modal-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(195, 212, 207, 0.45);
   border-radius: 20px;
   width: 620px;
-  max-width: 100%;
+  max-width: calc(100vw - 32px);
   max-height: 90vh;
+  max-height: calc(var(--app-vh, 100vh) * 0.9);
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(190, 208, 203, 0.45), inset 0 -1px 0 rgba(190, 208, 203, 0.15);
-  position: relative;
   overflow: hidden;
 }
 
@@ -1523,13 +1527,14 @@
   .detalle-header-main { flex-wrap: wrap; }
 
   .modal-card {
-    width: 100%;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
     max-height: 90vh;
-    max-height: 90dvh;
+    max-height: calc(100svh - 80px);
+    max-height: calc(var(--app-vh, 100vh) * 0.9);
     border-radius: 20px;
   }
 
-  .modal-overlay { align-items: center; padding: 0.75rem; }
   .modal-row-inline { flex-wrap: wrap; }
   .modal-row-inline select { flex: 1; min-width: 0; }
 

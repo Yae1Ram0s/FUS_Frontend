@@ -1,0 +1,135 @@
+/* El centrado (position:fixed + transform) y el alto seguro (--app-vh) ya los
+   da .modal-card compartido (ConsultarFUS.css) — acá solo el look propio. */
+.mdet-modal.modal-card {
+  width: 640px;
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  max-height: calc(var(--app-vh, 100vh) * 0.85);
+  z-index: 9999;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.mdet-modal .modal-title { font-weight: 600; text-align: left; }
+.mdet-modal .modal-header { background: #235b4e; flex-shrink: 0; }
+
+.mdet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 24px 24px;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: #ffffff;
+}
+
+.mdet-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+.mdet-row:last-of-type { border-bottom: none; }
+
+.mdet-label {
+  flex-shrink: 0;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #718096;
+}
+
+.mdet-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: .88rem;
+  font-weight: 500;
+  color: #2d3748;
+  line-height: 1.5;
+}
+
+.mdet-solicitante { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.mdet-solicitante strong { font-weight: 700; color: #2d3748; }
+.mdet-solicitante small { font-size: .76rem; font-weight: 400; color: #a0aec0; }
+
+.mdet-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.mdet-badge {
+  display: inline-block;
+  font-size: .74rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: #f8f1e4;
+  color: #8a6820;
+}
+
+/* ── Respuestas ── */
+.mdet-seguimientos {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #edf2f7;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mdet-seguimientos-title {
+  margin: 0 0 4px;
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #235b4e;
+}
+
+.mdet-seg-card {
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 12px 15px;
+}
+.mdet-seg-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.mdet-seg-autor { font-size: .82rem; font-weight: 700; color: #2d3748; }
+.mdet-seg-fecha { font-size: .72rem; color: #a0aec0; white-space: nowrap; flex-shrink: 0; }
+.mdet-seg-texto { margin: 0; font-size: .85rem; color: #4a5568; line-height: 1.6; white-space: pre-wrap; }
+.mdet-seg-empty { font-size: .82rem; color: #a0aec0; margin: 0; }
+
+@media (max-width: 768px) {
+  .mdet-overlay { z-index: 9999; }
+  .mdet-modal.modal-card {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: 82vh;
+    max-height: calc(100svh - 80px);
+    max-height: calc(var(--app-vh, 100vh) * 0.82);
+    z-index: 9999;
+    border-radius: 18px;
+  }
+  .mdet-modal .modal-header { padding: 14px 16px; }
+  .mdet-modal .modal-title { font-size: 1rem; }
+  .mdet-body { padding: 6px 16px 18px; }
+
+  .mdet-row { flex-direction: column; align-items: flex-start; gap: 5px; padding: 11px 0; }
+  .mdet-value, .mdet-solicitante, .mdet-badges {
+    width: 100%;
+    text-align: left;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .mdet-seguimientos { margin-top: 14px; padding-top: 14px; }
+  .mdet-seg-meta { flex-wrap: wrap; gap: 4px 10px; }
+}
+
+@media (max-width: 480px) {
+  .mdet-modal .modal-title { font-size: .92rem; }
+  .mdet-body { padding: 4px 14px 16px; }
+  .mdet-label { font-size: .64rem; }
+  .mdet-value { font-size: .85rem; }
+  .mdet-badge { padding: 3px 12px; font-size: .70rem; }
+  .mdet-seg-card { padding: 10px 12px; }
+  .mdet-seg-autor { font-size: .78rem; }
+  .mdet-seg-texto { font-size: .82rem; }
+}

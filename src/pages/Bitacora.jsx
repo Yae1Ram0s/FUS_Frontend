@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
+import ModalDetalleFUS from '../components/ModalDetalleFUS'
 import { useAuth } from '../context/AuthContext'
 import './Bitacora.css'
 
@@ -14,7 +14,6 @@ const COLUMNAS_TOGGLEABLES = [
   { key: 'nombre',                label: 'Responsable',            admOnly: true },
   { key: 'usuario',               label: 'Correo del responsable', admOnly: true },
   { key: 'unidadAdministrativa',  label: 'Unidad administrativa',  admOnly: true },
-  { key: 'accion',                label: 'Acción' },
   { key: 'cambioEstatus',         label: 'Cambio de estatus' },
   { key: 'observaciones',         label: 'Observaciones' },
 ]
@@ -105,50 +104,52 @@ function ModalPreviewPDF({ folio, onClose }) {
 
 export default function Bitacora() {
   const { user }  = useAuth()
-  const navigate  = useNavigate()
   const rol       = user?.rol || 'ROL1'
   const esADM     = rol === 'ROL1'
   const acciones  = ACCIONES_POR_ROL[rol] || ACCIONES_POR_ROL.ROL1
 
-  const irAlFus = (folio) => {
-    if (!folio) return
-    const ruta = esADM ? '/rol1/consultar-fus' : '/rol2/solicitudes'
-    navigate(`${ruta}?folio=${encodeURIComponent(folio)}`)
-  }
+  const [detalleFolio, setDetalleFolio] = useState(null)
 
   const [registros, setRegistros] = useState([])
   const [total,     setTotal]     = useState(0)
   const [pagina,    setPagina]    = useState(1)
   const [cargando,  setCargando]  = useState(true)
 
-  const [fUsuario,    setFUsuario]    = useState('')
+  const [fBusqueda,   setFBusqueda]   = useState('')
   const [fAccion,     setFAccion]     = useState('')
-  const [fFolio,      setFFolio]      = useState('')
-  const [fNombre,     setFNombre]     = useState('')
   const [fEstatusFus, setFEstatusFus] = useState('')
   const [fDesde,      setFDesde]      = useState('')
   const [fHasta,      setFHasta]      = useState('')
 
-  const [fUsuarioDeb, setFUsuarioDeb] = useState(fUsuario)
-  const [fFolioDeb,   setFFolioDeb]   = useState(fFolio)
-  const [fNombreDeb,  setFNombreDeb]  = useState(fNombre)
+  const [fBusquedaDeb, setFBusquedaDeb] = useState(fBusqueda)
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setFUsuarioDeb(fUsuario); setFFolioDeb(fFolio); setFNombreDeb(fNombre)
-    }, 350)
+    const t = setTimeout(() => setFBusquedaDeb(fBusqueda), 350)
     return () => clearTimeout(t)
-  }, [fUsuario, fFolio, fNombre])
+  }, [fBusqueda])
 
   const [colVisibles, setColVisibles] = useState(COL_VISIBLES_DEFAULT)
-  const [colMenuAbierto, setColMenuAbierto] = useState(false)
-  const colMenuRef = useRef(null)
   const [previewFolio, setPreviewFolio] = useState(null)
   const [exportando, setExportando] = useState(null)
   const [descargandoFolio, setDescargandoFolio] = useState(null)
-  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [sortCol, setSortCol] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
+  const [presetFecha, setPresetFecha] = useState(null)
+
+  const [unidades, setUnidades] = useState([])
+  const [unidadesCargadas, setUnidadesCargadas] = useState(false)
+  const [unidadPopoverAbierto, setUnidadPopoverAbierto] = useState(false)
+  const [unidadPopoverPos, setUnidadPopoverPos] = useState({ top: 0, left: 0 })
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState(null)
+  const unidadPopoverRef = useRef(null)
+  const unidadBtnRef = useRef(null)
+
+  const [compacto, setCompacto] = useState(false)
+  const bitaBgRef = useRef(null)
+  // Cuando no es null, ignora eventos de scroll mientras scrollTop no cambie
+  // respecto a este valor (evita que un scroll "fantasma" disparado por el
+  // propio cambio de layout al expandir el panel lo vuelva a compactar).
+  const scrollBaselineRef = useRef(null)
 
   const ordenarPor = (key) => {
     if (sortCol === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -156,19 +157,66 @@ export default function Bitacora() {
   }
 
   useEffect(() => {
-    if (!colMenuAbierto) return
-    const cerrar = e => { if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setColMenuAbierto(false) }
+    const el = bitaBgRef.current
+    if (!el) return
+    const onScroll = () => {
+      const top = el.scrollTop
+      if (scrollBaselineRef.current !== null) {
+        if (top === scrollBaselineRef.current) return
+        scrollBaselineRef.current = null
+      }
+      setCompacto(top > 50)
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const editarFiltros = () => {
+    scrollBaselineRef.current = bitaBgRef.current ? bitaBgRef.current.scrollTop : 0
+    setCompacto(false)
+  }
+
+  useEffect(() => {
+    if (!unidadPopoverAbierto) return
+    const cerrar = e => {
+      if (unidadPopoverRef.current?.contains(e.target)) return
+      if (unidadBtnRef.current?.contains(e.target)) return
+      setUnidadPopoverAbierto(false)
+    }
     document.addEventListener('mousedown', cerrar)
     return () => document.removeEventListener('mousedown', cerrar)
-  }, [colMenuAbierto])
+  }, [unidadPopoverAbierto])
+
+  const abrirUnidadPopover = () => {
+    if (!unidadPopoverAbierto && unidadBtnRef.current) {
+      const r = unidadBtnRef.current.getBoundingClientRect()
+      setUnidadPopoverPos({ top: r.bottom + 6, left: r.left })
+    }
+    if (!unidadesCargadas) {
+      api.get('/catalogos/unidades-administrativas/')
+        .then(r => setUnidades(Array.isArray(r.data) ? r.data : []))
+        .catch(() => {})
+      setUnidadesCargadas(true)
+    }
+    setUnidadPopoverAbierto(v => !v)
+  }
+
+  const seleccionarUnidad = (u) => {
+    setColVisibles(v => ({ ...v, unidadAdministrativa: true }))
+    setUnidadSeleccionada(u)
+    setUnidadPopoverAbierto(false)
+  }
+
+  const quitarColumna = (key) => {
+    toggleColumna(key)
+    if (key === 'unidadAdministrativa') setUnidadSeleccionada(null)
+  }
 
   const cargar = useCallback((pag = 1, append = false) => {
     setCargando(true)
     const params = { page: pag, page_size: PAGE_SIZE }
-    if (fUsuarioDeb && esADM) params.usuario     = fUsuarioDeb
+    if (fBusquedaDeb)         params.q           = fBusquedaDeb
     if (fAccion)              params.accion      = fAccion
-    if (fFolioDeb)            params.folio       = fFolioDeb
-    if (fNombreDeb && esADM)  params.nombre      = fNombreDeb
     if (fEstatusFus)          params.estatus_fus = fEstatusFus
     if (fDesde)               params.fecha_desde = fDesde
     if (fHasta)               params.fecha_hasta = fHasta
@@ -182,24 +230,64 @@ export default function Bitacora() {
       })
       .catch(() => {})
       .finally(() => setCargando(false))
-  }, [fUsuarioDeb, fAccion, fFolioDeb, fNombreDeb, fEstatusFus, fDesde, fHasta, sortCol, sortDir, esADM])
+  }, [fBusquedaDeb, fAccion, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
 
-  useEffect(() => { cargar(1) }, [fUsuarioDeb, fAccion, fFolioDeb, fNombreDeb, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
+  useEffect(() => { cargar(1) }, [fBusquedaDeb, fAccion, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
 
   const limpiar = () => {
-    setFUsuario(''); setFAccion(''); setFFolio(''); setFNombre('')
+    setFBusqueda(''); setFAccion('')
     setFEstatusFus(''); setFDesde(''); setFHasta('')
+    setPresetFecha(null)
     setColVisibles(COL_VISIBLES_DEFAULT)
+    setUnidadSeleccionada(null)
     setSortCol(null); setSortDir('asc')
   }
-  const colVisiblesModificadas = COLUMNAS_TOGGLEABLES.some(c => colVisibles[c.key] !== COL_VISIBLES_DEFAULT[c.key])
-  const hayFiltros = fUsuario || fAccion || fFolio || fNombre || fEstatusFus || fDesde || fHasta || colVisiblesModificadas || sortCol !== null
   const toggleColumna = (key) => setColVisibles(v => ({ ...v, [key]: !v[key] }))
-  const cantFiltrosActivos = [fUsuario, fAccion, fFolio, fNombre, fEstatusFus, fDesde, fHasta].filter(Boolean).length
+  // Solo columnas AGREGADAS (activadas) más allá del default — no las que el
+  // usuario desactivó desde su estado por defecto (esas no generan chip).
+  const columnasAgregadas = COLUMNAS_TOGGLEABLES.filter(c => colVisibles[c.key] && !COL_VISIBLES_DEFAULT[c.key])
+  const hayColumnasAgregadas = columnasAgregadas.length > 0
+  const filtrosActivosChips = Boolean(fBusqueda || fAccion || fEstatusFus || fDesde || fHasta || hayColumnasAgregadas)
 
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' })
     : '—'
+
+  const fmtFechaCorta = s => {
+    const [y, m, d] = s.split('-')
+    return `${d}/${m}/${y}`
+  }
+
+  const toISODate = d => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const aplicarPresetFecha = (preset) => {
+    const hoy = new Date()
+    if (preset === 'hoy') {
+      const s = toISODate(hoy)
+      setFDesde(s); setFHasta(s)
+    } else if (preset === 'semana') {
+      const hace7 = new Date(hoy)
+      hace7.setDate(hoy.getDate() - 6)
+      setFDesde(toISODate(hace7)); setFHasta(toISODate(hoy))
+    } else if (preset === 'mes') {
+      const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+      setFDesde(toISODate(primerDia)); setFHasta(toISODate(hoy))
+    }
+  }
+
+  const handlePresetClick = (preset) => {
+    if (preset === 'rango') {
+      setPresetFecha(p => p === 'rango' ? null : 'rango')
+      return
+    }
+    aplicarPresetFecha(preset)
+    setPresetFecha(preset)
+  }
 
   const columnasVisibles = () => {
     const cols = []
@@ -216,13 +304,11 @@ export default function Bitacora() {
 
   const exportParams = () => {
     const p = new URLSearchParams()
+    if (fBusqueda)            p.set('q',           fBusqueda)
     if (fAccion)              p.set('accion',      fAccion)
-    if (fFolio)               p.set('folio',       fFolio)
-    if (fNombre && esADM)     p.set('nombre',      fNombre)
     if (fEstatusFus)          p.set('estatus_fus', fEstatusFus)
     if (fDesde)               p.set('fecha_desde', fDesde)
     if (fHasta)               p.set('fecha_hasta', fHasta)
-    if (fUsuario && esADM)    p.set('usuario',     fUsuario)
     p.set('columnas', columnasVisibles().join(','))
     const qs = p.toString()
     return qs ? `?${qs}` : ''
@@ -251,7 +337,7 @@ export default function Bitacora() {
 
   return (
     <AppLayout>
-      <div className="bita-bg">
+      <div className="bita-bg" ref={bitaBgRef}>
       <div className="bita-wrap">
 
         <div className="bita-header">
@@ -305,93 +391,144 @@ export default function Bitacora() {
         </div>
 
         {/* Filtros */}
-        <button type="button" className="bita-filtros-toggle" onClick={() => setFiltrosAbiertos(v => !v)}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="1.6" fill="currentColor" stroke="none"/>
-            <line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none"/>
-            <line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="1.6" fill="currentColor" stroke="none"/>
-          </svg>
-          Filtros
-          {cantFiltrosActivos > 0 && (
-            <span className="bita-filtros-badge">{cantFiltrosActivos} activo{cantFiltrosActivos > 1 ? 's' : ''}</span>
-          )}
-          <svg className={`bita-filtros-chevron${filtrosAbiertos ? ' open' : ''}`} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
-        <div className={`bita-filtros${filtrosAbiertos ? ' bita-filtros-open' : ''}`}>
-          {esADM && (
-            <input className="bita-input" placeholder="Usuario (correo)"
-              value={fUsuario} onChange={e => setFUsuario(e.target.value)} />
-          )}
-          <input className="bita-input" placeholder="Folio FUS"
-            value={fFolio} onChange={e => setFFolio(e.target.value)} />
-          {esADM && (
-            <input className="bita-input" placeholder="Nombre del servidor público"
-              value={fNombre} onChange={e => setFNombre(e.target.value)} />
-          )}
-          <select className="bita-input" value={fAccion} onChange={e => setFAccion(e.target.value)}>
-            <option value="">Todas las acciones</option>
-            {acciones.map(a => (
-              <option key={a} value={a}>{ACCION_LABELS[a] || a}</option>
-            ))}
-          </select>
-          <select className="bita-input" value={fEstatusFus} onChange={e => setFEstatusFus(e.target.value)}>
-            <option value="">Estatus actual del FUS</option>
-            {ESTATUS_FUS_OPCIONES.map(e => (
-              <option key={e} value={e}>{e}</option>
-            ))}
-          </select>
-          <div className="bita-fechas">
-            <div className="bita-fecha-grupo">
-              <span className="bita-fecha-lbl">Desde</span>
-              <input className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
-            </div>
-            <span className="bita-sep">–</span>
-            <div className="bita-fecha-grupo">
-              <span className="bita-fecha-lbl">Hasta</span>
-              <input className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="bita-col-menu desktop-only" ref={colMenuRef}>
-            <button type="button" className="bita-col-menu-btn" onClick={() => setColMenuAbierto(v => !v)}>
+        <div className={`bita-filtros-sticky${compacto ? ' bita-filtros-compacto' : ''}`}>
+          {compacto && (
+            <button type="button" className="bita-editar-filtros-btn" onClick={editarFiltros}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-                <circle cx="9" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.6" fill="currentColor" stroke="none"/>
+                <polyline points="6 9 12 15 18 9"/>
               </svg>
-              Columnas
+              Editar filtros
             </button>
-            {colMenuAbierto && (
-              <div className="bita-col-dropdown">
-                {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esADM).map(c => (
-                  <label key={c.key} className="bita-col-opcion">
-                    <input
-                      type="checkbox"
-                      checked={colVisibles[c.key]}
-                      onChange={() => toggleColumna(c.key)}
-                    />
+          )}
+
+          <div className="bita-filtros bita-fila-principal">
+            {/* Fila 1: buscador global */}
+            <div className="bita-fila-busqueda">
+              <div className="bita-busqueda-wrap">
+                <svg className="bita-busqueda-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input className="bita-input bita-busqueda"
+                  placeholder={esADM ? 'Buscar por folio, usuario o nombre…' : 'Buscar por folio…'}
+                  value={fBusqueda} onChange={e => setFBusqueda(e.target.value)} />
+              </div>
+            </div>
+
+            {/* Fila 2: presets de fecha + columnas opcionales, scroll horizontal combinado */}
+            <div className="bita-fila-pildoras">
+              <div className="bita-pildoras-scroll">
+                <button type="button" className={`bita-pildora${presetFecha === 'hoy' ? ' activa' : ''}`} onClick={() => handlePresetClick('hoy')}>Hoy</button>
+                <button type="button" className={`bita-pildora${presetFecha === 'semana' ? ' activa' : ''}`} onClick={() => handlePresetClick('semana')}>Semana</button>
+                <button type="button" className={`bita-pildora${presetFecha === 'mes' ? ' activa' : ''}`} onClick={() => handlePresetClick('mes')}>Mes</button>
+                <button type="button" className={`bita-pildora${presetFecha === 'rango' ? ' activa' : ''}`} onClick={() => handlePresetClick('rango')}>Rango</button>
+                <span className="bita-pildoras-sep" />
+                {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esADM).map(c => c.key === 'unidadAdministrativa' ? (
+                  <div key={c.key} className="bita-unidad-pill-wrap">
+                    <button type="button" ref={unidadBtnRef} className={`bita-pildora${colVisibles.unidadAdministrativa ? ' activa' : ''}`} onClick={abrirUnidadPopover}>
+                      {colVisibles.unidadAdministrativa && unidadSeleccionada ? unidadSeleccionada.unidadAdministrativa : c.label}
+                    </button>
+                    {unidadPopoverAbierto && createPortal(
+                      <div className="bita-unidad-popover" ref={unidadPopoverRef} style={{ position: 'fixed', top: unidadPopoverPos.top, left: unidadPopoverPos.left }}>
+                        {unidades.map(u => (
+                          <button key={u.idUnidadAdministrativa} type="button" className="bita-unidad-opcion" onClick={() => seleccionarUnidad(u)}>
+                            {u.unidadAdministrativa}
+                          </button>
+                        ))}
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                ) : (
+                  <button key={c.key} type="button" className={`bita-pildora${colVisibles[c.key] ? ' activa' : ''}`} onClick={() => toggleColumna(c.key)}>
                     {c.label}
-                  </label>
+                  </button>
                 ))}
               </div>
+            </div>
+
+            {presetFecha === 'rango' && (
+              <div className="bita-fechas">
+                <div className="bita-fecha-grupo">
+                  <span className="bita-fecha-lbl">Desde</span>
+                  <input className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
+                </div>
+                <span className="bita-sep">–</span>
+                <div className="bita-fecha-grupo">
+                  <span className="bita-fecha-lbl">Hasta</span>
+                  <input className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
+                </div>
+              </div>
             )}
+
+            {/* Fila 3: selects Acción + Estatus */}
+            <div className="bita-fila-selects">
+              <select className="bita-input" value={fAccion} onChange={e => setFAccion(e.target.value)}>
+                <option value="">Todas las acciones</option>
+                {acciones.map(a => (
+                  <option key={a} value={a}>{ACCION_LABELS[a] || a}</option>
+                ))}
+              </select>
+              <select className="bita-input" value={fEstatusFus} onChange={e => setFEstatusFus(e.target.value)}>
+                <option value="">Estatus actual del FUS</option>
+                {ESTATUS_FUS_OPCIONES.map(e => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {hayFiltros && <button className="bita-limpiar" onClick={limpiar}>Limpiar filtros</button>}
-        </div>
-
-        <div className="cols-toggle-bar">
-          {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esADM).map(c => (
-            <button
-              key={c.key}
-              type="button"
-              className={`col-toggle-btn${colVisibles[c.key] ? ' activa' : ''}`}
-              onClick={() => toggleColumna(c.key)}
-            >
-              {c.label}
-            </button>
-          ))}
+          {/* Fila 4: FILTROS ACTIVOS — dentro del panel verde */}
+          {filtrosActivosChips && <hr className="bita-divider" />}
+          {(filtrosActivosChips || compacto) && (
+            <div className={`bita-chips${compacto ? ' bita-chips-compacta' : ''}`}>
+              {filtrosActivosChips && <span className="chips-label">FILTROS ACTIVOS:</span>}
+              {fBusqueda && (
+                <span className="bita-chip">
+                  Búsqueda: "{fBusqueda}"
+                  <button type="button" onClick={() => setFBusqueda('')} aria-label="Quitar filtro de búsqueda">×</button>
+                </span>
+              )}
+              {fAccion && (
+                <span className="bita-chip">
+                  Acción: {ACCION_LABELS[fAccion] || fAccion}
+                  <button type="button" onClick={() => setFAccion('')} aria-label="Quitar filtro de acción">×</button>
+                </span>
+              )}
+              {fEstatusFus && (
+                <span className="bita-chip">
+                  Estatus: {fEstatusFus}
+                  <button type="button" onClick={() => setFEstatusFus('')} aria-label="Quitar filtro de estatus">×</button>
+                </span>
+              )}
+              {fDesde && (
+                <span className="bita-chip">
+                  Desde: {fmtFechaCorta(fDesde)}
+                  <button type="button" onClick={() => { setFDesde(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha desde">×</button>
+                </span>
+              )}
+              {fHasta && (
+                <span className="bita-chip">
+                  Hasta: {fmtFechaCorta(fHasta)}
+                  <button type="button" onClick={() => { setFHasta(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha hasta">×</button>
+                </span>
+              )}
+              {columnasAgregadas.map(c => (
+                <span key={c.key} className="bita-chip">
+                  Columnas: {c.key === 'unidadAdministrativa' && unidadSeleccionada ? `${c.label} (${unidadSeleccionada.unidadAdministrativa})` : c.label}
+                  <button type="button" onClick={() => quitarColumna(c.key)} aria-label={`Quitar columna ${c.label}`}>×</button>
+                </span>
+              ))}
+              {filtrosActivosChips && <button type="button" className="bita-limpiar-todo" onClick={limpiar}>Limpiar todo</button>}
+              {compacto && (
+                <button type="button" className="bita-editar-filtros-btn-inline" onClick={editarFiltros}>
+                  Editar
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tabla */}
@@ -426,11 +563,12 @@ export default function Bitacora() {
                         ? <a
                             href={`${esADM ? '/rol1/consultar-fus' : '/rol2/solicitudes'}?folio=${encodeURIComponent(r.fusFolio)}`}
                             className="bita-folio-link"
-                            onClick={e => { e.preventDefault(); irAlFus(r.fusFolio) }}
+                            onClick={e => { e.preventDefault(); setDetalleFolio(r.fusFolio) }}
                           >
                             {r.fusFolio}
                           </a>
                         : '—'}
+                      <span className="bita-folio-fecha-mobile">{fmt(r.fechaHora)}</span>
                       <span className="bita-mobile-badge">{ACCION_LABELS[r.accion] || r.accion}</span>
                     </td>
                   )}
@@ -504,6 +642,9 @@ export default function Bitacora() {
 
       {previewFolio && (
         <ModalPreviewPDF folio={previewFolio} onClose={() => setPreviewFolio(null)} />
+      )}
+      {detalleFolio && (
+        <ModalDetalleFUS folio={detalleFolio} onClose={() => setDetalleFolio(null)} />
       )}
     </AppLayout>
   )

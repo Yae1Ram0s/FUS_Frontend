@@ -12,10 +12,11 @@ import { useResizablePanel } from '../hooks/useResizablePanel'
 import './SolicitudesTurnadas.css'
 
 /* ── Panel de estadísticas ROL2 ── */
-function StatsPanel({ stats, cargando }) {
+function StatsPanel({ stats, cargando, onStatClick }) {
   const { user } = useAuth()
   const nombre = user?.nombre || user?.email || 'Usuario'
   const total  = (stats.pendientes || 0) + (stats.activas || 0) + (stats.concluidas || 0)
+  const esMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   return (
     <div className="std-panel">
@@ -48,6 +49,7 @@ function StatsPanel({ stats, cargando }) {
         <StatCard
           delay="0ms" accent="#235b4e"
           value={stats.pendientes} label="Recibidas" sublabel="Pendientes de atender"
+          onClick={() => onStatClick?.('Recibido')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
@@ -58,6 +60,8 @@ function StatsPanel({ stats, cargando }) {
         <StatCard
           delay="90ms" accent="#c9a227"
           value={stats.activas} label="En seguimiento" sublabel="Con respuesta en proceso"
+          live
+          onClick={() => onStatClick?.('En_seguimiento')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -67,6 +71,7 @@ function StatsPanel({ stats, cargando }) {
         <StatCard
           delay="180ms" accent="#1a7a52"
           value={stats.concluidas} label="Concluidas" sublabel="Atendidas y cerradas"
+          onClick={() => onStatClick?.('Concluido')}
           icon={
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -81,7 +86,10 @@ function StatsPanel({ stats, cargando }) {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        Selecciona una solicitud del panel izquierdo para ver el detalle completo
+        {esMobile
+          ? 'Toca una categoría para ver las solicitudes'
+          : 'Haz clic en una categoría para filtrar las solicitudes, o selecciona una del panel izquierdo para ver el detalle completo'
+        }
       </div>
 
     </div>
@@ -497,7 +505,11 @@ export default function SolicitudesTurnadas() {
 
   const cargarMas = () => cargar(pagina + 1, true)
 
-  useEffect(() => { cargarStats() }, [])
+  useEffect(() => {
+    cargarStats()
+    const interval = setInterval(cargarStats, 30_000)
+    return () => clearInterval(interval)
+  }, [])
   useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
@@ -616,7 +628,7 @@ export default function SolicitudesTurnadas() {
                 onConcluido={() => { cargar(); cargarStats(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
               />
-            : <StatsPanel stats={stats} cargando={statsCargando} />
+            : <StatsPanel stats={stats} cargando={statsCargando} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
           }
         </div>
       </div>
