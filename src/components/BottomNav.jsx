@@ -20,9 +20,8 @@ const ICON_INICIO = (
 
 const NAV_ROL1 = [
   {
-    path: '/rol1/consultar-fus',
+    path: '/rol1/dashboard',
     label: 'Inicio',
-    home: true,
     icon: ICON_INICIO,
   },
   {

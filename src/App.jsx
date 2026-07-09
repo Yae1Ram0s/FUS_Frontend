@@ -10,6 +10,7 @@ import NotFound                   from './pages/NotFound'
 import './context/Toast.css'
 
 import Login               from './pages/Login'
+import DashboardROL1       from './pages/DashboardROL1'
 import ConsultarFUS        from './pages/ConsultarFUS'
 import RegistrarFUS        from './pages/RegistrarFUS'
 import SolicitudesTurnadas from './pages/SolicitudesTurnadas'
@@ -49,7 +50,7 @@ export default function App() {
                   <Route path="/rol1/registrar-fus" element={<RegistrarFUS />} />
                   <Route path="/rol1/bitacora"       element={<Bitacora />} />
                   <Route path="/rol1/panel"          element={<PanelAdmin />} />
-                  <Route path="/rol1/dashboard"      element={<Navigate to="/rol1/consultar-fus" replace />} />
+                  <Route path="/rol1/dashboard"      element={<DashboardROL1 />} />
                 </Route>
 
                 {/* ROL2 — Titular / Enlace Estratégico */}
