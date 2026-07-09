@@ -10,38 +10,18 @@ import './Bitacora.css'
 const ESTATUS_FUS_OPCIONES = ['Registrado', 'Turnado', 'Atendido', 'Concluido']
 
 const COLUMNAS_TOGGLEABLES = [
-  { key: 'nombre',         label: 'Nombre',       admOnly: true },
-  { key: 'usuario',        label: 'Usuario',      admOnly: true },
-  { key: 'fecha',          label: 'Fecha y hora' },
-  { key: 'accion',         label: 'Acción' },
-  { key: 'estadoAnterior', label: 'Estado ant.' },
-  { key: 'estadoNuevo',    label: 'Estado nuevo' },
-  { key: 'observaciones',  label: 'Observaciones' },
+  { key: 'fecha',                 label: 'Fecha y hora (CDMX)' },
+  { key: 'nombre',                label: 'Responsable',            admOnly: true },
+  { key: 'usuario',               label: 'Correo del responsable', admOnly: true },
+  { key: 'unidadAdministrativa',  label: 'Unidad administrativa',  admOnly: true },
+  { key: 'accion',                label: 'Acción' },
+  { key: 'cambioEstatus',         label: 'Cambio de estatus' },
+  { key: 'observaciones',         label: 'Observaciones' },
 ]
 
 const COL_VISIBLES_DEFAULT = {
-  folio: true, nombre: true, usuario: true, fecha: true, accion: true,
-  estadoAnterior: false, estadoNuevo: false, observaciones: false,
-}
-
-/* ── Ordenamiento inteligente por tipo de dato (solo escritorio) ── */
-const SORT_GETTERS = {
-  folio:          r => r.fusFolio || '',
-  nombre:         r => r.nombre || '',
-  usuario:        r => r.usuario || '',
-  fecha:          r => r.fechaHora || '',
-  accion:         r => ACCION_LABELS[r.accion] || r.accion || '',
-  estadoAnterior: r => r.estadoAnterior || '',
-  estadoNuevo:    r => r.estadoNuevo || '',
-  observaciones:  r => r.observaciones || '',
-}
-
-function compararValores(va, vb, dir) {
-  const da = Date.parse(va), db = Date.parse(vb)
-  if (va && vb && !isNaN(da) && !isNaN(db)) return dir === 'asc' ? da - db : db - da
-  return dir === 'asc'
-    ? String(va).localeCompare(String(vb), 'es', { sensitivity: 'base', numeric: true })
-    : String(vb).localeCompare(String(va), 'es', { sensitivity: 'base', numeric: true })
+  folio: true, fecha: true, nombre: true, usuario: true, unidadAdministrativa: false,
+  accion: true, cambioEstatus: false, observaciones: false,
 }
 
 const ACCION_LABELS = {
@@ -149,6 +129,17 @@ export default function Bitacora() {
   const [fDesde,      setFDesde]      = useState('')
   const [fHasta,      setFHasta]      = useState('')
 
+  const [fUsuarioDeb, setFUsuarioDeb] = useState(fUsuario)
+  const [fFolioDeb,   setFFolioDeb]   = useState(fFolio)
+  const [fNombreDeb,  setFNombreDeb]  = useState(fNombre)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFUsuarioDeb(fUsuario); setFFolioDeb(fFolio); setFNombreDeb(fNombre)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [fUsuario, fFolio, fNombre])
+
   const [colVisibles, setColVisibles] = useState(COL_VISIBLES_DEFAULT)
   const [colMenuAbierto, setColMenuAbierto] = useState(false)
   const colMenuRef = useRef(null)
@@ -174,13 +165,14 @@ export default function Bitacora() {
   const cargar = useCallback((pag = 1, append = false) => {
     setCargando(true)
     const params = { page: pag, page_size: PAGE_SIZE }
-    if (fUsuario && esADM)    params.usuario     = fUsuario
+    if (fUsuarioDeb && esADM) params.usuario     = fUsuarioDeb
     if (fAccion)              params.accion      = fAccion
-    if (fFolio)               params.folio       = fFolio
-    if (fNombre && esADM)     params.nombre      = fNombre
+    if (fFolioDeb)            params.folio       = fFolioDeb
+    if (fNombreDeb && esADM)  params.nombre      = fNombreDeb
     if (fEstatusFus)          params.estatus_fus = fEstatusFus
     if (fDesde)               params.fecha_desde = fDesde
     if (fHasta)               params.fecha_hasta = fHasta
+    if (sortCol)              params.ordering    = `${sortDir === 'desc' ? '-' : ''}${sortCol}`
 
     api.get('/bitacora/', { params })
       .then(r => {
@@ -190,9 +182,9 @@ export default function Bitacora() {
       })
       .catch(() => {})
       .finally(() => setCargando(false))
-  }, [fUsuario, fAccion, fFolio, fNombre, fEstatusFus, fDesde, fHasta, esADM])
+  }, [fUsuarioDeb, fAccion, fFolioDeb, fNombreDeb, fEstatusFus, fDesde, fHasta, sortCol, sortDir, esADM])
 
-  useEffect(() => { cargar(1) }, [fUsuario, fAccion, fFolio, fNombre, fEstatusFus, fDesde, fHasta])
+  useEffect(() => { cargar(1) }, [fUsuarioDeb, fAccion, fFolioDeb, fNombreDeb, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
 
   const limpiar = () => {
     setFUsuario(''); setFAccion(''); setFFolio(''); setFNombre('')
@@ -211,13 +203,13 @@ export default function Bitacora() {
 
   const columnasVisibles = () => {
     const cols = []
+    if (colVisibles.fecha)            cols.push('fecha')
     if (colVisibles.folio)            cols.push('folio')
     if (esADM && colVisibles.nombre)  cols.push('nombre')
     if (esADM && colVisibles.usuario) cols.push('usuario')
-    if (colVisibles.fecha)            cols.push('fecha')
+    if (esADM && colVisibles.unidadAdministrativa) cols.push('unidadAdministrativa')
     if (colVisibles.accion)           cols.push('accion')
-    if (colVisibles.estadoAnterior)   cols.push('estado_ant')
-    if (colVisibles.estadoNuevo)      cols.push('estado_nuevo')
+    if (colVisibles.cambioEstatus)  { cols.push('estado_ant'); cols.push('estado_nuevo') }
     if (colVisibles.observaciones)    cols.push('observaciones')
     return cols
   }
@@ -236,19 +228,25 @@ export default function Bitacora() {
     return qs ? `?${qs}` : ''
   }
 
-  const COLS = 1 + columnasVisibles().length
+  const cantColumnasUI = [
+    colVisibles.fecha, colVisibles.folio,
+    esADM && colVisibles.nombre, esADM && colVisibles.usuario,
+    esADM && colVisibles.unidadAdministrativa,
+    colVisibles.accion, colVisibles.cambioEstatus, colVisibles.observaciones,
+  ].filter(Boolean).length
+  const COLS = 1 + cantColumnasUI
 
-  const registrosOrdenados = sortCol
-    ? [...registros].sort((a, b) => compararValores(SORT_GETTERS[sortCol](a), SORT_GETTERS[sortCol](b), sortDir))
-    : registros
-
-  const th = (key, label) => (
-    <th className="bita-th-sort" onClick={() => ordenarPor(key)}>
-      {label}
-      <span className={`bita-sort-arrow${sortCol === key ? ' bita-sort-arrow-activa' : ''}`}>
-        {sortCol === key ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
-      </span>
-    </th>
+  const th = (key, label, sortable = true) => (
+    sortable ? (
+      <th className="bita-th-sort" onClick={() => ordenarPor(key)}>
+        {label}
+        <span className={`bita-sort-arrow${sortCol === key ? ' bita-sort-arrow-activa' : ''}`}>
+          {sortCol === key ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+        </span>
+      </th>
+    ) : (
+      <th>{label}</th>
+    )
   )
 
   return (
@@ -401,13 +399,13 @@ export default function Bitacora() {
           <table className="bita-table">
             <thead>
               <tr>
+                {colVisibles.fecha   && th('fecha', 'Fecha y hora (CDMX)')}
                 {colVisibles.folio   && th('folio', 'Folio')}
-                {esADM && colVisibles.nombre  && th('nombre', 'Nombre')}
-                {esADM && colVisibles.usuario && th('usuario', 'Usuario')}
-                {colVisibles.fecha   && th('fecha', 'Fecha y hora')}
+                {esADM && colVisibles.nombre                && th('nombre', 'Responsable', false)}
+                {esADM && colVisibles.usuario               && th('usuario', 'Correo del responsable', false)}
+                {esADM && colVisibles.unidadAdministrativa  && th('unidadAdministrativa', 'Unidad administrativa', false)}
                 {colVisibles.accion  && th('accion', 'Acción')}
-                {colVisibles.estadoAnterior && th('estadoAnterior', 'Estado ant.')}
-                {colVisibles.estadoNuevo    && th('estadoNuevo', 'Estado nuevo')}
+                {colVisibles.cambioEstatus  && th('cambioEstatus', 'Cambio de estatus', false)}
                 {colVisibles.observaciones  && th('observaciones', 'Observaciones')}
                 <th>Acciones</th>
               </tr>
@@ -419,8 +417,9 @@ export default function Bitacora() {
               {!cargando && registros.length === 0 && (
                 <tr><td colSpan={COLS} className="bita-empty">No hay registros que coincidan con los filtros.</td></tr>
               )}
-              {registrosOrdenados.map(r => (
+              {registros.map(r => (
                 <tr key={r.id}>
+                  {colVisibles.fecha && <td className="bita-fecha" data-label="Fecha y hora (CDMX)">{fmt(r.fechaHora)}</td>}
                   {colVisibles.folio && (
                     <td className="bita-folio" data-label="Folio">
                       {r.fusFolio
@@ -435,9 +434,11 @@ export default function Bitacora() {
                       <span className="bita-mobile-badge">{ACCION_LABELS[r.accion] || r.accion}</span>
                     </td>
                   )}
-                  {esADM && colVisibles.nombre  && <td className="bita-usuario" data-label="Nombre">{r.nombre || '—'}</td>}
-                  {esADM && colVisibles.usuario && <td className="bita-email-col" data-label="Usuario">{r.usuario}</td>}
-                  {colVisibles.fecha && <td className="bita-fecha" data-label="Fecha y hora">{fmt(r.fechaHora)}</td>}
+                  {esADM && colVisibles.nombre  && <td className="bita-usuario" data-label="Responsable">{r.nombre || '—'}</td>}
+                  {esADM && colVisibles.usuario && <td className="bita-email-col" data-label="Correo del responsable">{r.usuario}</td>}
+                  {esADM && colVisibles.unidadAdministrativa && (
+                    <td data-label="Unidad administrativa">{r.unidadAdministrativa || '—'}</td>
+                  )}
                   {colVisibles.accion && (
                     <td data-label="Acción">
                       <span className={`bita-accion bita-accion-${r.accion}`}>
@@ -445,8 +446,11 @@ export default function Bitacora() {
                       </span>
                     </td>
                   )}
-                  {colVisibles.estadoAnterior && <td data-label="Estado ant.">{r.estadoAnterior || '—'}</td>}
-                  {colVisibles.estadoNuevo    && <td data-label="Estado nuevo">{r.estadoNuevo   || '—'}</td>}
+                  {colVisibles.cambioEstatus && (
+                    <td data-label="Cambio de estatus">
+                      {r.estadoAnterior && r.estadoNuevo ? `${r.estadoAnterior} → ${r.estadoNuevo}` : '—'}
+                    </td>
+                  )}
                   {colVisibles.observaciones  && <td className="bita-obs" data-label="Observaciones">{r.observaciones || '—'}</td>}
                   <td className="bita-col-pdf" data-label="">
                     {r.fusFolio ? (

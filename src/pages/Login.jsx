@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
@@ -28,8 +28,12 @@ export default function Login() {
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
 
-  const { login, loginWithTokens } = useAuth()
+  const { user, login, loginWithTokens } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) navigate(user.rol === 'ROL2' ? '/rol2/solicitudes' : '/rol1/consultar-fus', { replace: true })
+  }, [user])
 
   const redirect = (rol) => {
     if (rol === 'ROL2') navigate('/rol2/solicitudes')
