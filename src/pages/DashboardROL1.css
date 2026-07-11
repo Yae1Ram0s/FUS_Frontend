@@ -6,13 +6,14 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: #1a4438;
+  background-color: #ffffff;
+  /* Overlay blanco al 86% sobre la pleca: patrón visible ~14%, igual que ConsultarFUS/SolicitudesTurnadas */
   background-image:
-    linear-gradient(160deg, rgba(15, 50, 41, 0.55), rgba(31, 86, 71, 0.75)),
+    linear-gradient(rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.86)),
     url('../assets/pleca.png');
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-blend-mode: normal, multiply;
   display: flex;
   justify-content: center;
@@ -31,12 +32,12 @@
 .dash-mega-card {
   width: 100%;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 32px;
-  box-shadow: 0 20px 60px rgba(6, 30, 22, 0.35);
+  box-shadow: 0 20px 60px rgba(31, 86, 71, 0.14), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
   padding: 2.25rem 2.25rem 2.5rem;
   display: flex;
   flex-direction: column;
@@ -54,7 +55,7 @@
 .dash-header-apple p {
   margin: 4px 0 0;
   font-size: .95rem;
-  color: #86868b;
+  color: #55555a;
 }
 
 /* ── KPI row ── */
@@ -67,12 +68,12 @@
 .kpi-row > * { min-width: 0; }
 
 .kpi-card {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
@@ -90,7 +91,7 @@
 }
 
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.kpi-label { font-size: .82rem; font-weight: 600; color: #6e6e73; }
+.kpi-label { font-size: .82rem; font-weight: 600; color: #48484c; }
 .kpi-card-dark .kpi-label { color: rgba(255, 255, 255, 0.72); }
 
 .kpi-pill {
@@ -120,12 +121,12 @@
 .dash-grid-inferior > * { min-width: 0; }
 
 .dash-card {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   padding: 26px 28px;
   display: flex;
   flex-direction: column;
@@ -135,8 +136,8 @@
   overflow: hidden;
 }
 .dash-card h2 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
-.dash-subtitle { margin: 4px 0 20px; font-size: .82rem; color: #86868b; }
-.dash-empty { font-size: .85rem; color: #86868b; margin: 0; }
+.dash-subtitle { margin: 4px 0 20px; font-size: .82rem; color: #55555a; }
+.dash-empty { font-size: .85rem; color: #55555a; margin: 0; }
 
 .dash-card-centrado { align-items: center; justify-content: center; text-align: center; }
 .dash-card-centrado .dash-subtitle { margin-bottom: 8px; }
@@ -145,7 +146,7 @@
 .dash-bars { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .dash-bar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 32px; align-items: center; gap: 12px; }
 .dash-bar-label { font-size: .82rem; font-weight: 600; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-bar-track { height: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.05); overflow: hidden; }
+.dash-bar-track { height: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.08); overflow: hidden; }
 .dash-bar-fill { height: 100%; border-radius: 8px; background: #1F5647; transition: width 600ms ease; }
 .dash-bar-value { font-size: .82rem; font-weight: 700; color: #1d1d1f; text-align: right; }
 
@@ -164,8 +165,8 @@
 .dash-reminder-dot { width: 8px; height: 8px; border-radius: 50%; background: #d70015; flex-shrink: 0; }
 .dash-reminder-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .dash-reminder-body strong { font-size: .86rem; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-reminder-body span { font-size: .78rem; color: #86868b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-reminder-time { font-size: .74rem; color: #86868b; white-space: nowrap; flex-shrink: 0; }
+.dash-reminder-body span { font-size: .78rem; color: #55555a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-reminder-time { font-size: .74rem; color: #55555a; white-space: nowrap; flex-shrink: 0; }
 
 /* ── Feed de actividad ── */
 .dash-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -178,19 +179,19 @@
 }
 .dash-feed-body { flex: 1; min-width: 0; }
 .dash-feed-text { font-size: .84rem; color: #1d1d1f; line-height: 1.4; overflow-wrap: anywhere; }
-.dash-feed-hora { font-size: .76rem; color: #86868b; white-space: nowrap; flex-shrink: 0; }
+.dash-feed-hora { font-size: .76rem; color: #55555a; white-space: nowrap; flex-shrink: 0; }
 
 /* ── Donut de eficiencia ── */
 .dash-donut-wrap { position: relative; width: 100%; max-width: 260px; margin: 8px auto 0; }
 .dash-donut { width: 100%; height: auto; display: block; }
-.dash-donut-track { fill: none; stroke: rgba(0, 0, 0, 0.06); stroke-width: 16; stroke-linecap: round; }
+.dash-donut-track { fill: none; stroke: rgba(0, 0, 0, 0.09); stroke-width: 16; stroke-linecap: round; }
 .dash-donut-fill   { fill: none; stroke: #1F5647; stroke-width: 16; stroke-linecap: round; transition: stroke-dashoffset 800ms ease; }
 .dash-donut-center {
   position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center;
 }
 .dash-donut-pct { font-size: 2.1rem; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em; }
-.dash-donut-lbl { font-size: .76rem; color: #86868b; }
+.dash-donut-lbl { font-size: .76rem; color: #55555a; }
 
 /* ══════════════════════════════════════
    RESPONSIVO
