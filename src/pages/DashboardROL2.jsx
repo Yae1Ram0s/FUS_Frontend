@@ -138,6 +138,7 @@ export default function DashboardROL2() {
     <AppLayout>
       <div className="dash-bg">
         <div className="dash-wrap-apple">
+        <div className="dash-mega-card">
 
           <header className="dash-header-apple">
             <h1>Hola, {nombre.split(' ')[0]}</h1>
@@ -213,6 +214,7 @@ export default function DashboardROL2() {
             </section>
           </div>
 
+        </div>
         </div>
       </div>
     </AppLayout>
