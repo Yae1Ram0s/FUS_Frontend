@@ -32,12 +32,12 @@ export default function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user) navigate(user.rol === 'ROL2' ? '/rol2/solicitudes' : '/rol1/consultar-fus', { replace: true })
+    if (user) navigate(user.rol === 'ROL2' ? '/rol2/dashboard' : '/rol1/dashboard', { replace: true })
   }, [user])
 
   const redirect = (rol) => {
-    if (rol === 'ROL2') navigate('/rol2/solicitudes')
-    else navigate('/rol1/consultar-fus')
+    if (rol === 'ROL2') navigate('/rol2/dashboard')
+    else navigate('/rol1/dashboard')
   }
 
   const resetAll = () => {

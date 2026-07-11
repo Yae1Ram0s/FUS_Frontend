@@ -1,18 +1,49 @@
 /* ══════════════════════════════════════
-   DASHBOARD ROL1 — Apple HIG style
+   DASHBOARD ROL1 — Apple HIG style (glass)
 ══════════════════════════════════════ */
 .dash-bg {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   background: #f5f5f7;
   display: flex;
   justify-content: center;
+  isolation: isolate;
+}
+
+/* Manchas de color difuminadas detrás de las tarjetas — dan profundidad al
+   efecto de vidrio (backdrop-filter necesita algo debajo para "esmerilar"). */
+.dash-bg::before,
+.dash-bg::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.dash-bg::before {
+  top: -120px;
+  left: -80px;
+  width: 420px;
+  height: 420px;
+  background: rgba(31, 86, 71, 0.16);
+}
+.dash-bg::after {
+  top: 260px;
+  right: -140px;
+  width: 480px;
+  height: 480px;
+  background: rgba(10, 132, 255, 0.10);
 }
 
 .dash-wrap-apple {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 1400px;
+  min-width: 0;
   padding: 2.5rem 2.5rem 3rem;
   display: flex;
   flex-direction: column;
@@ -38,13 +69,17 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  min-width: 0;
 }
+.kpi-row > * { min-width: 0; }
 
 .kpi-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
@@ -54,11 +89,11 @@
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 .kpi-card-clickable { cursor: pointer; }
-.kpi-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06); }
+.kpi-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08); }
 
 .kpi-card-dark {
-  background: #1F5647;
-  border-color: transparent;
+  background: rgba(31, 86, 71, 0.78);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -86,16 +121,25 @@
   grid-template-columns: 1.15fr 0.85fr;
   gap: 20px;
   align-items: stretch;
+  min-width: 0;
 }
+.dash-grid-central > *,
+.dash-grid-inferior > * { min-width: 0; }
 
 .dash-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   padding: 26px 28px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .dash-card h2 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
 .dash-subtitle { margin: 4px 0 20px; font-size: .82rem; color: #86868b; }
@@ -105,10 +149,10 @@
 .dash-card-centrado .dash-subtitle { margin-bottom: 8px; }
 
 /* ── Barras de recepción ── */
-.dash-bars { display: flex; flex-direction: column; gap: 16px; }
-.dash-bar-row { display: grid; grid-template-columns: 120px 1fr 32px; align-items: center; gap: 12px; }
-.dash-bar-label { font-size: .82rem; font-weight: 600; color: #1d1d1f; }
-.dash-bar-track { height: 10px; border-radius: 8px; background: #f0f0f2; overflow: hidden; }
+.dash-bars { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.dash-bar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 32px; align-items: center; gap: 12px; }
+.dash-bar-label { font-size: .82rem; font-weight: 600; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-bar-track { height: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.05); overflow: hidden; }
 .dash-bar-fill { height: 100%; border-radius: 8px; background: #1F5647; transition: width 600ms ease; }
 .dash-bar-value { font-size: .82rem; font-weight: 700; color: #1d1d1f; text-align: right; }
 
@@ -123,10 +167,10 @@
   cursor: pointer;
   transition: background 150ms ease;
 }
-.dash-reminder-item:hover { background: #f5f5f7; }
+.dash-reminder-item:hover { background: rgba(0, 0, 0, 0.04); }
 .dash-reminder-dot { width: 8px; height: 8px; border-radius: 50%; background: #d70015; flex-shrink: 0; }
 .dash-reminder-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.dash-reminder-body strong { font-size: .86rem; color: #1d1d1f; }
+.dash-reminder-body strong { font-size: .86rem; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash-reminder-body span { font-size: .78rem; color: #86868b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash-reminder-time { font-size: .74rem; color: #86868b; white-space: nowrap; flex-shrink: 0; }
 
@@ -140,13 +184,13 @@
   font-size: .82rem; font-weight: 700; flex-shrink: 0;
 }
 .dash-feed-body { flex: 1; min-width: 0; }
-.dash-feed-text { font-size: .84rem; color: #1d1d1f; line-height: 1.4; }
+.dash-feed-text { font-size: .84rem; color: #1d1d1f; line-height: 1.4; overflow-wrap: anywhere; }
 .dash-feed-hora { font-size: .76rem; color: #86868b; white-space: nowrap; flex-shrink: 0; }
 
 /* ── Donut de eficiencia ── */
 .dash-donut-wrap { position: relative; width: 100%; max-width: 260px; margin: 8px auto 0; }
 .dash-donut { width: 100%; height: auto; display: block; }
-.dash-donut-track { fill: none; stroke: #f0f0f2; stroke-width: 16; stroke-linecap: round; }
+.dash-donut-track { fill: none; stroke: rgba(0, 0, 0, 0.06); stroke-width: 16; stroke-linecap: round; }
 .dash-donut-fill   { fill: none; stroke: #1F5647; stroke-width: 16; stroke-linecap: round; transition: stroke-dashoffset 800ms ease; }
 .dash-donut-center {
   position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
@@ -164,15 +208,41 @@
 }
 
 @media (max-width: 768px) {
-  .dash-wrap-apple { padding: 1.5rem 1.25rem 2rem; gap: 16px; }
-  .dash-header-apple h1 { font-size: 1.5rem; }
-  .kpi-row { grid-template-columns: 1fr 1fr; gap: 12px; }
-  .kpi-card { padding: 16px 18px; min-height: 96px; }
-  .kpi-value { font-size: 1.8rem; }
-  .dash-card { padding: 18px 20px; }
-  .dash-bar-row { grid-template-columns: 84px 1fr 28px; gap: 8px; }
+  .dash-bg::before { width: 260px; height: 260px; top: -80px; left: -60px; filter: blur(50px); }
+  .dash-bg::after  { width: 280px; height: 280px; top: 220px; right: -110px; filter: blur(50px); }
+
+  .dash-wrap-apple { padding: 1.25rem 1rem 1.5rem; gap: 14px; }
+  .dash-header-apple h1 { font-size: 1.4rem; }
+  .dash-header-apple p { font-size: .85rem; }
+
+  .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi-card { padding: 14px 16px; min-height: 88px; gap: 10px; border-radius: 16px; }
+  .kpi-label { font-size: .74rem; }
+  .kpi-value { font-size: 1.6rem; }
+  .kpi-pill { font-size: .62rem; padding: 2px 7px; }
+
+  .dash-card { padding: 16px 18px; border-radius: 16px; }
+  .dash-card h2 { font-size: .96rem; }
+  .dash-subtitle { font-size: .76rem; margin-bottom: 14px; }
+
+  .dash-bar-row { grid-template-columns: 76px 1fr 26px; gap: 8px; }
+  .dash-bar-label { font-size: .74rem; }
+  .dash-bar-value { font-size: .74rem; }
+
+  .dash-reminder-body strong { font-size: .82rem; }
+  .dash-reminder-body span { font-size: .74rem; }
+  .dash-reminder-time { font-size: .7rem; }
+
+  .dash-feed-text { font-size: .8rem; }
+  .dash-avatar { width: 30px; height: 30px; font-size: .76rem; }
+
+  .dash-donut-wrap { max-width: 220px; }
+  .dash-donut-pct { font-size: 1.8rem; }
 }
 
 @media (max-width: 480px) {
   .kpi-row { grid-template-columns: 1fr; }
+  .kpi-card { min-height: auto; flex-direction: row; align-items: center; justify-content: space-between; }
+  .kpi-top { flex-direction: column; align-items: flex-start; gap: 4px; order: 1; }
+  .kpi-value { order: 2; }
 }

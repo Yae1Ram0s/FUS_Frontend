@@ -61,9 +61,8 @@ const NAV_ROL1 = [
 
 const NAV_ROL2 = [
   {
-    path: '/rol2/solicitudes',
+    path: '/rol2/dashboard',
     label: 'Inicio',
-    home: true,
     icon: ICON_INICIO,
   },
   {
@@ -94,10 +93,7 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
     .toUpperCase()
 
   const handleNav = (item) => {
-    if (item.home) {
-      window.dispatchEvent(new CustomEvent('scs:inicio'))
-      navigate(item.path)
-    } else if (item.consultar) {
+    if (item.consultar) {
       window.dispatchEvent(new CustomEvent('scs:consultar'))
       navigate(`${item.path}?modo=lista`)
     } else {
@@ -142,14 +138,9 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
       <nav className="sidebar-nav">
         <p className="sidebar-section-label">Menú principal</p>
         {items.map((item, idx) => {
-          let isActive = false
-          if (item.home) {
-            isActive = location.pathname === item.path && !location.search.includes('modo=lista')
-          } else if (item.consultar) {
-            isActive = location.pathname === item.path && location.search.includes('modo=lista')
-          } else {
-            isActive = location.pathname === item.path
-          }
+          const isActive = item.consultar
+            ? location.pathname === item.path && location.search.includes('modo=lista')
+            : location.pathname === item.path
           return (
           <button
             key={`${item.path}-${idx}`}

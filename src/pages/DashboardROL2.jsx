@@ -80,54 +80,54 @@ function DonutEficiencia({ pct }) {
   )
 }
 
-export default function DashboardROL1() {
+export default function DashboardROL2() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const nombre = user?.nombre || user?.email || 'Usuario'
 
-  const [fusData,   setFusData]   = useState([])
+  const [turnados,  setTurnados]  = useState([])
   const [actividad, setActividad] = useState([])
   const [cargando,  setCargando]  = useState(true)
   const [ahora] = useState(() => Date.now())
 
   useEffect(() => {
     Promise.all([
-      api.get('/fus/', { params: { page: 1, page_size: 500 } }),
+      api.get('/turnados/mis-turnados/', { params: { page: 1, page_size: 500 } }),
       api.get('/bitacora/', { params: { page: 1, page_size: 6 } }),
     ])
-      .then(([fusRes, bitRes]) => {
-        setFusData(fusRes.data.results || [])
+      .then(([turnRes, bitRes]) => {
+        setTurnados(turnRes.data.results || [])
         setActividad(bitRes.data.results || [])
       })
       .catch(() => {})
       .finally(() => setCargando(false))
   }, [])
 
-  const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
+  const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
 
-  const totalRegistrados = fusData.length
+  const totalTurnados = turnados.length
   const haceUnaSemana = ahora - 7 * 24 * 3_600_000
-  const nuevosSemana = fusData.filter(f => f.fechaHora && new Date(f.fechaHora).getTime() >= haceUnaSemana).length
-  const turnados   = fusData.filter(f => f.estatusParticular === 'Turnado').length
-  const enAtencion  = fusData.filter(f => f.estatusParticular === 'Atendido').length
-  const concluidos  = fusData.filter(f => f.estatusParticular === 'Concluido').length
+  const nuevosSemana = turnados.filter(t => t.fechaHoraTurnado && new Date(t.fechaHoraTurnado).getTime() >= haceUnaSemana).length
+  const recibidas     = turnados.filter(t => t.estatusTitular === 'Recibido').length
+  const enSeguimiento = turnados.filter(t => t.estatusTitular === 'En_seguimiento').length
+  const concluidas    = turnados.filter(t => t.estatusTitular === 'Concluido').length
 
   const medioCounts = {}
-  fusData.forEach(f => {
-    const m = f.idMedioRecepcion?.nombreMedio || 'Otro'
+  turnados.forEach(t => {
+    const m = t.idFus?.idMedioRecepcion?.nombreMedio || 'Otro'
     medioCounts[m] = (medioCounts[m] || 0) + 1
   })
   const medios = Object.entries(medioCounts).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
 
   const limite48h = ahora - 48 * 3_600_000
-  const recordatorios = fusData
-    .filter(f => f.prioridad === 'Alta' && f.estatusParticular !== 'Concluido' && f.fechaHora && new Date(f.fechaHora).getTime() < limite48h)
-    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+  const recordatorios = turnados
+    .filter(t => t.idFus?.prioridad === 'Alta' && t.estatusTitular !== 'Concluido' && t.fechaHoraTurnado && new Date(t.fechaHoraTurnado).getTime() < limite48h)
+    .sort((a, b) => new Date(a.fechaHoraTurnado) - new Date(b.fechaHoraTurnado))
     .slice(0, 6)
 
   const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0)
-  const delMes = fusData.filter(f => f.fechaHora && new Date(f.fechaHora) >= inicioMes)
-  const concluidosMes = delMes.filter(f => f.estatusParticular === 'Concluido').length
+  const delMes = turnados.filter(t => t.fechaHoraTurnado && new Date(t.fechaHoraTurnado) >= inicioMes)
+  const concluidosMes = delMes.filter(t => t.estatusTitular === 'Concluido').length
   const pctEficiencia = delMes.length ? Math.round((concluidosMes / delMes.length) * 100) : 0
 
   if (cargando) {
@@ -141,40 +141,40 @@ export default function DashboardROL1() {
 
           <header className="dash-header-apple">
             <h1>Hola, {nombre.split(' ')[0]}</h1>
-            <p>Resumen del Sistema de Control de Solicitudes</p>
+            <p>Resumen de tus solicitudes turnadas</p>
           </header>
 
           {/* ── KPIs ── */}
           <div className="kpi-row">
-            <KpiCard dark label="Total de FUS registrados" value={totalRegistrados} extra={`↑ +${nuevosSemana} esta semana`} onClick={() => irAConsultar('')} />
-            <KpiCard label="Turnados / en espera" value={turnados} extra="↗" onClick={() => irAConsultar('Turnado')} />
-            <KpiCard label="En atención" value={enAtencion} extra="↗" onClick={() => irAConsultar('Atendido')} />
-            <KpiCard label="Concluidos" value={concluidos} extra="✓" onClick={() => irAConsultar('Concluido')} />
+            <KpiCard dark label="Total de solicitudes turnadas" value={totalTurnados} extra={`↑ +${nuevosSemana} esta semana`} onClick={() => irAConsultar('')} />
+            <KpiCard label="Recibidas" value={recibidas} extra="↗" onClick={() => irAConsultar('Recibido')} />
+            <KpiCard label="En seguimiento" value={enSeguimiento} extra="↗" onClick={() => irAConsultar('En_seguimiento')} />
+            <KpiCard label="Concluidas" value={concluidas} extra="✓" onClick={() => irAConsultar('Concluido')} />
           </div>
 
           {/* ── Bloque central ── */}
           <div className="dash-grid-central">
             <section className="dash-card">
               <h2>Analítica de recepción</h2>
-              <p className="dash-subtitle">Canales de entrada de las solicitudes</p>
+              <p className="dash-subtitle">Canales de entrada de las solicitudes turnadas</p>
               <BarrasRecepcion data={medios} />
             </section>
 
             <section className="dash-card">
               <h2>Recordatorios y alertas críticas</h2>
-              <p className="dash-subtitle">Prioridad alta con más de 48 h sin actualización</p>
+              <p className="dash-subtitle">Prioridad alta con más de 48 h sin atender</p>
               {recordatorios.length === 0 ? (
                 <p className="dash-empty">Sin alertas pendientes. 🎉</p>
               ) : (
                 <ul className="dash-reminders">
-                  {recordatorios.map(f => (
-                    <li key={f.id} className="dash-reminder-item" onClick={() => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(f.folio)}`)}>
+                  {recordatorios.map(t => (
+                    <li key={t.id} className="dash-reminder-item" onClick={() => navigate(`/rol2/solicitudes?folio=${encodeURIComponent(t.idFus?.folio || '')}`)}>
                       <span className="dash-reminder-dot" />
                       <div className="dash-reminder-body">
-                        <strong>{f.folio}</strong>
-                        <span>{(f.descripcion || '').slice(0, 60)}</span>
+                        <strong>{t.idFus?.folio}</strong>
+                        <span>{(t.idFus?.descripcion || '').slice(0, 60)}</span>
                       </div>
-                      <span className="dash-reminder-time">{timeAgo(f.fechaHora)}</span>
+                      <span className="dash-reminder-time">{timeAgo(t.fechaHoraTurnado)}</span>
                     </li>
                   ))}
                 </ul>
@@ -208,7 +208,7 @@ export default function DashboardROL1() {
 
             <section className="dash-card dash-card-centrado">
               <h2>Eficiencia operativa</h2>
-              <p className="dash-subtitle">Resueltas vs. pendientes este mes</p>
+              <p className="dash-subtitle">Concluidas vs. pendientes este mes</p>
               <DonutEficiencia pct={pctEficiencia} />
             </section>
           </div>

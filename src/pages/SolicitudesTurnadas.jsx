@@ -451,7 +451,7 @@ export default function SolicitudesTurnadas() {
 
   const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
-  const [filtro,       setFiltro]       = useState('')
+  const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
   const [seleccionado, setSeleccionado] = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
@@ -522,17 +522,20 @@ export default function SolicitudesTurnadas() {
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
   /* ── Resize panel izquierdo ── */
-  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista')
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')))
 
   useEffect(() => {
-    const handleInicio = () => { setPanelAbierto(false); setSeleccionado(null) }
-    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
-    window.addEventListener('scs:inicio', handleInicio)
-    window.addEventListener('scs:consultar', handleConsultar)
-    return () => {
-      window.removeEventListener('scs:inicio', handleInicio)
-      window.removeEventListener('scs:consultar', handleConsultar)
+    if (searchParams.get('filtro')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('filtro')
+      setSearchParams(next, { replace: true })
     }
+  }, [])
+
+  useEffect(() => {
+    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
+    window.addEventListener('scs:consultar', handleConsultar)
+    return () => window.removeEventListener('scs:consultar', handleConsultar)
   }, [])
   const { leftWidth, containerRef, startResize } = useResizablePanel('st-left-width')
 

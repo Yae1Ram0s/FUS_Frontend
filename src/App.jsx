@@ -11,6 +11,7 @@ import './context/Toast.css'
 
 import Login               from './pages/Login'
 import DashboardROL1       from './pages/DashboardROL1'
+import DashboardROL2       from './pages/DashboardROL2'
 import ConsultarFUS        from './pages/ConsultarFUS'
 import RegistrarFUS        from './pages/RegistrarFUS'
 import SolicitudesTurnadas from './pages/SolicitudesTurnadas'
@@ -57,6 +58,7 @@ export default function App() {
                 <Route element={<PrivateRoute roles={['ROL2']} />}>
                   <Route path="/rol2/solicitudes" element={<SolicitudesTurnadas />} />
                   <Route path="/rol2/bitacora"    element={<Bitacora />} />
+                  <Route path="/rol2/dashboard"   element={<DashboardROL2 />} />
                 </Route>
 
                 {/* Raíz → login */}

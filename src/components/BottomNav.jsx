@@ -62,9 +62,8 @@ const NAV_ROL1 = [
 
 const NAV_ROL2 = [
   {
-    path: '/rol2/solicitudes',
+    path: '/rol2/dashboard',
     label: 'Inicio',
-    home: true,
     icon: ICON_INICIO,
   },
   {
@@ -93,23 +92,15 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav" role="navigation" aria-label="Navegación principal">
       {items.map((item, idx) => {
-        let active = false
-        if (item.home) {
-          active = location.pathname === item.path && !location.search.includes('modo=lista')
-        } else if (item.consultar) {
-          active = location.pathname === item.path && location.search.includes('modo=lista')
-        } else {
-          active = location.pathname === item.path
-        }
+        const active = item.consultar
+          ? location.pathname === item.path && location.search.includes('modo=lista')
+          : location.pathname === item.path
         return (
           <button
             key={`${item.path}-${idx}`}
             className={`bn-item${item.raised ? ' bn-item-raised' : ''}${active ? ' bn-item-active' : ''}`}
             onClick={() => {
-              if (item.home) {
-                window.dispatchEvent(new CustomEvent('scs:inicio'))
-                navigate(item.path)
-              } else if (item.consultar) {
+              if (item.consultar) {
                 window.dispatchEvent(new CustomEvent('scs:consultar'))
                 navigate(`${item.path}?modo=lista`)
               } else {

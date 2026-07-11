@@ -8,8 +8,8 @@ export default function NotFound() {
 
   const goHome = () => {
     if (!user) { navigate('/login'); return }
-    if (user.rol === 'ROL2') navigate('/rol2/solicitudes')
-    else navigate('/rol1/consultar-fus')
+    if (user.rol === 'ROL2') navigate('/rol2/dashboard')
+    else navigate('/rol1/dashboard')
   }
 
   return (
