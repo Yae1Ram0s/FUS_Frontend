@@ -809,7 +809,7 @@ export default function ConsultarFUS() {
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input
-                placeholder="Buscar por folio, descripción…"
+                placeholder="Buscar por folio, descripción, contacto, medio…"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
               />

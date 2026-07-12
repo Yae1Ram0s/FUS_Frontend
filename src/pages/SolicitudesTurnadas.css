@@ -288,6 +288,28 @@
   background-blend-mode: normal, multiply;
 }
 
+.st-hint-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 18px;
+  text-align: center;
+  padding: 2rem;
+  user-select: none;
+}
+.st-hint-select svg {
+  flex-shrink: 0;
+  color: rgba(31, 86, 71, 0.28);
+}
+.st-hint-select p {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  max-width: 260px;
+  color: rgba(31, 86, 71, 0.42);
+}
+
 /* ── Panel de estadísticas ROL2 ── */
 .std-panel {
   display: flex;

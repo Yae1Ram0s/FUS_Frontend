@@ -562,7 +562,7 @@ export default function SolicitudesTurnadas() {
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input
-                placeholder="Buscar por folio, descripción…"
+                placeholder="Buscar por folio, descripción, contacto, medio…"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
               />
@@ -631,7 +631,20 @@ export default function SolicitudesTurnadas() {
                 onConcluido={() => { cargar(); cargarStats(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
               />
-            : <StatsPanel stats={stats} cargando={statsCargando} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
+            : panelAbierto
+              ? (
+                <div className="st-hint-select">
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                  <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+                </div>
+              )
+              : <StatsPanel stats={stats} cargando={statsCargando} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
           }
         </div>
       </div>
