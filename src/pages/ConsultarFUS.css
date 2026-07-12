@@ -308,6 +308,23 @@
 .cfus-left .fus-card-top      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; min-width: 0; }
 .cfus-left .fus-folio         { font-size: 0.78rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
 .cfus-left .fus-card-top > span { align-self: flex-end; order: -1; }
+.fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
+.fus-card-historial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(195, 212, 207, 0.30);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms, color 150ms;
+}
+.fus-card-historial-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
 .cfus-left .fus-meta          { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72) !important; margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cfus-left .fus-desc          { font-size: 0.74rem; color: rgba(255, 255, 255, 0.50) !important; margin-top: 5px; font-style: normal; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -782,6 +799,7 @@
 .detalle-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   padding: 14px 20px;
   border-top: 1px solid rgba(35, 91, 78, 0.12);
   background: rgba(235, 248, 244, 0.07);
@@ -1090,6 +1108,20 @@
 .btn-turnar:active:not(:disabled) { background: rgba(22, 65, 55, 1); }
 .btn-turnar:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-turnar .btn-spinner { border-color: rgba(255,255,255,0.30); border-top-color: #ffffff; margin-right: 2px; }
+
+.btn-historial {
+  background: transparent;
+  color: rgba(35, 91, 78, 0.90);
+  border: 1px solid rgba(35, 91, 78, 0.35);
+  border-radius: 20px;
+  padding: 10px 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease-in-out;
+}
+.btn-historial:hover { background: rgba(35, 91, 78, 0.08); border-color: rgba(35, 91, 78, 0.55); }
+.btn-historial:active { background: rgba(35, 91, 78, 0.14); }
 
 .modal-close:disabled { opacity: 0.45; cursor: not-allowed; }
 

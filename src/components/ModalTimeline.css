@@ -1,0 +1,158 @@
+/* El centrado (position:fixed + transform) y el alto seguro (--app-vh) ya los
+   da .modal-card compartido (ConsultarFUS.css) — acá solo el look propio. */
+.mtl-modal.modal-card {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  max-height: calc(var(--app-vh, 100vh) * 0.85);
+  z-index: 9999;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.mtl-modal .modal-title { font-weight: 600; text-align: left; }
+.mtl-modal .modal-header { background: var(--bg); flex-shrink: 0; }
+
+/* ── Leyenda de colores ── */
+.mtl-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #edf2f7;
+  flex-shrink: 0;
+  background: #ffffff;
+}
+.mtl-leyenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .68rem;
+  font-weight: 600;
+  color: #718096;
+}
+.mtl-leyenda-dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+/* ── Cuerpo con scroll interno ── */
+.mtl-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 18px 24px 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: #ffffff;
+}
+
+.mtl-empty { font-size: .85rem; color: #a0aec0; margin: 0; }
+
+/* ── Línea de tiempo ── */
+.mtl-timeline { list-style: none; margin: 0; padding: 0; }
+
+.mtl-evento { display: flex; gap: 12px; }
+
+.mtl-punto-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 12px;
+}
+.mtl-punto {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px #ffffff;
+  margin-top: 2px;
+}
+.mtl-linea {
+  width: 1.5px;
+  flex: 1;
+  min-height: 22px;
+  background: #e2e8f0;
+  margin: 2px 0;
+}
+
+.mtl-card {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-base);
+  border: 1px solid #edf2f7;
+  border-left: 3px solid var(--tipo-color, #edf2f7);
+  background: #f9fafb;
+}
+
+.mtl-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mtl-card-titulo { font-size: .82rem; font-weight: 700; color: #2d3748; }
+.mtl-card-fecha  { font-size: .70rem; color: #a0aec0; white-space: nowrap; flex-shrink: 0; }
+
+.mtl-card-detalle {
+  margin: 4px 0 0;
+  font-size: .82rem;
+  color: #4a5568;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.mtl-card-actor {
+  display: block;
+  margin-top: 4px;
+  font-size: .74rem;
+  font-weight: 600;
+  color: #718096;
+}
+.mtl-card-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: .70rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--badge-brand-bg);
+  border: 1px solid var(--badge-brand-border);
+  color: #8a6820;
+}
+
+/* ── Eventos de bitácora — visualmente secundarios ── */
+.mtl-evento-bitacora .mtl-card {
+  background: var(--badge-brand-bg);
+  border: 1px dashed var(--badge-brand-border);
+  border-left: 3px dashed var(--tipo-color, var(--badge-brand-border));
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.mtl-evento-bitacora .mtl-card-titulo { font-size: .76rem; color: #8a6820; }
+.mtl-evento-bitacora .mtl-card-detalle,
+.mtl-evento-bitacora .mtl-card-actor { font-size: .72rem; }
+
+@media (max-width: 768px) {
+  .mtl-overlay { z-index: 9999; }
+  .mtl-modal.modal-card {
+    width: 92vw;
+    max-width: 92vw;
+    max-height: 82vh;
+    max-height: calc(100svh - 80px);
+    max-height: calc(var(--app-vh, 100vh) * 0.82);
+    z-index: 9999;
+    border-radius: 18px;
+  }
+  .mtl-modal .modal-header { padding: 14px 16px; }
+  .mtl-modal .modal-title { font-size: .96rem; }
+
+  .mtl-leyenda { padding: 8px 16px; gap: 5px 10px; }
+  .mtl-leyenda-item { font-size: .64rem; }
+
+  .mtl-body { padding: 14px 16px 18px; }
+  .mtl-card { padding: 9px 12px; margin-bottom: 12px; }
+  .mtl-card-titulo { font-size: .78rem; }
+  .mtl-card-fecha { font-size: .66rem; }
+  .mtl-card-detalle { font-size: .78rem; }
+  .mtl-card-actor { font-size: .70rem; }
+}

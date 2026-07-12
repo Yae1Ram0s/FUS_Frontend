@@ -5,6 +5,7 @@ import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import StatCard from '../components/StatCard'
+import ModalTimeline from '../components/ModalTimeline'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useEstatus } from '../hooks/useEstatus'
@@ -522,7 +523,7 @@ function ModalDescargarPDF({ onCancelar, onConfirmar }) {
 }
 
 /* ── Panel de detalle FUS ── */
-function DetalleFUS({ fus, onTurnar, onBack }) {
+function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
   const navigate = useNavigate()
   const { accessToken } = useAuth()
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
@@ -650,19 +651,22 @@ function DetalleFUS({ fus, onTurnar, onBack }) {
         </div>
       )}
 
-      {puedesTurnar && (
-        <div className="detalle-footer">
+      <div className="detalle-footer">
+        {puedesTurnar && (
           <button className="btn-turnar" onClick={() => onTurnar(fus)}>
             Turnar solicitud
           </button>
-        </div>
-      )}
+        )}
+        <button className="btn-historial" onClick={() => onVerHistorial(fus.folio)}>
+          Ver historial
+        </button>
+      </div>
     </div>
   )
 }
 
 /* ── Tarjeta en la lista ── */
-function FusCard({ fus, activo, onClick, highlight }) {
+function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -671,7 +675,20 @@ function FusCard({ fus, activo, onClick, highlight }) {
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">{fus.folio}</strong>
-        <Badge estatus={fus.estatusParticular} />
+        <span className="fus-card-top-actions">
+          <button
+            className="fus-card-historial-btn"
+            title="Ver historial"
+            onClick={e => { e.stopPropagation(); onVerHistorial() }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7"/>
+              <path d="M3 5v4h4"/>
+              <polyline points="12 7 12 12 15.5 14"/>
+            </svg>
+          </button>
+          <Badge estatus={fus.estatusParticular} />
+        </span>
       </div>
       <p className="fus-meta"><b>Fecha:</b> {fmt(fus.fechaHora)}</p>
       <p className="fus-meta"><b>Medio:</b> {fus.idMedioRecepcion?.nombreMedio || '—'}</p>
@@ -692,6 +709,7 @@ export default function ConsultarFUS() {
   const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
   const [seleccionado, setSeleccionado] = useState(null)
   const [turnarFUS,    setTurnarFUS]    = useState(null)
+  const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, turnadas: 0, atendidas: 0, pendientes: 0 })
   const [statsCargando, setStatsCargando] = useState(true)
@@ -856,7 +874,7 @@ export default function ConsultarFUS() {
                   activo={seleccionado?.id === f.id}
                   highlight={highlightId === f.id}
                   onClick={() => { setSeleccionado(f); setHighlightId(null); if (window.innerWidth <= 768) setPanelAbierto(false) }}
-
+                  onVerHistorial={() => setModalTimelineFolio(f.folio)}
                 />
               ))}
               {lista.length < totalItems && (
@@ -883,6 +901,7 @@ export default function ConsultarFUS() {
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
                 onBack={() => setSeleccionado(null)}
+                onVerHistorial={setModalTimelineFolio}
               />
             : panelAbierto
               ? (
@@ -908,6 +927,10 @@ export default function ConsultarFUS() {
           onClose={() => setTurnarFUS(null)}
           onDone={handleTurnarDone}
         />
+      )}
+
+      {modalTimelineFolio && (
+        <ModalTimeline folio={modalTimelineFolio} onClose={() => setModalTimelineFolio(null)} />
       )}
     </AppLayout>
   )

@@ -4,6 +4,7 @@ import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import ModalDetalleFUS from '../components/ModalDetalleFUS'
+import ModalTimeline from '../components/ModalTimeline'
 import { useAuth } from '../context/AuthContext'
 import './Bitacora.css'
 
@@ -130,6 +131,7 @@ export default function Bitacora() {
 
   const [colVisibles, setColVisibles] = useState(COL_VISIBLES_DEFAULT)
   const [previewFolio, setPreviewFolio] = useState(null)
+  const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [exportando, setExportando] = useState(null)
   const [descargandoFolio, setDescargandoFolio] = useState(null)
   const [sortCol, setSortCol] = useState(null)
@@ -604,6 +606,17 @@ export default function Bitacora() {
                           </svg>
                         </button>
                         <button
+                          className="bita-historial-btn"
+                          title={`Ver historial FUS ${r.fusFolio}`}
+                          onClick={() => setModalTimelineFolio(r.fusFolio)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                            <path d="M3 5v4h4"/>
+                            <polyline points="12 7 12 12 15.5 14"/>
+                          </svg>
+                        </button>
+                        <button
                           className="bita-dl-btn"
                           title={`Descargar FUS ${r.fusFolio}`}
                           disabled={descargandoFolio === r.fusFolio}
@@ -645,6 +658,9 @@ export default function Bitacora() {
       )}
       {detalleFolio && (
         <ModalDetalleFUS folio={detalleFolio} onClose={() => setDetalleFolio(null)} />
+      )}
+      {modalTimelineFolio && (
+        <ModalTimeline folio={modalTimelineFolio} onClose={() => setModalTimelineFolio(null)} />
       )}
     </AppLayout>
   )

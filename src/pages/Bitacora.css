@@ -682,6 +682,27 @@
   border-color: #1F5647;
 }
 
+.bita-historial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(195, 212, 207, 0.55);
+  background: rgba(255, 255, 255, 0.70);
+  color: #1F5647;
+  cursor: pointer;
+  transition: background 150ms, box-shadow 150ms, color 150ms;
+  box-shadow: 2px 2px 6px rgba(35,91,78,0.10), -1px -1px 4px rgba(190,208,203,0.40);
+}
+.bita-historial-btn:hover {
+  background: #1F5647;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(35,91,78,0.30);
+  border-color: #1F5647;
+}
+
 /* ── Modal: previsualización de PDF ── */
 .bita-modal-preview {
   width: min(900px, 92vw);
