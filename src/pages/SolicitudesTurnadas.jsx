@@ -3,100 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
-import StatCard from '../components/StatCard'
 import ModalTimeline from '../components/ModalTimeline'
 import api from '../api/api'
-import { useAuth } from '../context/AuthContext'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import './SolicitudesTurnadas.css'
-
-/* ── Panel de estadísticas ROL2 ── */
-function StatsPanel({ stats, cargando, onStatClick }) {
-  const { user } = useAuth()
-  const nombre = user?.nombre || user?.email || 'Usuario'
-  const total  = (stats.pendientes || 0) + (stats.activas || 0) + (stats.concluidas || 0)
-  const esMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-
-  return (
-    <div className="std-panel">
-
-      {/* Bienvenida */}
-      <div className="std-greeting">
-        <div className="std-avatar">{nombre.charAt(0).toUpperCase()}</div>
-        <div className="std-greeting-text">
-          <span className="std-greeting-hello">Bienvenido(a)</span>
-          <span className="std-greeting-name">{nombre}</span>
-          <span className="std-greeting-role">{user?.unidadAdministrativa || 'Sin unidad asignada'} · ANAM</span>
-        </div>
-        <div className="std-greeting-badge">
-          <span className="std-badge-num">{total}</span>
-          <span className="std-badge-lbl">Solicitudes turnadas</span>
-        </div>
-      </div>
-
-      {/* Divisor */}
-      <div className="std-divider">
-        <span className="std-divider-line" />
-        <span className="std-divider-text">Resumen de actividad</span>
-        <span className="std-divider-line" />
-      </div>
-
-      {/* Métricas */}
-      {cargando
-        ? <div className="std-stats-loading"><Spinner overlay={false} label="Cargando resumen…" /></div>
-        : <div className="std-grid">
-        <StatCard
-          delay="0ms" accent="#235b4e"
-          value={stats.pendientes} label="Recibidas" sublabel="Pendientes de atender"
-          onClick={() => onStatClick?.('Recibido')}
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-              <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-            </svg>
-          }
-        />
-        <StatCard
-          delay="90ms" accent="#c9a227"
-          value={stats.activas} label="En seguimiento" sublabel="Con respuesta en proceso"
-          live
-          onClick={() => onStatClick?.('En_seguimiento')}
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-          }
-        />
-        <StatCard
-          delay="180ms" accent="#1a7a52"
-          value={stats.concluidas} label="Concluidas" sublabel="Atendidas y cerradas"
-          onClick={() => onStatClick?.('Concluido')}
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-          }
-        />
-      </div>}
-
-      {/* Pista */}
-      <div className="std-hint">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        {esMobile
-          ? 'Toca una categoría para ver las solicitudes'
-          : 'Haz clic en una categoría para filtrar las solicitudes, o selecciona una del panel izquierdo para ver el detalle completo'
-        }
-      </div>
-
-    </div>
-  )
-}
 
 /* ── Sección Respuestas y Seguimiento ── */
 function Seguimientos({ turnadoId, concluido }) {
@@ -488,24 +401,11 @@ export default function SolicitudesTurnadas() {
   const [seleccionado, setSeleccionado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
-  const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
-  const [statsCargando, setStatsCargando] = useState(true)
   const [highlightId,  setHighlightId]  = useState(null)
   const [pagina,       setPagina]       = useState(1)
   const [totalItems,   setTotalItems]   = useState(0)
   const PAGE_SIZE = 30
   const reordenadoRef = useRef(false)
-
-  const cargarStats = () => {
-    api.get('/turnados/mis-turnados/', { params: { page: 1, page_size: 500 } }).then(r => {
-      const todos = r.data.results || []
-      setStats({
-        concluidas:  todos.filter(t => t.estatusTitular === 'Concluido').length,
-        activas:     todos.filter(t => t.estatusTitular === 'En_seguimiento').length,
-        pendientes:  todos.filter(t => t.estatusTitular === 'Recibido').length,
-      })
-    }).catch(() => {}).finally(() => setStatsCargando(false))
-  }
 
   const cargar = (pag = 1, append = false) => {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
@@ -539,18 +439,12 @@ export default function SolicitudesTurnadas() {
 
   const cargarMas = () => cargar(pagina + 1, true)
 
-  useEffect(() => {
-    cargarStats()
-    const interval = setInterval(cargarStats, 30_000)
-    return () => clearInterval(interval)
-  }, [])
   useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
   useEffect(() => {
     if (!notifCtx?.turnadoKey) return
     cargar(1)
-    cargarStats()
   }, [notifCtx?.turnadoKey])
 
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
@@ -663,24 +557,22 @@ export default function SolicitudesTurnadas() {
           {seleccionado
             ? <DetalleTurnado
                 turnado={seleccionado}
-                onConcluido={() => { cargar(); cargarStats(); setSeleccionado(null) }}
+                onConcluido={() => { cargar(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
                 onVerHistorial={setModalTimelineFolio}
               />
-            : panelAbierto
-              ? (
-                <div className="st-hint-select">
-                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
-                  </svg>
-                  <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
-                </div>
-              )
-              : <StatsPanel stats={stats} cargando={statsCargando} onStatClick={status => { setFiltro(status); setPanelAbierto(true) }} />
+            : (
+              <div className="st-hint-select">
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+              </div>
+            )
           }
         </div>
       </div>
