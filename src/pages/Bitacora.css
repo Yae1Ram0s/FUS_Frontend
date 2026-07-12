@@ -1,51 +1,4 @@
 /* ══════════════════════════════════════
-   TABS PRINCIPALES
-══════════════════════════════════════ */
-.bita-tabs {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.52);
-  border-radius: 18px;
-  padding: 8px 10px;
-  box-shadow:
-    6px  6px  18px rgba(35,91,78,0.10),
-   -4px -4px  12px rgba(255,255,255,0.72),
-    inset 0 1px 0   rgba(255,255,255,0.75);
-}
-
-.bita-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 20px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
-  color: rgba(10,30,20,0.55);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 150ms, color 150ms, box-shadow 150ms;
-}
-.bita-tab:hover {
-  background: rgba(255,255,255,0.45);
-  color: #0a1e14;
-}
-.bita-tab-active {
-  background: rgba(35,91,78,0.88);
-  color: #ffffff;
-  border-color: rgba(35,91,78,0.20);
-  box-shadow: 0 3px 10px rgba(35,91,78,0.25);
-}
-.bita-tab svg { opacity: 0.80; }
-
-/* ══════════════════════════════════════
    SUB-TABS (Usuarios y Accesos)
 ══════════════════════════════════════ */
 .ua-subtabs {
@@ -675,12 +628,6 @@
 }
 .bita-folio-link:hover  { color: #16362d; border-bottom-color: #16362d; }
 .bita-folio-link:active { opacity: 0.75; }
-.bita-ip {
-  font-family: 'Courier New', monospace;
-  font-size: .71rem;
-  color: rgba(10, 30, 20, 0.38);
-  white-space: nowrap;
-}
 .bita-obs    { max-width: 200px; color: rgba(10, 30, 20, 0.55); }
 .bita-accion { font-weight: 700; white-space: nowrap; }
 
@@ -735,56 +682,6 @@
   border-color: #1F5647;
 }
 
-/* ── Menú de columnas ── */
-.bita-col-menu { position: relative; }
-
-.bita-col-menu-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-base);
-  padding: 8px 13px;
-  color: var(--fg-secondary);
-  font-size: .82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 150ms, border-color 150ms;
-}
-.bita-col-menu-btn:hover { border-color: var(--border-medium); background: rgba(255, 255, 255, 0.08); }
-
-.bita-col-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 190px;
-  background: var(--bg);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-base);
-  padding: 10px;
-  box-shadow: var(--shadow-lg);
-}
-
-.bita-col-opcion {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: var(--radius-default);
-  font-size: .82rem;
-  font-weight: 600;
-  color: var(--body);
-  cursor: pointer;
-  transition: background 150ms;
-}
-.bita-col-opcion:hover { background: rgba(255, 255, 255, 0.08); }
-.bita-col-opcion input { accent-color: var(--fg-secondary); width: 15px; height: 15px; cursor: pointer; }
-
 /* ── Modal: previsualización de PDF ── */
 .bita-modal-preview {
   width: min(900px, 92vw);
@@ -826,20 +723,6 @@
 .bita-accion-INICIO_SESION      { color: rgba(37, 132, 102, 0.50); }
 .bita-accion-CIERRE_SESION      { color: rgba(37, 132, 102, 0.38); }
 .bita-accion-ELIMINACION        { color: #9F2241; }
-
-/* ══════════════════════════════════════
-   BADGES DE ROL — Paleta Institucional
-══════════════════════════════════════ */
-.bita-rol {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 20px;
-  font-size: .70rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-}
-.bita-rol-rol1 { background: rgba(188,149,92,0.12);  color: #8a6820; border: 1px solid rgba(188,149,92,0.32); }  /* BC955C dorado */
-.bita-rol-rol2 { background: rgba(105,28,50,0.10);   color: #691C32; border: 1px solid rgba(105,28,50,0.25); }  /* 691C32 carmine */
 
 /* ══════════════════════════════════════
    VACÍO / CARGANDO

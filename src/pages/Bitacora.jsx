@@ -401,7 +401,7 @@ export default function Bitacora() {
             </button>
           )}
 
-          <div className="bita-filtros bita-fila-principal">
+          <div className="bita-filtros">
             {/* Fila 1: buscador global */}
             <div className="bita-fila-busqueda">
               <div className="bita-busqueda-wrap">
