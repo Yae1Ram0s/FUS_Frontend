@@ -843,6 +843,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+.ev-item-cargando { opacity: 0.55; cursor: default; }
+
 .ev-thumb {
   width: 72px;
   height: 72px;

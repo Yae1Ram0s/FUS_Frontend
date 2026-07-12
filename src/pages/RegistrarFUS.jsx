@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import './RegistrarFUS.css'
 
 const PRIORIDAD_INFO = {
@@ -44,6 +45,26 @@ const PRIORIDAD_INFO = {
       'Pueda responderse con formato estándar, canalizarse o archivarse.',
     ],
   },
+}
+
+/* ── Enlace a evidencia ya guardada (descarga autenticada) ── */
+function EvidenciaExistenteLink({ ev }) {
+  const url = useEvidenciaUrl(ev.id)
+  return (
+    <a
+      href={url || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`ev-existente-item${url ? '' : ' ev-item-cargando'}`}
+      onClick={e => { if (!url) e.preventDefault() }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      {ev.nombreArchivo}
+    </a>
+  )
 }
 
 export default function RegistrarFUS() {
@@ -315,15 +336,7 @@ export default function RegistrarFUS() {
                 <div className="evidencia-col">
                   {evidenciasExistentes.length > 0 && (
                     <div className="ev-existentes-list">
-                      {evidenciasExistentes.map(ev => (
-                        <a key={ev.id} href={`/media/${ev.rutaArchivo}`} target="_blank" rel="noopener noreferrer" className="ev-existente-item">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                          </svg>
-                          {ev.nombreArchivo}
-                        </a>
-                      ))}
+                      {evidenciasExistentes.map(ev => <EvidenciaExistenteLink key={ev.id} ev={ev} />)}
                     </div>
                   )}
                   <label className="file-btn">

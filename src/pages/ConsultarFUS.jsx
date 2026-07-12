@@ -9,6 +9,7 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useEstatus } from '../hooks/useEstatus'
 import { useResizablePanel } from '../hooks/useResizablePanel'
+import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import './ConsultarFUS.css'
 
 function descargar(url, nombre) {
@@ -271,8 +272,6 @@ function ModalTurnar({ fus, onClose, onDone }) {
   )
 }
 
-const MEDIA_BASE = ''
-
 function esImagen(mime) {
   return mime && mime.startsWith('image/')
 }
@@ -318,6 +317,35 @@ function PrioridadPills({ valor, criterios }) {
   )
 }
 
+/* ── Ítem de evidencia individual (descarga autenticada) ── */
+function EvidenciaItem({ ev }) {
+  const url = useEvidenciaUrl(ev.id)
+  const imagen = esImagen(ev.tipoMime)
+  return (
+    <a
+      href={url || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`ev-item${url ? '' : ' ev-item-cargando'}`}
+      title={ev.nombreArchivo}
+      onClick={e => { if (!url) e.preventDefault() }}
+    >
+      {imagen && url ? (
+        <img src={url} alt={ev.nombreArchivo} className="ev-thumb" />
+      ) : (
+        <span className="ev-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </span>
+      )}
+      <span className="ev-nombre">{ev.nombreArchivo}</span>
+      {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
+    </a>
+  )
+}
+
 /* ── Lista de evidencias ── */
 function EvidenciaList({ evidencias }) {
   if (!evidencias?.length) return (
@@ -331,33 +359,7 @@ function EvidenciaList({ evidencias }) {
     <div className="det-row det-row-evidencia">
       <span className="det-label">Evidencia</span>
       <div className="ev-lista">
-        {evidencias.map(ev => {
-          const url = `${MEDIA_BASE}/media/${ev.rutaArchivo}`
-          const imagen = esImagen(ev.tipoMime)
-          return (
-            <a
-              key={ev.id}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ev-item"
-              title={ev.nombreArchivo}
-            >
-              {imagen ? (
-                <img src={url} alt={ev.nombreArchivo} className="ev-thumb" />
-              ) : (
-                <span className="ev-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
-                </span>
-              )}
-              <span className="ev-nombre">{ev.nombreArchivo}</span>
-              {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
-            </a>
-          )
-        })}
+        {evidencias.map(ev => <EvidenciaItem key={ev.id} ev={ev} />)}
       </div>
     </div>
   )

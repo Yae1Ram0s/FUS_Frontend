@@ -488,6 +488,7 @@
   text-decoration: none;
 }
 .ev-existente-item:hover { background: rgba(255, 255, 255, 0.75); }
+.ev-item-cargando { opacity: 0.55; cursor: default; }
 
 /* Grid de previews */
 .ev-preview-list {
