@@ -108,30 +108,6 @@
   font-weight: 600;
   color: #718096;
 }
-.mtl-card-badge {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: .70rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  background: var(--badge-brand-bg);
-  border: 1px solid var(--badge-brand-border);
-  color: #8a6820;
-}
-
-/* ── Eventos de bitácora — visualmente secundarios ── */
-.mtl-evento-bitacora .mtl-card {
-  background: var(--badge-brand-bg);
-  border: 1px dashed var(--badge-brand-border);
-  border-left: 3px dashed var(--tipo-color, var(--badge-brand-border));
-  padding: 8px 12px;
-  margin-bottom: 10px;
-}
-.mtl-evento-bitacora .mtl-card-titulo { font-size: .76rem; color: #8a6820; }
-.mtl-evento-bitacora .mtl-card-detalle,
-.mtl-evento-bitacora .mtl-card-actor { font-size: .72rem; }
-
 @media (max-width: 768px) {
   .mtl-overlay { z-index: 9999; }
   .mtl-modal.modal-card {

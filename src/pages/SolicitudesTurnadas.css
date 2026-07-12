@@ -269,6 +269,23 @@
 .fus-card-top      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; min-width: 0; }
 .st-left .fus-folio         { font-size: 0.78rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
 .fus-card-top > span { align-self: flex-end; order: -1; }
+.fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
+.fus-card-historial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(195, 212, 207, 0.30);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 150ms, color 150ms;
+}
+.fus-card-historial-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
 .st-left .fus-meta          { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72) !important; margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-left .fus-desc          { font-size: 0.74rem; color: rgba(255, 255, 255, 0.50) !important; margin-top: 5px; font-style: normal; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1100,6 +1117,21 @@
 .btn-concluir:hover:not(:disabled)  { background: rgba(28,70,60,0.96); box-shadow: 0 4px 16px rgba(35,91,78,0.40), inset rgba(255,255,255,0.20) 0 6px 0px -5px; }
 .btn-concluir:active:not(:disabled) { background: rgba(22, 65, 55, 1); }
 .btn-concluir:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.dt-historial-row { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+.btn-historial {
+  background: transparent;
+  color: rgba(35, 91, 78, 0.90);
+  border: 1px solid rgba(35, 91, 78, 0.35);
+  border-radius: 20px;
+  padding: 10px 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease-in-out;
+}
+.btn-historial:hover { background: rgba(35, 91, 78, 0.08); border-color: rgba(35, 91, 78, 0.55); }
+.btn-historial:active { background: rgba(35, 91, 78, 0.14); }
 
 /* ══════════════════════════════════════
    RESPONSIVO

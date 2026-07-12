@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import StatCard from '../components/StatCard'
+import ModalTimeline from '../components/ModalTimeline'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useEstatus } from '../hooks/useEstatus'
@@ -301,7 +302,7 @@ function PrioridadPills({ valor, criterios }) {
 }
 
 /* ── Detalle del turnado (ROL2) ── */
-function DetalleTurnado({ turnado, onConcluido, onBack }) {
+function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
   const [cargando,      setCargando]      = useState(false)
   const [error,         setError]         = useState('')
   const [modalConcluir, setModalConcluir] = useState(false)
@@ -420,6 +421,12 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
       {/* ── Seguimientos ── */}
       <Seguimientos turnadoId={turnado.id} concluido={turnado.estatusTitular === 'Concluido'} />
 
+      <div className="dt-historial-row">
+        <button className="btn-historial" onClick={() => onVerHistorial(fus.folio)}>
+          Ver historial
+        </button>
+      </div>
+
       {puedesConcluir && (
         <div className="dt-actions">
           {error && <p className="sec-error" role="alert">{error}</p>}
@@ -433,7 +440,7 @@ function DetalleTurnado({ turnado, onConcluido, onBack }) {
 }
 
 /* ── Tarjeta de la lista ── */
-function TurnadoCard({ t, activo, onClick, highlight }) {
+function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -443,7 +450,22 @@ function TurnadoCard({ t, activo, onClick, highlight }) {
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">{fus.folio || `Turnado #${t.id}`}</strong>
-        <Badge estatus={t.estatusTitular} />
+        <span className="fus-card-top-actions">
+          {fus.folio && (
+            <button
+              className="fus-card-historial-btn"
+              title="Ver historial"
+              onClick={e => { e.stopPropagation(); onVerHistorial(fus.folio) }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                <path d="M3 5v4h4"/>
+                <polyline points="12 7 12 12 15.5 14"/>
+              </svg>
+            </button>
+          )}
+          <Badge estatus={t.estatusTitular} />
+        </span>
       </div>
       <p className="fus-meta"><b>Fecha:</b> {fmt(fus.fechaHora)}</p>
       <p className="fus-meta"><b>Medio:</b> {fus.idMedioRecepcion?.nombreMedio || '—'}</p>
@@ -464,6 +486,7 @@ export default function SolicitudesTurnadas() {
   const [busqueda,     setBusqueda]     = useState('')
   const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
   const [seleccionado, setSeleccionado] = useState(null)
+  const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
   const [stats,        setStats]        = useState({ concluidas: 0, activas: 0, pendientes: 0 })
   const [statsCargando, setStatsCargando] = useState(true)
@@ -615,6 +638,7 @@ export default function SolicitudesTurnadas() {
                   activo={seleccionado?.id === t.id}
                   highlight={highlightId === t.id}
                   onClick={() => { setSeleccionado(t); setHighlightId(null); if (window.innerWidth <= 768) setPanelAbierto(false) }}
+                  onVerHistorial={setModalTimelineFolio}
                 />
               ))}
               {lista.length < totalItems && (
@@ -641,6 +665,7 @@ export default function SolicitudesTurnadas() {
                 turnado={seleccionado}
                 onConcluido={() => { cargar(); cargarStats(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
+                onVerHistorial={setModalTimelineFolio}
               />
             : panelAbierto
               ? (
@@ -659,6 +684,10 @@ export default function SolicitudesTurnadas() {
           }
         </div>
       </div>
+
+      {modalTimelineFolio && (
+        <ModalTimeline folio={modalTimelineFolio} onClose={() => setModalTimelineFolio(null)} />
+      )}
     </AppLayout>
   )
 }

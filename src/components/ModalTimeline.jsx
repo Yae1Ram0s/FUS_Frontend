@@ -13,14 +13,12 @@ const TIPO_INFO = {
   turnado:   { titulo: 'Turnado',   color: '#1F5647' },
   respuesta: { titulo: 'Respuesta', color: 'var(--fg-success)' },
   concluido: { titulo: 'Concluido', color: 'var(--fg-success)' },
-  bitacora:  { titulo: 'Auditoría', color: 'var(--fg-secondary)' },
 }
 
 const LEYENDA = [
   { tipo: 'creacion',  label: 'Registro' },
   { tipo: 'turnado',   label: 'Turnado' },
   { tipo: 'respuesta', label: 'Respuesta' },
-  { tipo: 'bitacora',  label: 'Auditoría' },
 ]
 
 export default function ModalTimeline({ folio, onClose }) {
@@ -64,10 +62,9 @@ export default function ModalTimeline({ folio, onClose }) {
             eventos.length ? (
               <ul className="mtl-timeline">
                 {eventos.map((ev, i) => {
-                  const info = TIPO_INFO[ev.tipo] || TIPO_INFO.bitacora
-                  const esBitacora = ev.tipo === 'bitacora'
+                  const info = TIPO_INFO[ev.tipo] || TIPO_INFO.respuesta
                   return (
-                    <li key={i} className={`mtl-evento${esBitacora ? ' mtl-evento-bitacora' : ''}`}>
+                    <li key={i} className="mtl-evento">
                       <span className="mtl-punto-col">
                         <span className="mtl-punto" style={{ background: info.color }} />
                         {i < eventos.length - 1 && <span className="mtl-linea" />}
@@ -79,11 +76,6 @@ export default function ModalTimeline({ folio, onClose }) {
                         </div>
                         {ev.detalle && <p className="mtl-card-detalle">{ev.detalle}</p>}
                         {ev.actor && <span className="mtl-card-actor">{ev.actor}</span>}
-                        {(ev.estadoAnterior || ev.estadoNuevo) && (
-                          <span className="mtl-card-badge">
-                            {ev.estadoAnterior || '—'} → {ev.estadoNuevo || '—'}
-                          </span>
-                        )}
                       </div>
                     </li>
                   )
