@@ -7,7 +7,7 @@ const NotificacionesContext = createContext(null)
 const esHttps = () => window.location.protocol === 'https:'
 
 export function NotificacionesProvider({ children }) {
-  const { user } = useAuth()
+  const { user, accessToken } = useAuth()
   const [notifs,        setNotifs]        = useState([])
   const [browserNotif,  setBrowserNotif]  = useState(() => localStorage.getItem('scs_browser_notif'))
   const [showPrompt,    setShowPrompt]    = useState(false)
@@ -73,11 +73,10 @@ export function NotificacionesProvider({ children }) {
 
     cargar()
 
-    const token = sessionStorage.getItem('access_token')
-    if (!token) return
+    if (!accessToken) return
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const wsUrl = `${proto}://${window.location.host}/ws/notificaciones/?token=${token}`
+    const wsUrl = `${proto}://${window.location.host}/ws/notificaciones/?token=${accessToken}`
 
     const connect = () => {
       try {
@@ -123,7 +122,7 @@ export function NotificacionesProvider({ children }) {
       if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
       if (pollingId.current) clearInterval(pollingId.current)
     }
-  }, [user, cargar])
+  }, [user, cargar, accessToken])
 
   /* Activar notificaciones del navegador */
   const activarBrowserNotif = async () => {

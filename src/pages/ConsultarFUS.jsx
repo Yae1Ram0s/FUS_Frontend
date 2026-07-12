@@ -12,8 +12,7 @@ import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import './ConsultarFUS.css'
 
-function descargar(url, nombre) {
-  const token = sessionStorage.getItem('access_token')
+function descargar(url, nombre, token) {
   return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then(r => r.blob())
     .then(blob => {
@@ -525,6 +524,7 @@ function ModalDescargarPDF({ onCancelar, onConfirmar }) {
 /* ── Panel de detalle FUS ── */
 function DetalleFUS({ fus, onTurnar, onBack }) {
   const navigate = useNavigate()
+  const { accessToken } = useAuth()
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -538,7 +538,7 @@ function DetalleFUS({ fus, onTurnar, onBack }) {
   const descargarPdf = (conImagenes) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
     const query = conImagenes ? '?imagenes=1' : ''
-    return descargar(`/api/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`)
+    return descargar(`/api/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`, accessToken)
       .finally(() => setMostrarModalPdf(false))
   }
 

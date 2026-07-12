@@ -44,8 +44,7 @@ const ACCIONES_POR_ROL = {
 
 const PAGE_SIZE = 50
 
-function descargar(url, nombre) {
-  const token = sessionStorage.getItem('access_token')
+function descargar(url, nombre, token) {
   return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     .then(r => {
       if (!r.ok) throw new Error(`Error ${r.status}`)
@@ -70,15 +69,16 @@ function ModalPreviewPDF({ folio, onClose }) {
   const [blobUrl, setBlobUrl] = useState(null)
   const [error,   setError]   = useState(false)
 
+  const { accessToken } = useAuth()
+
   useEffect(() => {
-    const token = sessionStorage.getItem('access_token')
     let url = null
-    fetch(urlPdfFus(folio), { headers: { Authorization: `Bearer ${token}` } })
+    fetch(urlPdfFus(folio), { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => { if (!r.ok) throw new Error(); return r.blob() })
       .then(blob => { url = URL.createObjectURL(blob); setBlobUrl(url) })
       .catch(() => setError(true))
     return () => { if (url) URL.revokeObjectURL(url) }
-  }, [folio])
+  }, [folio, accessToken])
 
   return createPortal(
     <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -103,7 +103,7 @@ function ModalPreviewPDF({ folio, onClose }) {
 }
 
 export default function Bitacora() {
-  const { user }  = useAuth()
+  const { user, accessToken } = useAuth()
   const rol       = user?.rol || 'ROL1'
   const esADM     = rol === 'ROL1'
   const acciones  = ACCIONES_POR_ROL[rol] || ACCIONES_POR_ROL.ROL1
@@ -359,7 +359,7 @@ export default function Bitacora() {
               disabled={exportando === 'excel'}
               onClick={() => {
                 setExportando('excel')
-                descargar(`/api/bitacora/exportar/excel/${exportParams()}`, 'bitacora.xlsx')
+                descargar(`/api/bitacora/exportar/excel/${exportParams()}`, 'bitacora.xlsx', accessToken)
                   .finally(() => setExportando(null))
               }}
               title="Exportar a Excel">
@@ -375,7 +375,7 @@ export default function Bitacora() {
               disabled={exportando === 'pdf'}
               onClick={() => {
                 setExportando('pdf')
-                descargar(`/api/bitacora/exportar/pdf/${exportParams()}`, 'bitacora.pdf')
+                descargar(`/api/bitacora/exportar/pdf/${exportParams()}`, 'bitacora.pdf', accessToken)
                   .finally(() => setExportando(null))
               }}
               title="Exportar a PDF">
@@ -609,7 +609,7 @@ export default function Bitacora() {
                           disabled={descargandoFolio === r.fusFolio}
                           onClick={() => {
                             setDescargandoFolio(r.fusFolio)
-                            descargar(urlPdfFus(r.fusFolio), `FUS_${r.fusFolio}.pdf`)
+                            descargar(urlPdfFus(r.fusFolio), `FUS_${r.fusFolio}.pdf`, accessToken)
                               .finally(() => setDescargandoFolio(null))
                           }}
                         >
