@@ -292,6 +292,9 @@ function TimelineActividad({ fusId }) {
   const fmtFecha = d => d
     ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '—'
+  const fmtHora = d => d
+    ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    : ''
 
   if (cargando) return <Spinner overlay={false} />
   if (!turnados.length) return <p className="act-msg">Sin actividad registrada aún.</p>
@@ -333,7 +336,10 @@ function TimelineActividad({ fusId }) {
                         {i < t.seguimientos.length - 1 && <div className="act-tl-connector" />}
                       </div>
                       <div className="act-tl-content">
-                        <span className="act-tl-fecha">{fmtFecha(s.fechaActividad)}</span>
+                        <span className="act-tl-fecha">
+                          {fmtFecha(s.fechaActividad)}
+                          {s.fechaRegistro && <span className="act-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
+                        </span>
                         <p className="act-tl-desc">{s.descripcionActividad}</p>
                         {s.accionTexto && (
                           <p className="act-tl-accion">→ {s.accionTexto}</p>

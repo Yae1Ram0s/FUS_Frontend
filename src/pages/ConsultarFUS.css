@@ -1032,6 +1032,10 @@
   letter-spacing: 0.04em;
   margin-bottom: 3px;
 }
+.act-tl-hora {
+  font-weight: 500;
+  color: rgba(35, 91, 78, 0.55);
+}
 
 .act-tl-desc {
   font-size: 0.82rem;

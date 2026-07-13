@@ -11,6 +11,10 @@ import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import './SolicitudesTurnadas.css'
 
+const fmtHora = d => d
+  ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  : ''
+
 /* ── Sección Respuestas y Seguimiento ── */
 function Seguimientos({ turnadoId, concluido }) {
   const [lista,       setLista]       = useState([])
@@ -79,7 +83,10 @@ function Seguimientos({ turnadoId, concluido }) {
               </div>
               <div className="seg-tl-content">
                 <div className="seg-tl-meta">
-                  <span className="seg-tl-fecha">{s.fechaActividad}</span>
+                  <span className="seg-tl-fecha">
+                    {s.fechaActividad}
+                    {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
+                  </span>
                   {!concluido && (
                     <button className="btn-del" onClick={() => eliminar(s.id)} disabled={eliminandoId === s.id} title="Eliminar">
                       {eliminandoId === s.id

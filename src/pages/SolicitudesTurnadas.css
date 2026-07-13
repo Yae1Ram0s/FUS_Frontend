@@ -814,6 +814,10 @@
   color: rgba(35, 91, 78, 0.85);
   letter-spacing: 0.04em;
 }
+.seg-tl-hora {
+  font-weight: 500;
+  color: rgba(35, 91, 78, 0.55);
+}
 
 .seg-tl-actividad {
   font-size: 0.9rem;
