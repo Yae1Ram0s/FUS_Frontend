@@ -306,6 +306,15 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
           </div>
         </div>
 
+        {fus.fechaLimite && (
+          <div className="sec-subseccion sec-subseccion-externo">
+            <span className="sec-sublabel sec-sublabel-externo">Límite de respuesta</span>
+            <div className="sec-grid-2">
+              <DRow label="Fecha y hora" value={fmt(fus.fechaLimite)} />
+            </div>
+          </div>
+        )}
+
         {/* Descripción */}
         <div className="sec-subseccion">
           <span className="sec-sublabel">Descripción de la solicitud</span>
@@ -315,8 +324,8 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
 
         {/* Solicitante externo */}
         {tieneExterno && (
-          <div className="sec-subseccion sec-subseccion-externo">
-            <span className="sec-sublabel sec-sublabel-externo">Datos de contacto de solicitante externo</span>
+          <div className="sec-subseccion">
+            <span className="sec-sublabel">Datos de contacto de solicitante externo</span>
             <div className="sec-grid-3">
               {fus.nombreExterno   && <DRow label="Nombre"           value={fus.nombreExterno} />}
               {fus.telefonoExterno && <DRow label="Teléfono/Celular" value={fus.telefonoExterno} />}

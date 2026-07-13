@@ -98,6 +98,13 @@ export default function RegistrarFUS() {
     api.get('/catalogos/medios/').then(r => setMedios(r.data)).catch(() => {})
   }, [])
 
+  const toDatetimeLocal = d => {
+    if (!d) return ''
+    const dt = new Date(d)
+    const pad = n => String(n).padStart(2, '0')
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
+
   useEffect(() => {
     if (!editId) return
     setCargandoFus(true)
@@ -110,6 +117,7 @@ export default function RegistrarFUS() {
         medioEspecificacion: f.medioEspecificacion || '',
         prioridad:           f.prioridad || '',
         criterios:           f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : [],
+        fechaLimite:         toDatetimeLocal(f.fechaLimite),
         solicitante_nombre:  f.nombreExterno || '',
         solicitante_tel:     f.telefonoExterno || '',
         solicitante_correo:  f.correoExterno || '',
@@ -186,7 +194,7 @@ export default function RegistrarFUS() {
       fd.append('medioEspecificacion',  form.medioEspecificacion)
       fd.append('prioridad',            form.prioridad)
       fd.append('criterios',            form.criterios.join(' | '))
-      if (form.fechaLimite) fd.append('fechaLimite', form.fechaLimite)
+      fd.append('fechaLimite', form.fechaLimite)
       fd.append('nombreExterno',    form.solicitante_nombre)
       fd.append('telefonoExterno', form.solicitante_tel)
       fd.append('correoExterno',   form.solicitante_correo)
@@ -438,17 +446,15 @@ export default function RegistrarFUS() {
                 </div>
               </div>
 
-              {!editId && (
-                <div className="reg-row">
-                  <label htmlFor="reg-fecha-limite">Fecha y hora límite (opcional)</label>
-                  <input
-                    id="reg-fecha-limite"
-                    type="datetime-local"
-                    value={form.fechaLimite}
-                    onChange={e => set('fechaLimite', e.target.value)}
-                  />
-                </div>
-              )}
+              <div className="reg-row">
+                <label htmlFor="reg-fecha-limite">Fecha y hora límite (opcional)</label>
+                <input
+                  id="reg-fecha-limite"
+                  type="datetime-local"
+                  value={form.fechaLimite}
+                  onChange={e => set('fechaLimite', e.target.value)}
+                />
+              </div>
             </fieldset>
 
             {error && <p className="reg-error" role="alert">{error}</p>}

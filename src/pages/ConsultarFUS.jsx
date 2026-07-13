@@ -515,6 +515,15 @@ function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
         </div>
       </div>
 
+      {fus.fechaLimite && (
+        <div className="det-section">
+          <span className="det-section-legend det-section-legend-activity">Límite de respuesta</span>
+          <div className="det-grid-2">
+            <Row label="Fecha y hora" value={fmt(fus.fechaLimite)} />
+          </div>
+        </div>
+      )}
+
       {/* ── Sección: Descripción de la solicitud ── */}
       <div className="det-section">
         <span className="det-section-legend">Descripción de la solicitud</span>
