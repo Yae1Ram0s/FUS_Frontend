@@ -8,7 +8,8 @@ import ModalTimeline from '../components/ModalTimeline'
 import { useAuth } from '../context/AuthContext'
 import './Bitacora.css'
 
-const ESTATUS_FUS_OPCIONES = ['Registrado', 'Turnado', 'Atendido', 'Concluido']
+const ESTATUS_FUS_OPCIONES = ['Registrado', 'Turnado', 'Atendido', 'Concluido', 'Vencido', 'PorVencer']
+const ESTATUS_FUS_LABELS = { PorVencer: 'Por vencer' }
 
 const COLUMNAS_TOGGLEABLES = [
   { key: 'fecha',                 label: 'Fecha y hora (CDMX)' },
@@ -489,7 +490,7 @@ export default function Bitacora() {
               <select className="bita-input" value={fEstatusFus} onChange={e => setFEstatusFus(e.target.value)}>
                 <option value="">Estatus actual del FUS</option>
                 {ESTATUS_FUS_OPCIONES.map(e => (
-                  <option key={e} value={e}>{e}</option>
+                  <option key={e} value={e}>{ESTATUS_FUS_LABELS[e] || e}</option>
                 ))}
               </select>
             </div>
@@ -514,7 +515,7 @@ export default function Bitacora() {
               )}
               {fEstatusFus && (
                 <span className="bita-chip">
-                  Estatus: {fEstatusFus}
+                  Estatus: {ESTATUS_FUS_LABELS[fEstatusFus] || fEstatusFus}
                   <button type="button" onClick={() => setFEstatusFus('')} aria-label="Quitar filtro de estatus">×</button>
                 </span>
               )}

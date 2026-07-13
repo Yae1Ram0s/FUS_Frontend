@@ -197,6 +197,12 @@
 .st-left .filtro-chip-active.filtro-chip-en-seguimiento,
 .st-left .filtro-chip-active.filtro-chip-concluido      { color: #f0dfc0; }
 
+/* Vencido / Por vencer — mismos tonos rojo/ámbar que las tarjetas y badges */
+.st-left .filtro-chip-vencido    { color: #f5a3a3; }
+.st-left .filtro-chip-porvencer  { color: #f5c563; }
+.st-left .filtro-chip-active.filtro-chip-vencido    { border-color: rgba(214, 69, 69, 0.55) !important; color: #ffb3b3; }
+.st-left .filtro-chip-active.filtro-chip-porvencer  { border-color: rgba(224, 160, 32, 0.55) !important; color: #ffd88a; }
+
 /* Lista */
 .left-lista { flex: 1; overflow-y: auto; padding: 6px 10px; }
 .st-left .left-msg { color: rgba(255, 255, 255, 0.55); font-size: 0.82rem; text-align: center; padding: 2rem 0; }

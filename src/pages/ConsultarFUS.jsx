@@ -769,6 +769,18 @@ export default function ConsultarFUS() {
                   {e.nombre}
                 </button>
               ))}
+              <button
+                className={`filtro-chip filtro-chip-vencido${filtro === 'Vencido' ? ' filtro-chip-active' : ''}`}
+                onClick={() => toggleFiltro('Vencido')}
+              >
+                Vencido
+              </button>
+              <button
+                className={`filtro-chip filtro-chip-porvencer${filtro === 'PorVencer' ? ' filtro-chip-active' : ''}`}
+                onClick={() => toggleFiltro('PorVencer')}
+              >
+                Por vencer
+              </button>
             </div>
 
             <div className="left-lista">

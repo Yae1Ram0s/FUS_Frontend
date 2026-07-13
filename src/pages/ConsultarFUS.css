@@ -226,6 +226,12 @@
 .cfus-left .filtro-chip-active.filtro-chip-atendido,
 .cfus-left .filtro-chip-active.filtro-chip-concluido  { color: #f0dfc0; }
 
+/* Vencido / Por vencer — mismos tonos rojo/ámbar que las tarjetas y badges */
+.cfus-left .filtro-chip-vencido    { color: #f5a3a3; }
+.cfus-left .filtro-chip-porvencer  { color: #f5c563; }
+.cfus-left .filtro-chip-active.filtro-chip-vencido    { border-color: rgba(214, 69, 69, 0.55) !important; color: #ffb3b3; }
+.cfus-left .filtro-chip-active.filtro-chip-porvencer  { border-color: rgba(224, 160, 32, 0.55) !important; color: #ffd88a; }
+
 /* Lista */
 .left-lista {
   flex: 1;
