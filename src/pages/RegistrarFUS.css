@@ -154,6 +154,7 @@
 /* Inputs, selects, textareas */
 .reg-row input[type="text"],
 .reg-row input[type="email"],
+.reg-row input[type="datetime-local"],
 .reg-row select,
 .reg-form textarea {
   flex: 1;
@@ -705,6 +706,7 @@
   /* box-sizing correcto para que el padding no desborde el ancho */
   .reg-row input[type="text"],
   .reg-row input[type="email"],
+  .reg-row input[type="datetime-local"],
   .reg-row select,
   .reg-form textarea {
     width: 100%;
@@ -752,6 +754,7 @@
   .reg-row > label { font-size: .78rem; }
   .reg-row input[type="text"],
   .reg-row input[type="email"],
+  .reg-row input[type="datetime-local"],
   .reg-row select,
   .reg-form textarea { font-size: .85rem; padding: 8px 11px; }
   .medios-quick   { padding: 8px 10px; gap: 5px; }
@@ -774,6 +777,7 @@
   .reg-row > label { font-size: .74rem; }
   .reg-row input[type="text"],
   .reg-row input[type="email"],
+  .reg-row input[type="datetime-local"],
   .reg-row select,
   .reg-form textarea { font-size: .80rem; padding: 7px 10px; }
   .quick-opt { padding: 4px 8px; font-size: 0.72rem; }
