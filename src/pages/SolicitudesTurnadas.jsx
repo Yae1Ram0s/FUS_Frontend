@@ -375,10 +375,14 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
     : '—'
   const fus = t.idFus || {}
   return (
-    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}`} onClick={onClick} role="button" tabIndex={0}
+    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">{fus.folio || `Turnado #${t.id}`}</strong>
+        <strong className="fus-folio">
+          {fus.folio || `Turnado #${t.id}`}
+          {fus.slaVencido && <span className="badge-vencido">Vencido</span>}
+          {!fus.slaVencido && fus.slaPorVencer && <span className="badge-por-vencer">Por vencer</span>}
+        </strong>
         <span className="fus-card-top-actions">
           {fus.folio && (
             <button
@@ -462,6 +466,21 @@ export default function SolicitudesTurnadas() {
     if (!notifCtx?.turnadoKey) return
     cargar(1)
   }, [notifCtx?.turnadoKey])
+
+  /* En vivo: si llega por WebSocket un aviso de SLA por vencer, el turnado
+     correspondiente (si ya está cargado en la lista) se sube al inicio y
+     queda marcado como "por vencer" — sin esperar a un refresh manual. */
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    const notif = notifCtx?.notifs?.[0]
+    if (!notif || notif.tipo !== 'SLA_POR_VENCER') return
+    setLista(prev => {
+      const idx = prev.findIndex(t => t.idFus?.folio === notif.fusFolio)
+      if (idx === -1) return prev
+      const item = { ...prev[idx], idFus: { ...prev[idx].idFus, slaPorVencer: true } }
+      return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+    })
+  }, [ultimaNotifId])
 
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 

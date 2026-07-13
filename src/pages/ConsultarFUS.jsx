@@ -7,6 +7,7 @@ import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import { useNotificaciones } from '../context/NotificacionesContext'
 import { useEstatus } from '../hooks/useEstatus'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
@@ -588,12 +589,13 @@ function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   return (
-    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}`} onClick={onClick} role="button" tabIndex={0}
+    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">
           {fus.folio}
           {fus.slaVencido && <span className="badge-vencido">Vencido</span>}
+          {!fus.slaVencido && fus.slaPorVencer && <span className="badge-por-vencer">Por vencer</span>}
         </strong>
         <span className="fus-card-top-actions">
           <button
@@ -669,6 +671,22 @@ export default function ConsultarFUS() {
   }
 
   const cargarMas = () => cargar(pagina + 1, true)
+
+  /* En vivo: si llega por WebSocket un aviso de SLA por vencer, el FUS
+     correspondiente (si ya está cargado en la lista) se sube al inicio y
+     queda marcado como "por vencer" — sin esperar a un refresh manual. */
+  const notifCtx = useNotificaciones()
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    const notif = notifCtx?.notifs?.[0]
+    if (!notif || notif.tipo !== 'SLA_POR_VENCER') return
+    setLista(prev => {
+      const idx = prev.findIndex(f => f.folio === notif.fusFolio)
+      if (idx === -1) return prev
+      const item = { ...prev[idx], slaPorVencer: true }
+      return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+    })
+  }, [ultimaNotifId])
 
   useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
 
