@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
 import Spinner from './Spinner'
 import Badge from './Badge'
+import { useNotificaciones } from '../context/NotificacionesContext'
 import './ModalTimeline.css'
 
 const fmtFecha = d => d
@@ -27,16 +28,30 @@ export default function ModalTimeline({ folio, onClose }) {
   const [estatusActual, setEstatusActual] = useState(null)
   const [error,         setError]         = useState(false)
   const [cargando,      setCargando]      = useState(true)
+  const notifCtx = useNotificaciones()
 
-  useEffect(() => {
-    api.get(`/fus/trazabilidad/${folio.split('/').map(encodeURIComponent).join('/')}/`)
+  const cargarTrazabilidad = useCallback(() => {
+    const url = `/fus/trazabilidad/${folio.split('/').map(encodeURIComponent).join('/')}/`
+    return api.get(url)
       .then(r => {
         setEventos(r.data.eventos || [])
         setEstatusActual(r.data.estatusActual || null)
+        setError(false)
       })
       .catch(() => setError(true))
-      .finally(() => setCargando(false))
   }, [folio])
+
+  useEffect(() => {
+    cargarTrazabilidad().finally(() => setCargando(false))
+  }, [cargarTrazabilidad])
+
+  // En vivo: si llega por WebSocket una notificación de este mismo folio
+  // (turnado, respuesta, cambio de estado, conclusión), se refresca sola —
+  // sin spinner de pantalla completa, sin que el usuario recargue nada.
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    if (notifCtx?.notifs?.[0]?.fusFolio === folio) cargarTrazabilidad()
+  }, [ultimaNotifId, folio, cargarTrazabilidad])
 
   const hayContenido = eventos.length > 0 || estatusActual
 
