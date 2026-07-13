@@ -866,6 +866,14 @@
 }
 
 @media (max-width: 768px) {
+  /* En móvil el scroll horizontal ya se siente por swipe — la barra sobra */
+  .bita-pildoras-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .bita-pildoras-scroll::-webkit-scrollbar { display: none; }
+
   .bita-wrap    { padding: 1rem; gap: .8rem; }
   .bita-header  { padding: 12px 14px; gap: 8px; }
   .bita-header-left h1 { font-size: .95rem; }
