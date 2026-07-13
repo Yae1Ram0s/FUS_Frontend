@@ -359,8 +359,12 @@
   border-radius: 16px;
   padding: 16px 12px;
   text-align: center;
+  cursor: pointer;
+  transition: transform 150ms, box-shadow 150ms;
 }
-.dash-venc-value { font-size: 1.6rem; font-weight: 700; color: #9a9a9e; }
+.dash-venc-card:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07); }
+.dash-venc-card:active { transform: translateY(0) scale(0.98); }
+.dash-venc-value { font-size: 1.6rem; font-weight: 700; color: #1d1d1f; font-variant-numeric: tabular-nums; }
 .dash-venc-label { font-size: .74rem; font-weight: 600; color: #55555a; margin-top: 4px; }
 .dash-venc-note { margin: 10px 0 0; font-size: .74rem; color: #86868b; text-align: center; }
 

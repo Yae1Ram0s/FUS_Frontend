@@ -158,6 +158,16 @@ export default function DashboardROL2() {
     color: PRIORIDAD_COLORES[p],
   }))
 
+  /* ── 3. Próximos vencimientos (fechaLimite de solicitudes activas) ── */
+  const conFechaLimite = noConcluidos.filter(t => t.idFus?.fechaLimite)
+  const inicioHoy   = new Date(); inicioHoy.setHours(0, 0, 0, 0)
+  const finHoy      = new Date(inicioHoy); finHoy.setDate(finHoy.getDate() + 1)
+  const finManana   = new Date(finHoy);    finManana.setDate(finManana.getDate() + 1)
+  const finSemana   = new Date(inicioHoy); finSemana.setDate(finSemana.getDate() + 7)
+  const vencenHoy    = conFechaLimite.filter(t => { const d = new Date(t.idFus.fechaLimite); return d >= inicioHoy && d < finHoy }).length
+  const vencenManana = conFechaLimite.filter(t => { const d = new Date(t.idFus.fechaLimite); return d >= finHoy && d < finManana }).length
+  const vencenSemana = conFechaLimite.filter(t => { const d = new Date(t.idFus.fechaLimite); return d >= inicioHoy && d < finSemana }).length
+
   /* ── 4. Mis solicitudes — tabla filtrable (cliente) ── */
   const filtradas = useMemo(() => {
     return turnados.filter(t => {
@@ -228,20 +238,22 @@ export default function DashboardROL2() {
                 <h2>Próximos vencimientos</h2>
                 <p className="dash-subtitle">Solicitudes por fecha límite</p>
                 <div className="dash-venc-row">
-                  <div className="dash-venc-card">
-                    <div className="dash-venc-value">—</div>
+                  <div className="dash-venc-card" onClick={() => irAConsultar('')}>
+                    <div className="dash-venc-value">{vencenHoy}</div>
                     <div className="dash-venc-label">Hoy</div>
                   </div>
-                  <div className="dash-venc-card">
-                    <div className="dash-venc-value">—</div>
+                  <div className="dash-venc-card" onClick={() => irAConsultar('')}>
+                    <div className="dash-venc-value">{vencenManana}</div>
                     <div className="dash-venc-label">Mañana</div>
                   </div>
-                  <div className="dash-venc-card">
-                    <div className="dash-venc-value">—</div>
+                  <div className="dash-venc-card" onClick={() => irAConsultar('')}>
+                    <div className="dash-venc-value">{vencenSemana}</div>
                     <div className="dash-venc-label">Esta semana</div>
                   </div>
                 </div>
-                <p className="dash-venc-note">El sistema aún no tiene fechas límite configuradas por solicitud.</p>
+                {conFechaLimite.length === 0 && (
+                  <p className="dash-venc-note">Ninguna de tus solicitudes activas tiene fecha límite configurada.</p>
+                )}
               </div>
             </div>
           </div>
