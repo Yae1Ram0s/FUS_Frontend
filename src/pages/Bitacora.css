@@ -339,11 +339,14 @@
   gap: 8px;
   overflow-x: auto;
   white-space: nowrap;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.45) transparent;
+  padding-bottom: 8px;
 }
-.bita-pildoras-scroll::-webkit-scrollbar { display: none; }
+.bita-pildoras-scroll::-webkit-scrollbar { height: 6px; }
+.bita-pildoras-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
+.bita-pildoras-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.45); border-radius: 999px; }
+.bita-pildoras-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.65); }
 .bita-pildoras-sep { width: 1px; align-self: stretch; background: rgba(255, 255, 255, 0.22); flex-shrink: 0; margin: 2px 0; }
 
 .bita-pildora {

@@ -462,6 +462,9 @@ export default function Bitacora() {
                     {c.label}
                   </button>
                 ))}
+                <span className="bita-pildoras-sep" />
+                <button type="button" className={`bita-pildora${fEstatusFus === 'Vencido' ? ' activa' : ''}`} onClick={() => setFEstatusFus(f => f === 'Vencido' ? '' : 'Vencido')}>Vencido</button>
+                <button type="button" className={`bita-pildora${fEstatusFus === 'PorVencer' ? ' activa' : ''}`} onClick={() => setFEstatusFus(f => f === 'PorVencer' ? '' : 'PorVencer')}>Por vencer</button>
               </div>
             </div>
 
