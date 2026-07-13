@@ -328,6 +328,22 @@
 .cfus-left .fus-meta          { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72) !important; margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cfus-left .fus-desc          { font-size: 0.74rem; color: rgba(255, 255, 255, 0.50) !important; margin-top: 5px; font-style: normal; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── FUS con SLA vencido (fechaLimite pasado, estatus "Turnado") ── */
+.fus-card-vencido {
+  border: 2px solid #d64545;
+  animation: sla-parpadeo 1.6s ease-in-out infinite;
+}
+@keyframes sla-parpadeo {
+  0%, 100% { border-color: #d64545; box-shadow: 0 0 0 0 rgba(214,69,69,0.25); }
+  50%      { border-color: #f08080; box-shadow: 0 0 0 4px rgba(214,69,69,0.08); }
+}
+.fus-card-vencido .badge-vencido {
+  display: inline-block;
+  margin-left: 6px;
+  background: #fceaea; color: #b23030; font-weight:700; font-size:.68rem;
+  padding: 3px 9px; border-radius: 999px;
+}
+
 
 /* ── Panel derecho — fondo blanco con pleca atenuada ── */
 .cfus-right {

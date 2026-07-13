@@ -87,6 +87,7 @@ export default function RegistrarFUS() {
     medioEspecificacion: '',
     prioridad:           '',
     criterios:           [],
+    fechaLimite:         '',
     solicitante_nombre:  '',
     solicitante_tel:     '',
     solicitante_correo:  '',
@@ -185,6 +186,7 @@ export default function RegistrarFUS() {
       fd.append('medioEspecificacion',  form.medioEspecificacion)
       fd.append('prioridad',            form.prioridad)
       fd.append('criterios',            form.criterios.join(' | '))
+      if (form.fechaLimite) fd.append('fechaLimite', form.fechaLimite)
       fd.append('nombreExterno',    form.solicitante_nombre)
       fd.append('telefonoExterno', form.solicitante_tel)
       fd.append('correoExterno',   form.solicitante_correo)
@@ -435,6 +437,18 @@ export default function RegistrarFUS() {
                   )}
                 </div>
               </div>
+
+              {!editId && (
+                <div className="reg-row">
+                  <label htmlFor="reg-fecha-limite">Fecha y hora límite (opcional)</label>
+                  <input
+                    id="reg-fecha-limite"
+                    type="datetime-local"
+                    value={form.fechaLimite}
+                    onChange={e => set('fechaLimite', e.target.value)}
+                  />
+                </div>
+              )}
             </fieldset>
 
             {error && <p className="reg-error" role="alert">{error}</p>}

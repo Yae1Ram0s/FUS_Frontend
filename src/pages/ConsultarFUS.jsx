@@ -579,10 +579,13 @@ function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   return (
-    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}`} onClick={onClick} role="button" tabIndex={0}
+    <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">{fus.folio}</strong>
+        <strong className="fus-folio">
+          {fus.folio}
+          {fus.slaVencido && <span className="badge-vencido">Vencido</span>}
+        </strong>
         <span className="fus-card-top-actions">
           <button
             className="fus-card-historial-btn"
