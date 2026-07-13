@@ -208,7 +208,9 @@
 .cfus-left .filtro-chip-registrado,
 .cfus-left .filtro-chip-turnado,
 .cfus-left .filtro-chip-atendido,
-.cfus-left .filtro-chip-concluido  { color: rgba(221, 201, 163, 0.90); }
+.cfus-left .filtro-chip-concluido,
+.cfus-left .filtro-chip-vencido,
+.cfus-left .filtro-chip-porvencer  { color: rgba(221, 201, 163, 0.90); }
 
 .cfus-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
@@ -224,13 +226,9 @@
 .cfus-left .filtro-chip-active.filtro-chip-registrado,
 .cfus-left .filtro-chip-active.filtro-chip-turnado,
 .cfus-left .filtro-chip-active.filtro-chip-atendido,
-.cfus-left .filtro-chip-active.filtro-chip-concluido  { color: #f0dfc0; }
-
-/* Vencido / Por vencer — mismos tonos rojo/ámbar que las tarjetas y badges */
-.cfus-left .filtro-chip-vencido    { color: #f5a3a3; }
-.cfus-left .filtro-chip-porvencer  { color: #f5c563; }
-.cfus-left .filtro-chip-active.filtro-chip-vencido    { border-color: rgba(214, 69, 69, 0.55) !important; color: #ffb3b3; }
-.cfus-left .filtro-chip-active.filtro-chip-porvencer  { border-color: rgba(224, 160, 32, 0.55) !important; color: #ffd88a; }
+.cfus-left .filtro-chip-active.filtro-chip-concluido,
+.cfus-left .filtro-chip-active.filtro-chip-vencido,
+.cfus-left .filtro-chip-active.filtro-chip-porvencer  { color: #f0dfc0; }
 
 /* Lista */
 .left-lista {
