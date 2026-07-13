@@ -748,7 +748,6 @@
 /* ══════════════════════════════════════
    VACÍO / CARGANDO
 ══════════════════════════════════════ */
-.bita-loading,
 .bita-empty {
   display: flex;
   align-items: center;
@@ -758,6 +757,63 @@
   padding: 3rem;
   color: rgba(10, 30, 20, 0.32);
   font-size: .85rem;
+}
+
+.bita-loading {
+  display: block;
+  padding: 12px 16px;
+}
+
+/* ── Skeleton — placeholder de filas mientras carga la primera página ── */
+.skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+.skeleton-bar {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e6e6e6 25%, #f0f0f0 50%, #e6e6e6 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-bar.corta { width: 40%; }
+.skeleton-bar.media { width: 65%; }
+.skeleton-bar.larga { width: 90%; }
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Error real de carga (catch) + reintentar ── */
+.bita-error-cell {
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+.bita-error-msg {
+  margin: 0 0 12px;
+  color: #b23030;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.bita-retry-btn {
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(35, 91, 78, 0.25);
+  border-radius: 14px;
+  color: rgba(10, 30, 20, 0.75);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
+}
+.bita-retry-btn:hover {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(35, 91, 78, 0.45);
 }
 
 /* ══════════════════════════════════════
@@ -891,10 +947,14 @@
     overflow-wrap: break-word;
   }
   .bita-table td:last-child { border-bottom: none; }
-  .bita-table td.bita-loading,
   .bita-table td.bita-empty {
     display: flex;
     justify-content: center;
+    text-align: center;
+  }
+  .bita-table td.bita-loading,
+  .bita-table td.bita-error-cell {
+    display: block;
     text-align: center;
   }
   .bita-table td::before {

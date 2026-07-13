@@ -103,6 +103,20 @@ function ModalPreviewPDF({ folio, onClose }) {
   )
 }
 
+function SkeletonRow() {
+  return (
+    <div className="skeleton-row">
+      <div className="skeleton-bar larga" />
+      <div className="skeleton-bar media" />
+      <div className="skeleton-bar corta" />
+    </div>
+  )
+}
+
+function SkeletonList() {
+  return Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+}
+
 export default function Bitacora() {
   const { user, accessToken } = useAuth()
   const rol       = user?.rol || 'ROL1'
@@ -115,6 +129,7 @@ export default function Bitacora() {
   const [total,     setTotal]     = useState(0)
   const [pagina,    setPagina]    = useState(1)
   const [cargando,  setCargando]  = useState(true)
+  const [errorCarga, setErrorCarga] = useState(false)
 
   const [fBusqueda,   setFBusqueda]   = useState('')
   const [fAccion,     setFAccion]     = useState('')
@@ -216,6 +231,7 @@ export default function Bitacora() {
 
   const cargar = useCallback((pag = 1, append = false) => {
     setCargando(true)
+    setErrorCarga(false)
     const params = { page: pag, page_size: PAGE_SIZE }
     if (fBusquedaDeb)         params.q           = fBusquedaDeb
     if (fAccion)              params.accion      = fAccion
@@ -230,7 +246,7 @@ export default function Bitacora() {
         setPagina(pag)
         setRegistros(prev => append ? [...prev, ...r.data.results] : r.data.results)
       })
-      .catch(() => {})
+      .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
   }, [fBusquedaDeb, fAccion, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
 
@@ -551,9 +567,17 @@ export default function Bitacora() {
             </thead>
             <tbody>
               {cargando && registros.length === 0 && (
-                <tr><td colSpan={COLS} className="bita-loading"><Spinner overlay={false} label="Cargando registros…" /></td></tr>
+                <tr><td colSpan={COLS} className="bita-loading"><SkeletonList /></td></tr>
               )}
-              {!cargando && registros.length === 0 && (
+              {!cargando && errorCarga && (
+                <tr>
+                  <td colSpan={COLS} className="bita-error-cell">
+                    <p className="bita-error-msg">No se pudo cargar la lista.</p>
+                    <button className="bita-retry-btn" onClick={() => cargar(1)}>Reintentar</button>
+                  </td>
+                </tr>
+              )}
+              {!cargando && !errorCarga && registros.length === 0 && (
                 <tr><td colSpan={COLS} className="bita-empty">No hay registros que coincidan con los filtros.</td></tr>
               )}
               {registros.map(r => (
