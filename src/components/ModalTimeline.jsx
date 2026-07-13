@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
 import Spinner from './Spinner'
-import Badge from './Badge'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import './ModalTimeline.css'
 
@@ -24,10 +23,9 @@ const LEYENDA = [
 ]
 
 export default function ModalTimeline({ folio, onClose }) {
-  const [eventos,       setEventos]       = useState([])
-  const [estatusActual, setEstatusActual] = useState(null)
-  const [error,         setError]         = useState(false)
-  const [cargando,      setCargando]      = useState(true)
+  const [eventos,  setEventos]  = useState([])
+  const [error,    setError]    = useState(false)
+  const [cargando, setCargando] = useState(true)
   const notifCtx = useNotificaciones()
 
   const cargarTrazabilidad = useCallback(() => {
@@ -35,7 +33,6 @@ export default function ModalTimeline({ folio, onClose }) {
     return api.get(url)
       .then(r => {
         setEventos(r.data.eventos || [])
-        setEstatusActual(r.data.estatusActual || null)
         setError(false)
       })
       .catch(() => setError(true))
@@ -53,7 +50,7 @@ export default function ModalTimeline({ folio, onClose }) {
     if (notifCtx?.notifs?.[0]?.fusFolio === folio) cargarTrazabilidad()
   }, [ultimaNotifId, folio, cargarTrazabilidad])
 
-  const hayContenido = eventos.length > 0 || estatusActual
+  const hayContenido = eventos.length > 0
 
   return createPortal(
     <div className="modal-overlay mtl-overlay" role="dialog" aria-modal="true">
@@ -88,12 +85,16 @@ export default function ModalTimeline({ folio, onClose }) {
             hayContenido ? (
               <ul className="mtl-timeline">
                 {eventos.map((ev, i) => {
-                  const info = TIPO_INFO[ev.tipo] || TIPO_INFO.respuesta
+                  const info    = TIPO_INFO[ev.tipo] || TIPO_INFO.respuesta
+                  const esUltimo = i === eventos.length - 1
                   return (
                     <li key={i} className="mtl-evento">
                       <span className="mtl-punto-col">
-                        <span className="mtl-punto" style={{ background: info.color }} />
-                        {(i < eventos.length - 1 || estatusActual) && <span className="mtl-linea" />}
+                        <span
+                          className={esUltimo ? 'mtl-punto mtl-punto-live' : 'mtl-punto'}
+                          style={{ background: info.color, '--live-color': info.color }}
+                        />
+                        {i < eventos.length - 1 && <span className="mtl-linea" />}
                       </span>
                       <div className="mtl-card" style={{ '--tipo-color': info.color }}>
                         <div className="mtl-card-top">
@@ -106,18 +107,6 @@ export default function ModalTimeline({ folio, onClose }) {
                     </li>
                   )
                 })}
-
-                {estatusActual && (
-                  <li className="mtl-evento mtl-evento-actual">
-                    <span className="mtl-punto-col">
-                      <span className="mtl-punto mtl-punto-live" />
-                    </span>
-                    <div className="mtl-card mtl-card-actual">
-                      <span className="mtl-card-titulo">Estado actual</span>
-                      <Badge estatus={estatusActual} theme="light" />
-                    </div>
-                  </li>
-                )}
               </ul>
             ) : <p className="mtl-empty">Sin eventos registrados.</p>
           )}

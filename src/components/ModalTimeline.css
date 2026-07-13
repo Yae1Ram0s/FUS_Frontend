@@ -119,25 +119,13 @@
   position: absolute;
   inset: -5px;
   border-radius: var(--radius-full);
-  border: 2px solid #1F5647;
+  border: 2px solid var(--live-color, #1F5647);
   animation: mtl-live-pulse 1.8s ease-out infinite;
 }
 @keyframes mtl-live-pulse {
   0%   { transform: scale(0.5); opacity: 0.9; }
   100% { transform: scale(1.9); opacity: 0; }
 }
-
-.mtl-card-actual {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 0;
-  background: rgba(31, 86, 71, 0.06);
-  border-color: rgba(31, 86, 71, 0.18);
-  border-left-color: #1F5647;
-}
-.mtl-card-actual .mtl-card-titulo { color: #1F5647; }
 
 @media (max-width: 768px) {
   .mtl-overlay { z-index: 9999; }
