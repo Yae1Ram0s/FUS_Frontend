@@ -351,6 +351,30 @@
 .dash-table td.dash-td-desc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash-table-empty { padding: 20px 0; text-align: center; color: #55555a; font-size: .85rem; }
 
+/* ── Error de carga (dashboard completo) ── */
+.dash-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60vh;
+  text-align: center;
+}
+.dash-error-msg { margin: 0; color: #b23030; font-size: .95rem; font-weight: 600; }
+.btn-reintentar {
+  padding: 9px 20px;
+  background: rgba(35, 91, 78, 0.10);
+  border: 1px solid rgba(35, 91, 78, 0.30);
+  border-radius: 14px;
+  color: #235b4e;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
+}
+.btn-reintentar:hover { background: rgba(35, 91, 78, 0.18); border-color: rgba(35, 91, 78, 0.45); }
+
 /* ── Vencimientos (buckets con estado vacío) ── */
 .dash-venc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .dash-venc-card {

@@ -199,17 +199,21 @@ export default function DashboardROL1() {
   const [fusData,   setFusData]   = useState([])
   const [bitacora,  setBitacora]  = useState([])
   const [cargando,  setCargando]  = useState(true)
+  const [errorCarga, setErrorCarga] = useState(false)
   const [ahora] = useState(() => Date.now())
 
-  useEffect(() => {
+  const cargar = () => {
     Promise.all([
       fetchAll('/fus/'),
       api.get('/bitacora/', { params: { page: 1, page_size: 100 } }).then(r => r.data.results || []),
     ])
-      .then(([fus, bit]) => { setFusData(fus); setBitacora(bit) })
-      .catch(() => {})
+      .then(([fus, bit]) => { setErrorCarga(false); setFusData(fus); setBitacora(bit) })
+      .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
-  }, [])
+  }
+  const reintentar = () => { setCargando(true); cargar() }
+
+  useEffect(() => { cargar() }, [])
 
   const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
 
@@ -293,6 +297,19 @@ export default function DashboardROL1() {
 
   if (cargando) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
+  }
+
+  if (errorCarga && fusData.length === 0) {
+    return (
+      <AppLayout>
+        <div className="dash-bg">
+          <div className="dash-error-state">
+            <p className="dash-error-msg">No se pudo cargar el dashboard.</p>
+            <button type="button" className="btn-reintentar" onClick={reintentar}>Reintentar</button>
+          </div>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (

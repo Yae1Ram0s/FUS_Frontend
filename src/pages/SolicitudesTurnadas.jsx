@@ -25,9 +25,12 @@ function Seguimientos({ turnadoId, concluido }) {
   const [loading,     setLoading]     = useState(false)
   const [eliminandoId,setEliminandoId] = useState(null)
   const [error,       setError]       = useState('')
+  const [errorCarga,  setErrorCarga]  = useState(false)
 
   const cargar = () =>
-    api.get(`/turnados/${turnadoId}/seguimientos/`).then(r => setLista(r.data)).catch(() => {})
+    api.get(`/turnados/${turnadoId}/seguimientos/`)
+      .then(r => { setErrorCarga(false); setLista(r.data) })
+      .catch(() => setErrorCarga(true))
 
   useEffect(() => { cargar() }, [turnadoId])
 
@@ -73,7 +76,12 @@ function Seguimientos({ turnadoId, concluido }) {
         )}
 
         <div className="seg-timeline">
-          {lista.length === 0 ? (
+          {errorCarga && lista.length === 0 ? (
+            <div className="seg-error">
+              <p className="seg-error-msg">No se pudo cargar el historial de respuestas.</p>
+              <button type="button" className="btn-reintentar" onClick={cargar}>Reintentar</button>
+            </div>
+          ) : lista.length === 0 ? (
             <p className="seg-empty">Sin respuestas registradas aún</p>
           ) : lista.map((s, i) => (
             <div key={s.id} className="seg-tl-item">
@@ -421,6 +429,7 @@ export default function SolicitudesTurnadas() {
   const [seleccionado, setSeleccionado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
+  const [errorCarga,   setErrorCarga]   = useState(false)
   const [highlightId,  setHighlightId]  = useState(null)
   const [pagina,       setPagina]       = useState(1)
   const [totalItems,   setTotalItems]   = useState(0)
@@ -435,6 +444,7 @@ export default function SolicitudesTurnadas() {
     if (!folioParam && busqueda) params.search = busqueda
     api.get('/turnados/mis-turnados/', { params })
       .then(r => {
+        setErrorCarga(false)
         const items = r.data.results || []
         setTotalItems(r.data.total || 0)
         if (folioParam) {
@@ -453,7 +463,7 @@ export default function SolicitudesTurnadas() {
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
       })
-      .catch(() => {})
+      .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
   }
 
@@ -563,7 +573,17 @@ export default function SolicitudesTurnadas() {
 
             <div className="left-lista">
               {cargando && <Spinner overlay={false} label="Cargando solicitudes…" />}
-              {!cargando && lista.length === 0 && (
+              {!cargando && errorCarga && lista.length === 0 && (
+                <div className="empty-state empty-state-error">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p className="empty-state-title">No se pudo cargar</p>
+                  <p className="empty-state-sub">Ocurrió un error al obtener tus solicitudes turnadas.</p>
+                  <button type="button" className="btn-reintentar" onClick={() => cargar(1)}>Reintentar</button>
+                </div>
+              )}
+              {!cargando && !errorCarga && lista.length === 0 && (
                 <div className="empty-state">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>

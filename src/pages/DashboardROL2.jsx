@@ -127,20 +127,24 @@ export default function DashboardROL2() {
   const [turnados,  setTurnados]  = useState([])
   const [actividad, setActividad] = useState([])
   const [cargando,  setCargando]  = useState(true)
+  const [errorCarga, setErrorCarga] = useState(false)
 
   const [fEstado,    setFEstado]    = useState('')
   const [fPrioridad, setFPrioridad] = useState('')
   const [fFecha,     setFFecha]     = useState('')
 
-  useEffect(() => {
+  const cargar = () => {
     Promise.all([
       fetchAll('/turnados/mis-turnados/'),
       api.get('/bitacora/', { params: { page: 1, page_size: 8 } }).then(r => r.data.results || []),
     ])
-      .then(([turn, bit]) => { setTurnados(turn); setActividad(bit) })
-      .catch(() => {})
+      .then(([turn, bit]) => { setErrorCarga(false); setTurnados(turn); setActividad(bit) })
+      .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
-  }, [])
+  }
+  const reintentar = () => { setCargando(true); cargar() }
+
+  useEffect(() => { cargar() }, [])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
 
@@ -188,6 +192,19 @@ export default function DashboardROL2() {
 
   if (cargando) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
+  }
+
+  if (errorCarga && turnados.length === 0) {
+    return (
+      <AppLayout>
+        <div className="dash-bg">
+          <div className="dash-error-state">
+            <p className="dash-error-msg">No se pudo cargar el dashboard.</p>
+            <button type="button" className="btn-reintentar" onClick={reintentar}>Reintentar</button>
+          </div>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (
