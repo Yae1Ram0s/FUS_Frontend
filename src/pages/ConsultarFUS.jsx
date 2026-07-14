@@ -633,6 +633,7 @@ export default function ConsultarFUS() {
   const [turnarFUS,    setTurnarFUS]    = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
+  const [errorCarga,   setErrorCarga]   = useState(false)
   const [highlightId,  setHighlightId]  = useState(null)
   const [pagina,       setPagina]       = useState(1)
   const [totalItems,   setTotalItems]   = useState(0)
@@ -647,6 +648,7 @@ export default function ConsultarFUS() {
     if (!folioParam && busqueda) params.search = busqueda
     api.get('/fus/', { params })
       .then(r => {
+        setErrorCarga(false)
         const items = r.data.results || []
         setTotalItems(r.data.total || 0)
         if (folioParam) {
@@ -666,7 +668,7 @@ export default function ConsultarFUS() {
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
       })
-      .catch(() => {})
+      .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
   }
 
@@ -785,7 +787,17 @@ export default function ConsultarFUS() {
 
             <div className="left-lista">
               {cargando && <Spinner overlay={false} label="Cargando solicitudes…" />}
-              {!cargando && lista.length === 0 && (
+              {!cargando && errorCarga && lista.length === 0 && (
+                <div className="empty-state empty-state-error">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p className="empty-state-title">No se pudo cargar</p>
+                  <p className="empty-state-sub">Ocurrió un error al obtener las solicitudes.</p>
+                  <button type="button" className="btn-reintentar" onClick={() => cargar(1)}>Reintentar</button>
+                </div>
+              )}
+              {!cargando && !errorCarga && lista.length === 0 && (
                 <div className="empty-state">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>

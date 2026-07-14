@@ -281,6 +281,23 @@
   line-height: 1.5;
 }
 
+/* Estado de error de carga — distinto del "sin solicitudes" normal */
+.empty-state-error svg { color: #f5a3a3; opacity: 0.75; }
+.empty-state-error .empty-state-title { color: #ffb3b3; }
+.btn-reintentar {
+  margin-top: 14px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+  color: #ffffff;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
+}
+.btn-reintentar:hover { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.5); }
+
 /* Tarjeta FUS — glass (scoped para ganar especificidad sobre SolicitudesTurnadas.css) */
 .cfus-left .fus-card {
   position: relative;
