@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
     // El access token vive solo en memoria y se pierde al recargar la página.
     // El refresh token (cookie httpOnly) sigue vivo, así que lo usamos aquí
     // para restaurar la sesión sin pedir credenciales de nuevo.
-    axios.post('/api/auth/token/refresh/', {}, { withCredentials: true })
+    axios.post('/api/auth/token/refresh/', {}, { withCredentials: true, headers: { 'ngrok-skip-browser-warning': 'true' } })
       .then(({ data }) => setAccessToken(data.access))
       .catch(() => {
         sessionStorage.removeItem('scs_user')

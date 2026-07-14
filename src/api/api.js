@@ -21,7 +21,7 @@ export function onAccessTokenChange(fn) {
 
 const api = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
   withCredentials: true,
 })
 
@@ -40,7 +40,7 @@ api.interceptors.response.use(
         const { data } = await axios.post(
           '/api/auth/token/refresh/',
           {},
-          { withCredentials: true }
+          { withCredentials: true, headers: { 'ngrok-skip-browser-warning': 'true' } }
         )
         setAccessToken(data.access)
         original.headers.Authorization = `Bearer ${data.access}`
