@@ -298,6 +298,33 @@
 }
 .btn-reintentar:hover { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.5); }
 
+/* Banner discreto: fallo de recarga con datos previos aun visibles */
+.banner-error-carga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  background: rgba(224, 160, 32, 0.15);
+  border: 1px solid rgba(224, 160, 32, 0.35);
+  border-radius: 10px;
+  font-size: .72rem;
+  color: #ffd88a;
+}
+.banner-error-carga button {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: .7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.banner-error-carga button:hover { background: rgba(255, 255, 255, 0.24); }
+
 /* Tarjeta FUS — glass (scoped para ganar especificidad sobre SolicitudesTurnadas.css) */
 .cfus-left .fus-card {
   position: relative;

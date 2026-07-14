@@ -26,13 +26,27 @@ function Seguimientos({ turnadoId, concluido }) {
   const [eliminandoId,setEliminandoId] = useState(null)
   const [error,       setError]       = useState('')
   const [errorCarga,  setErrorCarga]  = useState(false)
+  const autoRetriedRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   const cargar = () =>
     api.get(`/turnados/${turnadoId}/seguimientos/`)
-      .then(r => { setErrorCarga(false); setLista(r.data) })
-      .catch(() => setErrorCarga(true))
+      .then(r => {
+        setErrorCarga(false)
+        autoRetriedRef.current = false
+        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
+        setLista(r.data)
+      })
+      .catch(() => {
+        setErrorCarga(true)
+        if (!autoRetriedRef.current) {
+          autoRetriedRef.current = true
+          retryTimeoutRef.current = setTimeout(cargar, 5000)
+        }
+      })
 
   useEffect(() => { cargar() }, [turnadoId])
+  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const agregar = async () => {
     if (!fecha || !actividad.trim()) { setError('Completa la fecha y la actividad.'); return }
@@ -72,6 +86,13 @@ function Seguimientos({ turnadoId, concluido }) {
               <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
             Asunto concluido — las respuestas son de solo lectura
+          </div>
+        )}
+
+        {errorCarga && lista.length > 0 && (
+          <div className="banner-error-carga">
+            <span>No se pudo actualizar — mostrando la última información disponible.</span>
+            <button type="button" onClick={cargar}>Reintentar</button>
           </div>
         )}
 
@@ -435,6 +456,8 @@ export default function SolicitudesTurnadas() {
   const [totalItems,   setTotalItems]   = useState(0)
   const PAGE_SIZE = 30
   const reordenadoRef = useRef(false)
+  const autoRetriedRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   const cargar = (pag = 1, append = false) => {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
@@ -445,6 +468,8 @@ export default function SolicitudesTurnadas() {
     api.get('/turnados/mis-turnados/', { params })
       .then(r => {
         setErrorCarga(false)
+        autoRetriedRef.current = false
+        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
         const items = r.data.results || []
         setTotalItems(r.data.total || 0)
         if (folioParam) {
@@ -463,9 +488,17 @@ export default function SolicitudesTurnadas() {
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
       })
-      .catch(() => setErrorCarga(true))
+      .catch(() => {
+        setErrorCarga(true)
+        if (!autoRetriedRef.current) {
+          autoRetriedRef.current = true
+          retryTimeoutRef.current = setTimeout(() => cargar(pag, append), 5000)
+        }
+      })
       .finally(() => setCargando(false))
   }
+
+  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const cargarMas = () => cargar(pagina + 1, true)
 
@@ -571,8 +604,15 @@ export default function SolicitudesTurnadas() {
               </button>
             </div>
 
+            {errorCarga && lista.length > 0 && (
+              <div className="banner-error-carga">
+                <span>No se pudo actualizar — mostrando la última información disponible.</span>
+                <button type="button" onClick={() => cargar(1)}>Reintentar</button>
+              </div>
+            )}
+
             <div className="left-lista">
-              {cargando && <Spinner overlay={false} label="Cargando solicitudes…" />}
+              {cargando && lista.length === 0 && <Spinner overlay={false} label="Cargando solicitudes…" />}
               {!cargando && errorCarga && lista.length === 0 && (
                 <div className="empty-state empty-state-error">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">

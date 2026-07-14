@@ -639,6 +639,8 @@ export default function ConsultarFUS() {
   const [totalItems,   setTotalItems]   = useState(0)
   const PAGE_SIZE = 30
   const reordenadoRef = useRef(false)
+  const autoRetriedRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   const cargar = (pag = 1, append = false) => {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
@@ -649,6 +651,8 @@ export default function ConsultarFUS() {
     api.get('/fus/', { params })
       .then(r => {
         setErrorCarga(false)
+        autoRetriedRef.current = false
+        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
         const items = r.data.results || []
         setTotalItems(r.data.total || 0)
         if (folioParam) {
@@ -668,9 +672,17 @@ export default function ConsultarFUS() {
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
       })
-      .catch(() => setErrorCarga(true))
+      .catch(() => {
+        setErrorCarga(true)
+        if (!autoRetriedRef.current) {
+          autoRetriedRef.current = true
+          retryTimeoutRef.current = setTimeout(() => cargar(pag, append), 5000)
+        }
+      })
       .finally(() => setCargando(false))
   }
+
+  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const cargarMas = () => cargar(pagina + 1, true)
 
@@ -785,8 +797,15 @@ export default function ConsultarFUS() {
               </button>
             </div>
 
+            {errorCarga && lista.length > 0 && (
+              <div className="banner-error-carga">
+                <span>No se pudo actualizar — mostrando la última información disponible.</span>
+                <button type="button" onClick={() => cargar(1)}>Reintentar</button>
+              </div>
+            )}
+
             <div className="left-lista">
-              {cargando && <Spinner overlay={false} label="Cargando solicitudes…" />}
+              {cargando && lista.length === 0 && <Spinner overlay={false} label="Cargando solicitudes…" />}
               {!cargando && errorCarga && lista.length === 0 && (
                 <div className="empty-state empty-state-error">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">

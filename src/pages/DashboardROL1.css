@@ -375,6 +375,33 @@
 }
 .btn-reintentar:hover { background: rgba(35, 91, 78, 0.18); border-color: rgba(35, 91, 78, 0.45); }
 
+/* Banner discreto: fallo de recarga con datos previos aun visibles (fondo claro) */
+.banner-error-carga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 16px;
+  background: rgba(224, 160, 32, 0.12);
+  border: 1px solid rgba(224, 160, 32, 0.35);
+  border-radius: 12px;
+  font-size: .8rem;
+  color: #8a5a00;
+}
+.banner-error-carga button {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  background: rgba(35, 91, 78, 0.10);
+  border: 1px solid rgba(35, 91, 78, 0.30);
+  border-radius: 999px;
+  color: #235b4e;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.banner-error-carga button:hover { background: rgba(35, 91, 78, 0.18); }
+
 /* ── Vencimientos (buckets con estado vacío) ── */
 .dash-venc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .dash-venc-card {

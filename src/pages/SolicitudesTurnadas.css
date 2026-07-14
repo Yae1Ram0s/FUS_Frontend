@@ -205,6 +205,42 @@
 .left-lista { flex: 1; overflow-y: auto; padding: 6px 10px; }
 .st-left .left-msg { color: rgba(255, 255, 255, 0.55); font-size: 0.82rem; text-align: center; padding: 2rem 0; }
 
+/* Banner discreto: fallo de recarga con datos previos aun visibles */
+.banner-error-carga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  background: rgba(224, 160, 32, 0.15);
+  border: 1px solid rgba(224, 160, 32, 0.35);
+  border-radius: 10px;
+  font-size: .72rem;
+  color: #ffd88a;
+}
+.banner-error-carga button {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: .7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.banner-error-carga button:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* En paneles claros (ej. sec-body) el contraste se invierte */
+.sec-body .banner-error-carga { color: #8a5a00; }
+.sec-body .banner-error-carga button {
+  background: rgba(35, 91, 78, 0.10);
+  border-color: rgba(35, 91, 78, 0.30);
+  color: #235b4e;
+}
+.sec-body .banner-error-carga button:hover { background: rgba(35, 91, 78, 0.18); }
+
 .st-left .btn-cargar-mas {
   width: 100%;
   margin: 8px 0 4px;

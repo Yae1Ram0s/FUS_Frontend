@@ -30,6 +30,41 @@ api.interceptors.request.use(config => {
   return config
 })
 
+let refreshFallidosSeguidos = 0
+// Varias peticiones pueden 401 casi al mismo tiempo (ej. los dashboards
+// disparan 2 llamadas en paralelo) -- comparten un solo refresh en curso en
+// vez de contar cada 401 simultáneo como un fallo separado.
+let refreshEnCurso = null
+
+function refrescarToken() {
+  if (!refreshEnCurso) {
+    refreshEnCurso = axios.post(
+      '/api/auth/token/refresh/',
+      {},
+      { withCredentials: true, headers: { 'ngrok-skip-browser-warning': 'true' } }
+    )
+      .then(({ data }) => {
+        refreshFallidosSeguidos = 0
+        setAccessToken(data.access)
+        return data.access
+      })
+      .catch(err => {
+        refreshFallidosSeguidos += 1
+        setAccessToken(null)
+        // Una falla aislada de refresh no debe sacar al usuario de la app --
+        // se deja que la pantalla que hizo la petición maneje el error con
+        // su propio banner/"Reintentar". Solo tras 2 fallos consecutivos se
+        // asume que la sesión realmente murió.
+        if (refreshFallidosSeguidos >= 2) {
+          window.location.href = '/login'
+        }
+        throw err
+      })
+      .finally(() => { refreshEnCurso = null })
+  }
+  return refreshEnCurso
+}
+
 api.interceptors.response.use(
   res => res,
   async err => {
@@ -37,17 +72,11 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true
       try {
-        const { data } = await axios.post(
-          '/api/auth/token/refresh/',
-          {},
-          { withCredentials: true, headers: { 'ngrok-skip-browser-warning': 'true' } }
-        )
-        setAccessToken(data.access)
-        original.headers.Authorization = `Bearer ${data.access}`
+        const access = await refrescarToken()
+        original.headers.Authorization = `Bearer ${access}`
         return api(original)
       } catch {
-        setAccessToken(null)
-        window.location.href = '/login'
+        // El fallo ya quedó contabilizado/manejado dentro de refrescarToken().
       }
     }
     return Promise.reject(err)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -201,19 +201,33 @@ export default function DashboardROL1() {
   const [cargando,  setCargando]  = useState(true)
   const [errorCarga, setErrorCarga] = useState(false)
   const [ahora] = useState(() => Date.now())
+  const autoRetriedRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   const cargar = () => {
     Promise.all([
       fetchAll('/fus/'),
       api.get('/bitacora/', { params: { page: 1, page_size: 100 } }).then(r => r.data.results || []),
     ])
-      .then(([fus, bit]) => { setErrorCarga(false); setFusData(fus); setBitacora(bit) })
-      .catch(() => setErrorCarga(true))
+      .then(([fus, bit]) => {
+        setErrorCarga(false)
+        autoRetriedRef.current = false
+        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
+        setFusData(fus); setBitacora(bit)
+      })
+      .catch(() => {
+        setErrorCarga(true)
+        if (!autoRetriedRef.current) {
+          autoRetriedRef.current = true
+          retryTimeoutRef.current = setTimeout(cargar, 5000)
+        }
+      })
       .finally(() => setCargando(false))
   }
   const reintentar = () => { setCargando(true); cargar() }
 
   useEffect(() => { cargar() }, [])
+  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
 
@@ -295,7 +309,7 @@ export default function DashboardROL1() {
     { key: '>5',    label: 'Más de 5 días', value: bucketMas5, danger: true },
   ]
 
-  if (cargando) {
+  if (cargando && fusData.length === 0) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
   }
 
@@ -317,6 +331,13 @@ export default function DashboardROL1() {
       <div className="dash-bg">
         <div className="dash-wrap-apple">
         <div className="dash-mega-card">
+
+          {errorCarga && fusData.length > 0 && (
+            <div className="banner-error-carga">
+              <span>No se pudo actualizar — mostrando la última información disponible.</span>
+              <button type="button" onClick={reintentar}>Reintentar</button>
+            </div>
+          )}
 
           <header className="dash-header-apple">
             <h1>Hola, {nombre}</h1>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -132,19 +132,33 @@ export default function DashboardROL2() {
   const [fEstado,    setFEstado]    = useState('')
   const [fPrioridad, setFPrioridad] = useState('')
   const [fFecha,     setFFecha]     = useState('')
+  const autoRetriedRef = useRef(false)
+  const retryTimeoutRef = useRef(null)
 
   const cargar = () => {
     Promise.all([
       fetchAll('/turnados/mis-turnados/'),
       api.get('/bitacora/', { params: { page: 1, page_size: 8 } }).then(r => r.data.results || []),
     ])
-      .then(([turn, bit]) => { setErrorCarga(false); setTurnados(turn); setActividad(bit) })
-      .catch(() => setErrorCarga(true))
+      .then(([turn, bit]) => {
+        setErrorCarga(false)
+        autoRetriedRef.current = false
+        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
+        setTurnados(turn); setActividad(bit)
+      })
+      .catch(() => {
+        setErrorCarga(true)
+        if (!autoRetriedRef.current) {
+          autoRetriedRef.current = true
+          retryTimeoutRef.current = setTimeout(cargar, 5000)
+        }
+      })
       .finally(() => setCargando(false))
   }
   const reintentar = () => { setCargando(true); cargar() }
 
   useEffect(() => { cargar() }, [])
+  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
 
@@ -190,7 +204,7 @@ export default function DashboardROL2() {
   const limpiarFiltrosTabla = () => { setFEstado(''); setFPrioridad(''); setFFecha('') }
   const hayFiltrosTabla = Boolean(fEstado || fPrioridad || fFecha)
 
-  if (cargando) {
+  if (cargando && turnados.length === 0) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
   }
 
@@ -212,6 +226,13 @@ export default function DashboardROL2() {
       <div className="dash-bg">
         <div className="dash-wrap-apple">
         <div className="dash-mega-card">
+
+          {errorCarga && turnados.length > 0 && (
+            <div className="banner-error-carga">
+              <span>No se pudo actualizar — mostrando la última información disponible.</span>
+              <button type="button" onClick={reintentar}>Reintentar</button>
+            </div>
+          )}
 
           <header className="dash-header-apple">
             <h1>Hola, {nombre}</h1>
