@@ -17,6 +17,7 @@ import RegistrarFUS        from './pages/RegistrarFUS'
 import SolicitudesTurnadas from './pages/SolicitudesTurnadas'
 import Bitacora            from './pages/Bitacora'
 import PanelAdmin          from './pages/PanelAdmin'
+import CalendarioActividades from './pages/CalendarioActividades'
 
 export default function App() {
   // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
@@ -52,6 +53,7 @@ export default function App() {
                   <Route path="/rol1/bitacora"       element={<Bitacora />} />
                   <Route path="/rol1/panel"          element={<PanelAdmin />} />
                   <Route path="/rol1/dashboard"      element={<DashboardROL1 />} />
+                  <Route path="/rol1/calendario"     element={<CalendarioActividades />} />
                 </Route>
 
                 {/* ROL2 — Titular / Enlace Estratégico */}
@@ -59,6 +61,7 @@ export default function App() {
                   <Route path="/rol2/solicitudes" element={<SolicitudesTurnadas />} />
                   <Route path="/rol2/bitacora"    element={<Bitacora />} />
                   <Route path="/rol2/dashboard"   element={<DashboardROL2 />} />
+                  <Route path="/rol2/calendario"  element={<CalendarioActividades />} />
                 </Route>
 
                 {/* Raíz → login */}
