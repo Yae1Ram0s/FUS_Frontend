@@ -5,8 +5,8 @@ import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
 import './PanelAdmin.css'
 
-const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular/Enlace Estratégico' }
-const ROL_COLORS = { ROL1: '#1F5647',    ROL2: '#691C32'          }
+const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular/Enlace Estratégico', COMISIONADO: 'Comisionado', EQUIPO_PARTICULAR: 'Equipo del Particular' }
+const ROL_COLORS = { ROL1: '#1F5647',    ROL2: '#691C32',                    COMISIONADO: '#9F2241',    EQUIPO_PARTICULAR: '#235b4e'               }
 
 export default function PanelAdmin() {
   const { user: yo } = useAuth()
@@ -49,6 +49,7 @@ export default function PanelAdmin() {
 
   const direccionesGenerales = unidades.filter(u => u.esUnidadDeNegocio)
   const aduanas              = unidades.filter(u => u.esUnidadAdministrativa)
+  const unidadFaltante = form.rol === 'COMISIONADO' && !form.unidadAdministrativa
 
   const abrirEditar = (c) => {
     setEditando(c)
@@ -93,6 +94,10 @@ export default function PanelAdmin() {
 
   const agregarCorreo = async (e) => {
     e.preventDefault()
+    if (unidadFaltante) {
+      setError('Selecciona la dirección a la que quedará vinculado el comisionado.')
+      return
+    }
     setError(''); setGuardando(true)
     try {
       await api.post('/auth/correos-autorizados/', form)
@@ -170,6 +175,8 @@ export default function PanelAdmin() {
             <option value="">Todos los roles</option>
             <option value="ROL1">Particular</option>
             <option value="ROL2">Titular/Enlace Estratégico</option>
+            <option value="COMISIONADO">Comisionado</option>
+            <option value="EQUIPO_PARTICULAR">Equipo del Particular</option>
           </select>
         </div>
 
@@ -269,35 +276,60 @@ export default function PanelAdmin() {
                     required />
                 </label>
                 <label>Rol
-                  <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}>
+                  <select value={form.rol} onChange={e => {
+                    const rol = e.target.value
+                    setForm(f => ({ ...f, rol }))
+                    setError('')
+                  }}>
                     <option value="ROL1">Particular del Titular</option>
                     <option value="ROL2">Titular/Enlace Estratégico</option>
+                    <option value="COMISIONADO">Comisionado</option>
+                    <option value="EQUIPO_PARTICULAR">Equipo del Particular</option>
                   </select>
                 </label>
-                <label>Unidad administrativa
-                  <select value={form.unidadAdministrativa}
-                    onChange={e => setForm(f => ({ ...f, unidadAdministrativa: e.target.value }))}>
-                    <option value="">Sin asignar</option>
-                    <optgroup label="Direcciones generales">
-                      {direccionesGenerales.map(u => (
-                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
-                          {u.clave} — {u.unidadAdministrativa}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Aduanas">
-                      {aduanas.map(u => (
-                        <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
-                          {u.clave} — {u.unidadAdministrativa}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </label>
+                {form.rol === 'EQUIPO_PARTICULAR' ? (
+                  <div className="adm-direccion-heredada">
+                    <span className="adm-direccion-heredada-label">Dirección</span>
+                    <span className="adm-direccion-heredada-valor">{yo?.unidadAdministrativa || 'Sin unidad asignada'}</span>
+                  </div>
+                ) : (
+                  <label>Unidad administrativa{form.rol === 'COMISIONADO' && <span className="adm-campo-requerido"> *</span>}
+                    <select
+                      className={unidadFaltante && error ? 'adm-select-error' : ''}
+                      value={form.unidadAdministrativa}
+                      onChange={e => { setForm(f => ({ ...f, unidadAdministrativa: e.target.value })); setError('') }}>
+                      <option value="" disabled={form.rol === 'COMISIONADO'}>Sin asignar</option>
+                      <optgroup label="Direcciones generales">
+                        {direccionesGenerales.map(u => (
+                          <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                            {u.clave} — {u.unidadAdministrativa}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Aduanas">
+                        {aduanas.map(u => (
+                          <option key={u.idUnidadAdministrativa} value={u.idUnidadAdministrativa}>
+                            {u.clave} — {u.unidadAdministrativa}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+                )}
+                {form.rol === 'COMISIONADO' && (
+                  <p className="adm-nota-comisionado">
+                    El Comisionado queda vinculado a esta dirección: solo podrá recibir y ver los FUS que un Titular de esa misma dirección le comisione.
+                  </p>
+                )}
+                {form.rol === 'EQUIPO_PARTICULAR' && (
+                  <p className="adm-nota-comisionado">
+                    Este usuario podrá llenar, turnar y consultar FUS en tu representación: solo verá y operará las solicitudes registradas por ti.
+                  </p>
+                )}
                 {error && <p className="adm-modal-error">{error}</p>}
                 <div className="adm-modal-actions">
                   <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
-                  <button type="submit" className="adm-btn-save" disabled={guardando}>
+                  <button type="submit" className={`adm-btn-save${unidadFaltante ? ' adm-btn-save-bloqueado' : ''}`} disabled={guardando}>
                     {guardando && <span className="btn-spinner" />}
                     {guardando ? 'Guardando…' : 'Agregar'}
                   </button>

@@ -20,7 +20,9 @@ export default function BuscadorGlobal({ onClose }) {
   const buscar = useCallback((q) => {
     if (!q.trim()) { setResultados([]); setCargando(false); return }
     setCargando(true)
-    const endpoint = user?.rol === 'ROL2' ? '/turnados/mis-turnados/' : '/fus/'
+    const endpoint = user?.rol === 'ROL2' ? '/turnados/mis-turnados/'
+      : user?.rol === 'COMISIONADO' ? '/fus/mis-comisionados/'
+      : '/fus/'
     api.get(endpoint, { params: { search: q, page: 1, page_size: 10 } })
       .then(r => {
         const items = r.data.results || []
@@ -32,6 +34,15 @@ export default function BuscadorGlobal({ onClose }) {
             estatus: t.estatusTitular,
             path: '/rol2/solicitudes',
             folioBuscar: t.idFus?.folio,
+          })))
+        } else if (user?.rol === 'COMISIONADO') {
+          setResultados(items.map(f => ({
+            id: f.id,
+            folio: f.folio,
+            desc: f.descripcion,
+            estatus: f.estatusParticular,
+            path: '/comisionado/fus-comisionados',
+            folioBuscar: f.folio,
           })))
         } else {
           setResultados(items.map(f => ({

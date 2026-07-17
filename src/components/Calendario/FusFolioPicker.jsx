@@ -11,6 +11,7 @@ const ESTADO_INFO = {
   En_seguimiento:  { color: '#fbbf24', label: 'En seguimiento' },
   Atendido:        { color: '#fbbf24', label: 'Atendido' },
   Concluido:       { color: '#4ade80', label: 'Concluido' },
+  Pendiente_validacion: { color: '#a78bfa', label: 'Pendiente de validación' },
 }
 
 const formatearFecha = iso => iso

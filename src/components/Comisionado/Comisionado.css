@@ -1,0 +1,232 @@
+/* ══════════════════════════════════════
+   Modales de Comisionado — glassmorphism real
+══════════════════════════════════════ */
+.com-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 16, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  animation: com-fade-in 150ms ease;
+}
+@keyframes com-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.com-modal {
+  width: 420px;
+  max-width: 92vw;
+  max-height: calc(var(--app-vh, 100vh) * 0.86);
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.75));
+  backdrop-filter: blur(26px) saturate(1.65);
+  -webkit-backdrop-filter: blur(26px) saturate(1.65);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow:
+    0 24px 60px rgba(10, 30, 20, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  animation: com-modal-in 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  color: #1a2f28;
+}
+@keyframes com-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.com-modal-top { display: flex; align-items: center; justify-content: space-between; }
+.com-modal-top h3 { font-size: 16px; font-weight: 700; margin: 0; color: #1a2f28; }
+.com-modal-x {
+  border: none;
+  background: rgba(35, 91, 78, 0.10);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #235b4e;
+  flex-shrink: 0;
+}
+.com-modal-x:hover { background: rgba(35, 91, 78, 0.18); }
+.com-modal-x:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.com-pill-input {
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  color: #1a2f28;
+  width: 100%;
+  box-sizing: border-box;
+}
+.com-pill-input:focus { border-color: rgba(35, 91, 78, 0.5); background: rgba(255, 255, 255, 0.92); }
+.com-textarea { resize: vertical; min-height: 90px; }
+
+/* ── Lista de comisionados ── */
+.com-lista {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.com-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.35);
+}
+.com-item:hover { background: rgba(255, 255, 255, 0.6); }
+.com-item-sel { background: rgba(159, 34, 65, 0.10); }
+
+.com-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #235b4e;
+  color: #DDC9A3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.com-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.com-item-nombre {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a2f28;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.com-item-direccion { font-size: 11px; color: rgba(0, 0, 0, 0.5); }
+
+.com-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(35, 91, 78, 0.30);
+  flex-shrink: 0;
+}
+.com-check-on { background: #9F2241; border-color: #9F2241; }
+
+.com-vacio {
+  text-align: center;
+  padding: 1.2rem 0.5rem;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.45);
+  margin: 0;
+}
+
+.com-skeletons { display: flex; flex-direction: column; gap: 6px; }
+.com-skeleton-row {
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(35,91,78,0.06) 25%, rgba(35,91,78,0.12) 37%, rgba(35,91,78,0.06) 63%);
+  background-size: 400% 100%;
+  animation: com-shimmer 1.4s ease infinite;
+}
+@keyframes com-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ── Alertas ── */
+.com-alert-error {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(178, 48, 48, 0.10);
+  color: #b23030;
+}
+
+/* ── Botones ── */
+.com-btn-confirmar {
+  border: none;
+  background: #9F2241;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(159, 34, 65, 0.30);
+}
+.com-btn-confirmar:hover:not(:disabled) { background: #82182f; }
+.com-btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.com-modal-confirm { width: 400px; }
+.com-confirm-texto { font-size: 13.5px; line-height: 1.55; color: #1a2f28; margin: 0; }
+.com-confirm-texto strong { color: #9F2241; }
+
+.com-confirm-acciones { display: flex; gap: 8px; margin-top: 4px; }
+
+.com-btn-ghost {
+  flex: 1;
+  border: 1px solid rgba(35, 91, 78, 0.25);
+  background: rgba(255, 255, 255, 0.4);
+  color: #235b4e;
+  border-radius: 999px;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.com-btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); }
+.com-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.com-btn-verde {
+  flex: 1;
+  border: none;
+  background: #235b4e;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(35, 91, 78, 0.25);
+}
+.com-btn-verde:hover:not(:disabled) { background: #1a4338; }
+.com-btn-verde:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.com-btn-rojo {
+  flex: 1;
+  border: none;
+  background: #b23030;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(178, 48, 48, 0.25);
+}
+.com-btn-rojo:hover:not(:disabled) { background: #8f2626; }
+.com-btn-rojo:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .com-overlay { align-items: flex-end; }
+  .com-modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; }
+}

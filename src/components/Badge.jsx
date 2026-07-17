@@ -7,6 +7,8 @@ const VARIANTS = {
   // ── Turnado / pivot (estatusTitular) ────────────────────────────────────
   Recibido:       { tint: 'rgba(200,205,215,', text: '#dde1ea', glow: 'rgba(200,205,215,' },
   En_seguimiento: { tint: 'rgba(251,191,36,',  text: '#fde68a', glow: 'rgba(251,191,36,' },
+  // ── Comisionado (estatusParticular) ─────────────────────────────────────
+  Pendiente_validacion: { tint: 'rgba(167,139,250,', text: '#ddd6fe', glow: 'rgba(167,139,250,' },
 }
 
 // Light-background variants (neomorphism sandy #ddc9a3)
@@ -17,10 +19,12 @@ const VARIANTS_LIGHT = {
   Concluido:      { tint: 'rgba(25,90,55,',    text: '#0f3d26' },
   Recibido:       { tint: 'rgba(80,100,130,',  text: '#2a3d5c' },
   En_seguimiento: { tint: 'rgba(160,110,0,',   text: '#6b4800' },
+  Pendiente_validacion: { tint: 'rgba(109,40,217,', text: '#5b21b6' },
 }
 
 const ETIQUETAS = {
   En_seguimiento: 'En seguimiento',
+  Pendiente_validacion: 'Pendiente de validación',
 }
 
 const FALLBACK       = { tint: 'rgba(200,205,215,', text: '#dde1ea', glow: 'rgba(200,205,215,' }

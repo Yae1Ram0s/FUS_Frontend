@@ -53,6 +53,8 @@ export function NotificacionesProvider({ children }) {
       const rol   = userRef.current?.rol
       const dest  = rol === 'ROL2'
         ? `/rol2/solicitudes${folio ? `?folio=${encodeURIComponent(folio)}` : ''}`
+        : rol === 'COMISIONADO'
+        ? '/comisionado/fus-comisionados'
         : `/rol1/consultar-fus${folio ? `?folio=${encodeURIComponent(folio)}` : ''}`
 
       const n = new Notification('SCS — Nueva notificación', {

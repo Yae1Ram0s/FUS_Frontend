@@ -649,6 +649,94 @@
 .sec-resp  { color: #ffffff; }
 .sec-acc   { color: #ffffff; }
 
+/* ── Comisionado: acciones en el header, chip de asignación, footer ── */
+.dt-header-acciones { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.btn-comisionar {
+  background: transparent;
+  border: 1px solid rgba(254, 205, 211, 0.55);
+  color: #fecdd3;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  cursor: pointer;
+  text-shadow: none;
+}
+.btn-comisionar:hover { background: rgba(254, 205, 211, 0.12); border-color: #fecdd3; }
+
+.dt-comisionado-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(159, 34, 65, 0.06);
+  border: 1px solid rgba(159, 34, 65, 0.15);
+}
+.dt-comisionado-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #9F2241;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.dt-comisionado-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dt-comisionado-nombre { font-size: 0.85rem; font-weight: 700; color: #1a2f28; }
+.dt-comisionado-direccion { font-size: 0.75rem; color: rgba(0, 0, 0, 0.5); }
+
+.dt-actions-comisionado { align-items: stretch; }
+.dt-comisionado-botones { display: flex; gap: 10px; }
+
+.btn-rechazar {
+  flex: 1;
+  background: transparent;
+  color: #b23030;
+  border: 1px solid rgba(178, 48, 48, 0.45);
+  border-radius: 20px;
+  padding: 10px 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-rechazar:hover:not(:disabled) { background: rgba(178, 48, 48, 0.08); }
+.btn-rechazar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-aprobar {
+  flex: 1;
+  background: rgba(21, 128, 61, 0.90);
+  color: #ffffff;
+  border: 1px solid rgba(21, 128, 61, 0.70);
+  border-radius: 20px;
+  padding: 10px 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-aprobar:hover:not(:disabled) { background: rgba(16, 105, 50, 0.96); }
+.btn-aprobar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dt-concluido-texto {
+  text-align: right;
+  font-size: 0.82rem;
+  color: rgba(0, 0, 0, 0.45);
+  font-style: italic;
+  margin: 0.5rem 0 0;
+}
+
+@media (max-width: 480px) {
+  .dt-comisionado-botones { flex-direction: column; }
+}
+
 .sec-body { background: rgba(235, 248, 244, 0.07); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
 
 /* Subsecciones dentro de una tarjeta unificada */

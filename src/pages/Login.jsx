@@ -31,14 +31,17 @@ export default function Login() {
   const { user, login, loginWithTokens } = useAuth()
   const navigate = useNavigate()
 
+  const rutaInicio = (rol) => {
+    if (rol === 'ROL2') return '/rol2/dashboard'
+    if (rol === 'COMISIONADO') return '/comisionado/calendario'
+    return '/rol1/dashboard'
+  }
+
   useEffect(() => {
-    if (user) navigate(user.rol === 'ROL2' ? '/rol2/dashboard' : '/rol1/dashboard', { replace: true })
+    if (user) navigate(rutaInicio(user.rol), { replace: true })
   }, [user])
 
-  const redirect = (rol) => {
-    if (rol === 'ROL2') navigate('/rol2/dashboard')
-    else navigate('/rol1/dashboard')
-  }
+  const redirect = (rol) => navigate(rutaInicio(rol))
 
   const resetAll = () => {
     setError(''); setOtp(''); setNewPass(''); setConfirmPass('')

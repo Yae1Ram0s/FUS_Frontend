@@ -18,6 +18,7 @@ import SolicitudesTurnadas from './pages/SolicitudesTurnadas'
 import Bitacora            from './pages/Bitacora'
 import PanelAdmin          from './pages/PanelAdmin'
 import CalendarioActividades from './pages/CalendarioActividades'
+import FUSComisionados     from './pages/FUSComisionados'
 
 export default function App() {
   // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
@@ -46,14 +47,18 @@ export default function App() {
                 {/* Pública */}
                 <Route path="/login" element={<Login />} />
 
-                {/* ROL1 — Particular del Titular */}
-                <Route element={<PrivateRoute roles={['ROL1']} />}>
+                {/* ROL1 — Particular del Titular (rol 4 "Equipo del Particular" comparte estas mismas pantallas) */}
+                <Route element={<PrivateRoute roles={['ROL1', 'EQUIPO_PARTICULAR']} />}>
                   <Route path="/rol1/consultar-fus" element={<ConsultarFUS />} />
                   <Route path="/rol1/registrar-fus" element={<RegistrarFUS />} />
                   <Route path="/rol1/bitacora"       element={<Bitacora />} />
-                  <Route path="/rol1/panel"          element={<PanelAdmin />} />
                   <Route path="/rol1/dashboard"      element={<DashboardROL1 />} />
                   <Route path="/rol1/calendario"     element={<CalendarioActividades />} />
+                </Route>
+
+                {/* ROL1 — administración de usuarios/accesos (rol 4 no tiene acceso) */}
+                <Route element={<PrivateRoute roles={['ROL1']} />}>
+                  <Route path="/rol1/panel" element={<PanelAdmin />} />
                 </Route>
 
                 {/* ROL2 — Titular / Enlace Estratégico */}
@@ -62,6 +67,12 @@ export default function App() {
                   <Route path="/rol2/bitacora"    element={<Bitacora />} />
                   <Route path="/rol2/dashboard"   element={<DashboardROL2 />} />
                   <Route path="/rol2/calendario"  element={<CalendarioActividades />} />
+                </Route>
+
+                {/* COMISIONADO */}
+                <Route element={<PrivateRoute roles={['COMISIONADO']} />}>
+                  <Route path="/comisionado/calendario"       element={<CalendarioActividades />} />
+                  <Route path="/comisionado/fus-comisionados" element={<FUSComisionados />} />
                 </Route>
 
                 {/* Raíz → login */}

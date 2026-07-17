@@ -97,12 +97,37 @@ const NAV_ROL2 = [
   { path: '/rol2/bitacora', label: 'Búsqueda Avanzada', icon: ICON_BITACORA },
 ]
 
+// Rol 4 (asistente de ROL1): mismas pantallas que ROL1, sin administración de usuarios.
+const NAV_EQUIPO_PARTICULAR = NAV_ROL1.filter(item => item.path !== '/rol1/panel')
+
+const NAV_COMISIONADO = [
+  {
+    path: '/comisionado/calendario',
+    label: 'Calendario',
+    icon: ICON_CALENDARIO,
+  },
+  {
+    path: '/comisionado/fus-comisionados',
+    label: 'FUS Comisionados',
+    consultar: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+      </svg>
+    ),
+  },
+]
+
 export default function Sidebar({ isOpen, onClose, onToggle }) {
   const { user } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
 
-  const items = user?.rol === 'ROL2' ? NAV_ROL2 : NAV_ROL1
+  const items = user?.rol === 'ROL2' ? NAV_ROL2
+    : user?.rol === 'COMISIONADO' ? NAV_COMISIONADO
+    : user?.rol === 'EQUIPO_PARTICULAR' ? NAV_EQUIPO_PARTICULAR
+    : NAV_ROL1
   const initials = (user?.nombre || user?.email || 'U')
     .split(' ')
     .slice(0, 2)

@@ -10,7 +10,6 @@ import './RegistrarFUS.css'
 const PRIORIDAD_INFO = {
   Alta: {
     color: 'alta',
-    icono: '🔴',
     titulo: 'Alta',
     criterios: [
       'Posible corrupción, denuncia, falta administrativa o delito.',
@@ -22,7 +21,6 @@ const PRIORIDAD_INFO = {
   },
   Media: {
     color: 'media',
-    icono: '🟡',
     titulo: 'Media',
     criterios: [
       'Sea relevante para la gestión institucional.',
@@ -35,7 +33,6 @@ const PRIORIDAD_INFO = {
   },
   Baja: {
     color: 'baja',
-    icono: '🟢',
     titulo: 'Baja',
     criterios: [
       'Sea informativa, protocolaria o de cortesía.',
@@ -342,7 +339,7 @@ export default function RegistrarFUS() {
               <legend className="reg-legend">Evidencia</legend>
 
               <div className="reg-row reg-row-evidencia">
-                <label>Cargar evidencia</label>
+                <label>Adjuntar evidencias</label>
                 <div className="evidencia-col">
                   {evidenciasExistentes.length > 0 && (
                     <div className="ev-existentes-list">
@@ -355,7 +352,7 @@ export default function RegistrarFUS() {
                       <polyline points="17 8 12 3 7 8"/>
                       <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
-                    Cargar documento
+                    Agregar evidencia
                     <input
                       type="file"
                       multiple

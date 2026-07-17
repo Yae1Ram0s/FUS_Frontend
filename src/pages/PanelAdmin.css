@@ -332,6 +332,16 @@
   background: rgba(105, 28, 50, 0.10);
   border: 1px solid rgba(105, 28, 50, 0.25);
 }
+.adm-rol-badge-comisionado {
+  color: #9F2241;
+  background: rgba(159, 34, 65, 0.10);
+  border: 1px solid rgba(159, 34, 65, 0.28);
+}
+.adm-rol-badge-equipo_particular {
+  color: #235b4e;
+  background: rgba(35, 91, 78, 0.10);
+  border: 1px solid rgba(35, 91, 78, 0.28);
+}
 
 /* Celda acciones con gap */
 .adm-acciones-cell {
@@ -504,6 +514,45 @@
 .adm-modal-form input::placeholder { color: rgba(10, 30, 20, 0.38); }
 .adm-modal-form select option { background: #f0fff8; color: #0a1e14; }
 
+.adm-select-error {
+  border-color: #b91c1c !important;
+  background: rgba(185, 28, 28, 0.06) !important;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.10) !important;
+}
+
+.adm-campo-requerido { color: #b91c1c; font-weight: 800; }
+
+.adm-direccion-heredada {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.adm-direccion-heredada-label {
+  font-size: .8rem;
+  color: rgba(10, 30, 20, 0.60);
+  font-weight: 600;
+}
+.adm-direccion-heredada-valor {
+  background: rgba(10, 30, 20, 0.05);
+  border: 1px solid rgba(35, 91, 78, 0.16);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #0a1e14;
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.adm-nota-comisionado {
+  font-size: .78rem;
+  line-height: 1.45;
+  color: #6b4800;
+  background: rgba(221, 201, 163, 0.35);
+  border: 1px solid rgba(221, 201, 163, 0.65);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin: 0;
+}
+
 .adm-modal-error {
   font-size: .82rem;
   color: #b91c1c;
@@ -547,6 +596,8 @@
 }
 .adm-btn-save:hover    { background: rgba(28, 70, 60, 0.95); }
 .adm-btn-save:disabled { opacity: .5; cursor: not-allowed; }
+.adm-btn-save-bloqueado { opacity: .5; }
+.adm-btn-save-bloqueado:hover { background: rgba(35, 91, 78, 0.82); }
 
 /* ══════════════════════════════════════
    RESPONSIVO

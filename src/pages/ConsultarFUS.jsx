@@ -5,13 +5,24 @@ import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
+import ComisionarModal from '../components/Comisionado/ComisionarModal'
+import RechazarModal from '../components/Comisionado/RechazarModal'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useEstatus } from '../hooks/useEstatus'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
+import { useToast } from '../context/ToastContext'
+import { puedeGestionarComisionados } from '../utils/permisos'
 import './ConsultarFUS.css'
+
+const initialesComisionado = (nombre, email) => (nombre || email || '?')
+  .split(' ')
+  .slice(0, 2)
+  .map(w => w[0])
+  .join('')
+  .toUpperCase()
 
 function descargar(url, nombre, token) {
   return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
@@ -432,10 +443,17 @@ function ModalDescargarPDF({ onCancelar, onConfirmar }) {
 }
 
 /* ── Panel de detalle FUS ── */
-function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
+function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
   const navigate = useNavigate()
-  const { accessToken } = useAuth()
+  const { user, accessToken } = useAuth()
+  const toast = useToast()
+  const [fusData, setFusData] = useState(fusInicial)
+  const fus = fusData
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
+  const [modalComisionar, setModalComisionar] = useState(false)
+  const [modalRechazar,   setModalRechazar]   = useState(false)
+  const [aprobando,       setAprobando]       = useState(false)
+  const [errorAprobar,    setErrorAprobar]    = useState('')
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -444,6 +462,25 @@ function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
   const tieneActividad = fus.estatusParticular !== 'Registrado'
   const tieneExterno   = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
+
+  const puedeGestionar = puedeGestionarComisionados(user)
+  // ROL1 comisiona directamente desde "Registrado" (antes de turnar); ROL2 lo
+  // hace desde "Turnado" en su propia vista (SolicitudesTurnadas), no aquí.
+  const puedesComisionar = puedeGestionar && fus.estatusParticular === 'Registrado'
+  const puedeAprobarRechazar = puedeGestionar && fus.estatusParticular === 'Pendiente_validacion'
+
+  const handleAprobar = async () => {
+    setErrorAprobar(''); setAprobando(true)
+    try {
+      const { data } = await api.post(`/fus/${fus.id}/aprobar/`)
+      setFusData(data)
+      toast.success('Solicitud aprobada y concluida.')
+    } catch (e) {
+      setErrorAprobar(e.response?.data?.detail || 'No se pudo aprobar. Intenta nuevamente.')
+    } finally {
+      setAprobando(false)
+    }
+  }
 
   const descargarPdf = (conImagenes) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
@@ -494,6 +531,11 @@ function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
                 </svg>
               </button>
             )}
+            {puedesComisionar && (
+              <button type="button" className="btn-comisionar" onClick={() => setModalComisionar(true)}>
+                Comisionar
+              </button>
+            )}
             <Badge estatus={fus.estatusParticular} />
           </div>
         </div>
@@ -514,6 +556,15 @@ function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
           <Row label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
           <Row label="Solicitante interno" value={nombreSolicitante} />
         </div>
+        {fus.idComisionado && (
+          <div className="dt-comisionado-chip">
+            <span className="dt-comisionado-avatar">{initialesComisionado(fus.idComisionado.nombre, fus.idComisionado.email)}</span>
+            <div className="dt-comisionado-info">
+              <span className="dt-comisionado-nombre">{fus.idComisionado.nombre || fus.idComisionado.email}</span>
+              <span className="dt-comisionado-direccion">{fus.direccionComisionado || 'Sin dirección asignada'}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {fus.fechaLimite && (
@@ -579,6 +630,49 @@ function DetalleFUS({ fus, onTurnar, onBack, onVerHistorial }) {
           Ver historial
         </button>
       </div>
+
+      {puedeAprobarRechazar && (
+        <div className="dt-actions dt-actions-comisionado">
+          {errorAprobar && <p className="sec-error" role="alert">{errorAprobar}</p>}
+          <div className="dt-comisionado-botones">
+            <button type="button" className="btn-rechazar" onClick={() => setModalRechazar(true)} disabled={aprobando}>
+              Rechazar
+            </button>
+            <button type="button" className="btn-aprobar" onClick={handleAprobar} disabled={aprobando}>
+              {aprobando && <span className="btn-spinner" />}
+              {aprobando ? 'Aprobando…' : 'Aprobar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {fus.estatusParticular === 'Concluido' && fus.idComisionado && (
+        <p className="dt-concluido-texto">Solicitud concluida — sin acciones pendientes</p>
+      )}
+
+      {modalComisionar && (
+        <ComisionarModal
+          fusId={fus.id}
+          onClose={() => setModalComisionar(false)}
+          onConfirmado={(data) => {
+            setFusData(data)
+            setModalComisionar(false)
+            toast.success('Comisionado asignado correctamente.')
+          }}
+        />
+      )}
+
+      {modalRechazar && (
+        <RechazarModal
+          fusId={fus.id}
+          onClose={() => setModalRechazar(false)}
+          onRechazado={(data) => {
+            setFusData(data)
+            setModalRechazar(false)
+            toast.success('Solicitud regresada al comisionado.')
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -859,6 +953,7 @@ export default function ConsultarFUS() {
         <div className="cfus-right">
           {seleccionado
             ? <DetalleFUS
+                key={seleccionado.id}
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
                 onBack={() => setSeleccionado(null)}
