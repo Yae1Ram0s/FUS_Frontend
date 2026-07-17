@@ -4,7 +4,9 @@ import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import { useNotificaciones } from '../context/NotificacionesContext'
 import { useResizablePanel } from '../hooks/useResizablePanel'
+import FusFolioPicker from '../components/Calendario/FusFolioPicker'
 import './CalendarioActividades.css'
 
 const TIPO_INFO = {
@@ -16,6 +18,7 @@ const TIPO_INFO = {
 
 const DIAS_SEMANA      = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const DIAS_SEMANA_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const DIAS_SEMANA_MIN  = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const HORAS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`)
 const ALTURA_HORA = 56
@@ -56,10 +59,10 @@ function mesesNecesarios(vista, referencia) {
 }
 
 /* ── Toast ── */
-function Toast({ toast }) {
+function Toast({ toast, sobreModal }) {
   if (!toast) return null
   return createPortal(
-    <div className={`cal-toast${toast.tipo === 'error' ? ' cal-toast-error' : ''}`}>
+    <div className={`cal-toast${toast.tipo === 'error' ? ' cal-toast-error' : ''}${sobreModal ? ' cal-toast-sobre-modal' : ''}`}>
       <span>{toast.tipo === 'error' ? '⚠️' : '✓'}</span>
       {toast.mensaje}
     </div>,
@@ -68,7 +71,7 @@ function Toast({ toast }) {
 }
 
 /* ── Mini-calendario navegable del sidebar ── */
-function MiniCalendario({ mesCursor, seleccionado, onCambiarMes, onSeleccionarDia }) {
+function MiniCalendario({ mesCursor, seleccionado, actividadesPorDia, onCambiarMes, onSeleccionarDia }) {
   const celdas = useMemo(() => construirGrid(mesCursor), [mesCursor])
   const hoy = new Date()
   return (
@@ -86,11 +89,12 @@ function MiniCalendario({ mesCursor, seleccionado, onCambiarMes, onSeleccionarDi
           const fueraDeMes = c.getMonth() !== mesCursor.getMonth()
           const esHoy = isSameDay(c, hoy)
           const esSeleccionado = isSameDay(c, seleccionado)
+          const tieneActividad = (actividadesPorDia[toISODate(c)] || []).length > 0
           return (
             <span
               key={i}
               onClick={() => onSeleccionarDia(c)}
-              className={`cal-mini-dia${fueraDeMes ? ' cal-mini-dia-fuera' : ''}${esHoy ? ' cal-mini-dia-hoy' : ''}${esSeleccionado ? ' cal-mini-dia-sel' : ''}`}
+              className={`cal-mini-dia${fueraDeMes ? ' cal-mini-dia-fuera' : ''}${esHoy ? ' cal-mini-dia-hoy' : ''}${esSeleccionado ? ' cal-mini-dia-sel' : ''}${tieneActividad ? ' cal-mini-dia-actividad' : ''}`}
             >
               {c.getDate()}
             </span>
@@ -119,34 +123,18 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const [guardando, setGuardando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
   const { user } = useAuth()
-  const debounceRef = useRef(null)
-
   const soloLectura = modal.mode === 'editar' && !esCreador
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
+  const onFolioSeleccionado = (folio) => {
+    set('folioFus', folio || '')
+    if (!folio) setFusEncontrado(null)
+  }
+  const onFusSeleccionado = (item) => setFusEncontrado(item ? { id: item.id, folio: item.folio } : null)
 
-  const onFolioFusChange = (value) => {
-    set('folioFus', value)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    const folio = value.trim()
-    if (!folio) { setFusEncontrado(null); return }
-    setFusEncontrado('buscando')
-    debounceRef.current = setTimeout(() => {
-      const esROL2 = user?.rol === 'ROL2'
-      const endpoint = esROL2 ? '/turnados/mis-turnados/' : '/fus/'
-      api.get(endpoint, { params: { search: folio, page_size: 5 } })
-        .then(r => {
-          const resultados = r.data.results || []
-          const match = esROL2
-            ? resultados.find(t => t.idFus?.folio === folio)
-            : resultados.find(f => f.folio === folio)
-          const idFus = esROL2 ? match?.idFus?.id : match?.id
-          setFusEncontrado(match ? { id: idFus, folio } : 'no-encontrado')
-        })
-        .catch(() => setFusEncontrado('no-encontrado'))
-    }, 500)
+  const enfocarCampo = (e) => {
+    e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }
 
   const toggleParticipante = (id) => {
@@ -239,6 +227,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           className="cal-pill-input"
           value={form.titulo}
           onChange={e => set('titulo', e.target.value)}
+          onFocus={enfocarCampo}
           placeholder="Título de la actividad"
           disabled={soloLectura}
         />
@@ -248,15 +237,16 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           type="date"
           value={form.fecha}
           onChange={e => set('fecha', e.target.value)}
+          onFocus={enfocarCampo}
           disabled={soloLectura}
         />
 
         <div className="cal-modal-row2">
-          <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} disabled={soloLectura} />
-          <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} disabled={soloLectura} />
+          <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
         </div>
 
-        <select className="cal-pill-input" value={form.tipo} onChange={e => set('tipo', e.target.value)} disabled={soloLectura}>
+        <select className="cal-pill-input" value={form.tipo} onChange={e => set('tipo', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura}>
           {Object.entries(TIPO_INFO).map(([key, info]) => (
             <option key={key} value={key}>{info.label}</option>
           ))}
@@ -266,41 +256,38 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           className="cal-pill-input cal-pill-textarea"
           value={form.descripcion}
           onChange={e => set('descripcion', e.target.value)}
+          onFocus={enfocarCampo}
           placeholder="Descripción (opcional)"
           rows={2}
           disabled={soloLectura}
         />
 
-        <div className="cal-fus-input-wrap">
-          <input
-            className="cal-pill-input"
-            value={form.folioFus}
-            onChange={e => onFolioFusChange(e.target.value)}
-            placeholder="Folio de FUS (opcional)"
-            disabled={soloLectura}
-          />
-          {fusEncontrado === 'buscando'      && <span className="cal-fus-check cal-fus-buscando">Buscando…</span>}
-          {fusEncontrado === 'no-encontrado' && <span className="cal-fus-check cal-fus-no">✕ No se encontró ese folio</span>}
-          {fusEncontrado && typeof fusEncontrado === 'object' && <span className="cal-fus-check cal-fus-si">✓ FUS vinculado</span>}
-        </div>
+        <FusFolioPicker
+          value={form.folioFus || null}
+          onChange={onFolioSeleccionado}
+          onSelect={onFusSeleccionado}
+          disabled={soloLectura}
+        />
 
-        <div className="cal-modal-participantes">
-          <p className="cal-modal-label">Participantes</p>
-          <div className="cal-participantes-lista">
-            {usuarios.map(u => (
-              <label key={u.id} className="cal-participante-item">
-                <input
-                  type="checkbox"
-                  checked={form.participantes.includes(u.id)}
-                  onChange={() => toggleParticipante(u.id)}
-                  disabled={soloLectura}
-                />
-                {u.nombre || u.email}
-              </label>
-            ))}
-            {usuarios.length === 0 && <p className="cal-participantes-vacio">Sin usuarios disponibles.</p>}
+        {user?.rol !== 'ROL2' && (
+          <div className="cal-modal-participantes">
+            <p className="cal-modal-label">Participantes</p>
+            <div className="cal-participantes-lista">
+              {usuarios.map(u => (
+                <label key={u.id} className="cal-participante-item">
+                  <input
+                    type="checkbox"
+                    checked={form.participantes.includes(u.id)}
+                    onChange={() => toggleParticipante(u.id)}
+                    disabled={soloLectura}
+                  />
+                  {u.nombre || u.email}
+                </label>
+              ))}
+              {usuarios.length === 0 && <p className="cal-participantes-vacio">Sin usuarios disponibles.</p>}
+            </div>
           </div>
-        </div>
+        )}
 
         {modal.mode === 'editar' && (
           <p className="cal-modal-audit">
@@ -338,15 +325,29 @@ export default function CalendarioActividades() {
   const [modal, setModal]       = useState(null)
   const [toast, setToast]       = useState(null)
   const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
+  const [compacto, setCompacto] = useState(() => window.innerWidth <= 768)
+  const [ultraCompacto, setUltraCompacto] = useState(() => window.innerWidth < 640)
   const { user } = useAuth()
+  const notifCtx = useNotificaciones()
   const { leftWidth, containerRef, startResize } = useResizablePanel('scs_calendario_panel_w')
   const mesesCargadosRef = useRef(new Set())
   const autoRetriedRef   = useRef(false)
   const retryTimeoutRef  = useRef(null)
   const toastTimeoutRef  = useRef(null)
+  const diaScrollRef     = useRef(null)
+  const semanaScrollRef  = useRef(null)
 
   useEffect(() => {
     api.get('/auth/usuarios-rol2/').then(r => setUsuarios(r.data)).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const onResize = () => {
+      setCompacto(window.innerWidth <= 768)
+      setUltraCompacto(window.innerWidth < 640)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   const mostrarToast = (mensaje, tipo = 'exito') => {
@@ -392,6 +393,24 @@ export default function CalendarioActividades() {
     cargar()
   }
 
+  /* En vivo: si llega por WebSocket un nuevo turnado (ROL2) con fecha límite,
+     el backend ya nos agregó como participante de la Actividad — refrescar
+     (sin vaciar actividades: solo se agregan las nuevas, vía merge por id). */
+  useEffect(() => {
+    if (!notifCtx?.turnadoKey) return
+    mesesCargadosRef.current = new Set()
+    cargar()
+  }, [notifCtx?.turnadoKey])
+
+  /* Al entrar a Día/Semana, arrancar el scroll cerca de horario hábil (~7 a. m.)
+     en vez de medianoche, para no tener que desplazar manualmente cada vez. */
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (vista === 'dia' && diaScrollRef.current) diaScrollRef.current.scrollTop = 7 * 60 - 20
+      if (vista === 'semana' && semanaScrollRef.current) semanaScrollRef.current.scrollTop = 7 * ALTURA_HORA - 20
+    })
+  }, [vista, current])
+
   const irAHoy = () => { const d = new Date(); setCurrent(d); setMiniCursor(d) }
   const avanzar = (dir) => {
     setCurrent(prev => {
@@ -403,7 +422,29 @@ export default function CalendarioActividades() {
     })
   }
   const cambiarMesMini = (dir) => setMiniCursor(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + dir); return d })
-  const seleccionarDiaMini = (d) => { setCurrent(d); setMiniCursor(d) }
+
+  const flashDiaRef = useRef(null)
+  const [flashTick, setFlashTick] = useState(0)
+  const seleccionarDiaMini = (d) => {
+    setMiniCursor(d)
+    setCurrent(d)
+    setVista('mes')
+    flashDiaRef.current = toISODate(d)
+    setFlashTick(t => t + 1)
+  }
+  useEffect(() => {
+    if (!flashDiaRef.current) return
+    const fecha = flashDiaRef.current
+    flashDiaRef.current = null
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.cal-grid-celda[data-fecha="${fecha}"]`)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('cell-flash')
+      setTimeout(() => el.classList.remove('cell-flash'), 1000)
+    })
+  }, [flashTick, current, vista])
+
   const abrirDia = (d) => { setCurrent(d); setVista('dia') }
 
   const abrirCrear = (fecha, hora) => {
@@ -481,6 +522,7 @@ export default function CalendarioActividades() {
               <MiniCalendario
                 mesCursor={miniCursor}
                 seleccionado={current}
+                actividadesPorDia={actividadesPorDia}
                 onCambiarMes={cambiarMesMini}
                 onSeleccionarDia={seleccionarDiaMini}
               />
@@ -530,12 +572,6 @@ export default function CalendarioActividades() {
                 <button type="button" className={vista === 'semana' ? 'activo' : ''} onClick={() => setVista('semana')}>Semana</button>
                 <button type="button" className={vista === 'dia' ? 'activo' : ''} onClick={() => setVista('dia')}>Día</button>
               </div>
-              <button type="button" className="cal-btn-nueva" onClick={() => abrirCrear(current)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Nueva actividad
-              </button>
             </div>
           </div>
 
@@ -550,15 +586,16 @@ export default function CalendarioActividades() {
 
           {!mostrandoErrorTotal && !(cargando && !hayDatos) && vista === 'mes' && (
             <div className="cal-grid">
-              {DIAS_SEMANA_FULL.map(d => <div key={d} className="cal-grid-dia-header">{d}</div>)}
+              {(ultraCompacto ? DIAS_SEMANA_MIN : compacto ? DIAS_SEMANA : DIAS_SEMANA_FULL).map((d, i) => <div key={`${d}-${i}`} className="cal-grid-dia-header">{d}</div>)}
               {construirGrid(current).map((c, i) => {
                 const key = toISODate(c)
-                const eventos = actividadesPorDia[key] || []
-                const mostrados = eventos.slice(0, 3)
-                const esHoy = isSameDay(c, hoy)
                 const fueraDeMes = c.getMonth() !== current.getMonth()
+                const eventos = (fueraDeMes && ultraCompacto) ? [] : (actividadesPorDia[key] || [])
+                const limiteChips = ultraCompacto ? 1 : compacto ? 2 : 3
+                const mostrados = eventos.slice(0, limiteChips)
+                const esHoy = isSameDay(c, hoy)
                 return (
-                  <div key={i} className={`cal-grid-celda${fueraDeMes ? ' cal-celda-fuera' : ''}`} onClick={() => abrirDia(c)}>
+                  <div key={i} data-fecha={key} className={`cal-grid-celda${fueraDeMes ? ' cal-celda-fuera' : ''}`} onClick={() => { ultraCompacto ? setCurrent(c) : abrirDia(c) }}>
                     <div className="cal-celda-numero-wrap">
                       <span className={`cal-celda-numero${esHoy ? ' cal-celda-numero-hoy' : ''}`}>{c.getDate()}</span>
                     </div>
@@ -571,17 +608,41 @@ export default function CalendarioActividades() {
                             className="cal-evento-chip"
                             style={{ background: info.chipBg, color: info.chipText }}
                             title={ev.titulo}
-                            onClick={e => { e.stopPropagation(); abrirEditar(ev) }}
+                            onClick={e => { e.stopPropagation(); ultraCompacto ? setCurrent(c) : abrirEditar(ev) }}
                           >
                             {ev.titulo}
                           </span>
                         )
                       })}
-                      {eventos.length > 3 && <span className="cal-evento-mas">+{eventos.length - 3} más</span>}
+                      {eventos.length > limiteChips && <span className="cal-evento-mas">+{eventos.length - limiteChips}</span>}
                     </div>
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {!mostrandoErrorTotal && !(cargando && !hayDatos) && vista === 'mes' && ultraCompacto && (
+            <div className="cal-dia-panel">
+              <div className="cal-dia-panel-header">
+                {DIAS_SEMANA_FULL[current.getDay()]} {current.getDate()} de {MESES[current.getMonth()]}
+              </div>
+              {(actividadesPorDia[toISODate(current)] || []).length === 0 ? (
+                <p className="cal-dia-panel-vacio">Sin actividades este día.</p>
+              ) : (
+                (actividadesPorDia[toISODate(current)] || []).map(ev => {
+                  const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                  return (
+                    <div key={ev.id} className="cal-dia-panel-item" onClick={() => abrirEditar(ev)}>
+                      <span className="cal-dia-panel-dot" style={{ background: info.color }} />
+                      <div className="cal-dia-panel-info">
+                        <span className="cal-dia-panel-titulo">{ev.titulo}</span>
+                        <span className="cal-dia-panel-hora">{ev.horaInicio} – {ev.horaFin}</span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           )}
 
@@ -596,7 +657,7 @@ export default function CalendarioActividades() {
                   </div>
                 ))}
               </div>
-              <div className="cal-semana-body">
+              <div className="cal-semana-body" ref={semanaScrollRef}>
                 <div className="cal-semana-horas">
                   {HORAS.map(h => <div key={h} className="cal-hora-label">{h}</div>)}
                 </div>
@@ -629,7 +690,7 @@ export default function CalendarioActividades() {
           )}
 
           {!mostrandoErrorTotal && !(cargando && !hayDatos) && vista === 'dia' && (
-            <div className="cal-dia-wrap">
+            <div className="cal-dia-wrap" ref={diaScrollRef}>
               <div className="cal-dia-grid">
                 <div className="cal-dia-horas">
                   {HORAS.map(h => <div key={h} className="cal-hora-label">{h}</div>)}
@@ -659,6 +720,10 @@ export default function CalendarioActividades() {
         </div>
       </div>
 
+      <button type="button" className="cal-fab" onClick={() => abrirCrear(current)} aria-label="Nueva actividad">
+        +
+      </button>
+
       {modal && (
         <ModalActividad
           modal={modal}
@@ -671,7 +736,7 @@ export default function CalendarioActividades() {
         />
       )}
 
-      <Toast toast={toast} />
+      <Toast toast={toast} sobreModal={!!modal} />
     </AppLayout>
   )
 }

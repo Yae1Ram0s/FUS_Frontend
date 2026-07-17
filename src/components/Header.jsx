@@ -8,6 +8,7 @@ import './Header.css'
 
 export default function Header({ onMenuClick }) {
   const [showSearch, setShowSearch] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -21,6 +22,13 @@ export default function Header({ onMenuClick }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  useEffect(() => {
+    if (!showMore) return
+    const onDocClick = (e) => { if (!e.target.closest('.header-actions-wrap')) setShowMore(false) }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [showMore])
 
   return (
     <>
@@ -39,28 +47,39 @@ export default function Header({ onMenuClick }) {
 
         <span className="header-titulo">Sistema de Control de Solicitudes</span>
 
-        <button className="header-search-btn" onClick={() => setShowSearch(true)} title="Buscar FUS (Ctrl+K)" aria-label="Buscar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <span className="header-search-hint">Ctrl K</span>
-        </button>
+        <div className="header-actions-wrap">
+          {/* Kebab — solo se muestra en móvil dentro del Calendario (ver Header.css) */}
+          <button className="header-more-btn" onClick={() => setShowMore(v => !v)} aria-label="Más opciones" aria-expanded={showMore}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
+            </svg>
+          </button>
 
-        <NotificacionesBell />
+          <div className={`header-actions${showMore ? ' header-actions-flotante' : ''}`}>
+            <button className="header-search-btn" onClick={() => { setShowSearch(true); setShowMore(false) }} title="Buscar FUS (Ctrl+K)" aria-label="Buscar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <span className="header-search-hint">Ctrl K</span>
+            </button>
 
-        {/* Cerrar sesión — lado derecho, mismo estilo que la campana de notificaciones */}
-        <button
-          className="header-logout-btn"
-          onClick={() => { logout(); navigate('/login') }}
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
+            <NotificacionesBell />
+
+            {/* Cerrar sesión — lado derecho, mismo estilo que la campana de notificaciones */}
+            <button
+              className="header-logout-btn"
+              onClick={() => { logout(); navigate('/login') }}
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </header>
 
       {showSearch && <BuscadorGlobal onClose={() => setShowSearch(false)} />}
