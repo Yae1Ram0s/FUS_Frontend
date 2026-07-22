@@ -349,7 +349,6 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
                 Comisionar
               </button>
             )}
-            <Badge estatus={fus.idComisionado ? fus.estatusParticular : turnado.estatusTitular} />
           </span>
         </div>
 
@@ -548,6 +547,13 @@ export default function SolicitudesTurnadas() {
         }
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
+        // Si el turnado abierto en el detalle sigue en la respuesta, refresca
+        // su estatus in place (sin perder el panel abierto ni el scroll).
+        setSeleccionado(prev => {
+          if (!prev) return prev
+          const actualizado = items.find(t => t.id === prev.id)
+          return actualizado || prev
+        })
       })
       .catch(() => {
         setErrorCarga(true)
@@ -584,6 +590,18 @@ export default function SolicitudesTurnadas() {
       const item = { ...prev[idx], idFus: { ...prev[idx].idFus, slaPorVencer: true } }
       return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
     })
+  }, [ultimaNotifId])
+
+  /* En vivo: cualquier notificación ligada a un FUS (comisionar, atendido,
+     concluir, rechazar, etc.) dispara un refresh silencioso — cubre tanto
+     un cambio de estatus en algo que ya se ve en la lista/detalle como una
+     asignación nueva que todavía no aparecía. SLA_POR_VENCER queda fuera:
+     ya tiene su propio parche puntual arriba. TURNADO también queda fuera:
+     ya lo maneja turnadoKey justo arriba, sin duplicar la recarga. */
+  useEffect(() => {
+    const notif = notifCtx?.notifs?.[0]
+    if (!notif?.fusFolio || notif.tipo === 'SLA_POR_VENCER' || notif.tipo === 'TURNADO') return
+    cargar(1)
   }, [ultimaNotifId])
 
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
@@ -739,7 +757,7 @@ export default function SolicitudesTurnadas() {
         <div className="st-right">
           {seleccionado
             ? <DetalleTurnado
-                key={seleccionado.id}
+                key={`${seleccionado.id}_${seleccionado.estatusTitular}_${seleccionado.idFus?.estatusParticular}`}
                 turnado={seleccionado}
                 onConcluido={() => { cargar(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}

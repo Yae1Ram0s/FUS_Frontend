@@ -6,6 +6,7 @@ import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoCom
 import api from '../api/api'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
+import { useNotificaciones } from '../context/NotificacionesContext'
 import './FUSComisionados.css'
 
 /* ── Fila de detalle ── */
@@ -107,11 +108,12 @@ function SeguimientoComisionado({ fusId, estatusParticular }) {
   }
 
   // 'En_seguimiento' = aún sin responder; 'Atendido' = ya respondió al menos
-  // una vez (el backend hace esa transición sola) — en ambos puede seguir
-  // agregando avances/acciones mientras el Particular no valide o rechace.
-  // Ya no hay "finalizar" de su parte: quien manda el FUS a validación es
-  // Rol 1/Rol 2 desde el botón "Atendido" (ver AccionesValidacion).
-  const puedeAgregar = estatusParticular === 'En_seguimiento' || estatusParticular === 'Atendido'
+  // una vez (el backend hace esa transición sola); 'Rechazado' = el
+  // Particular lo rechazó — su próxima respuesta es la que lo reabre directo
+  // a "Atendido" (ya no basta con que alguien lo consulte). Ya no hay
+  // "finalizar" de su parte: quien manda el FUS a validación es Rol 1/Rol 2
+  // desde el botón "Atendido" (ver AccionesValidacion).
+  const puedeAgregar = ['En_seguimiento', 'Atendido', 'Rechazado'].includes(estatusParticular)
 
   return (
     <>
@@ -174,7 +176,6 @@ function DetalleFUSComisionado({ fus, onBack }) {
             <polyline points="14 2 14 8 20 8"/>
           </svg>
           {fus.folio}
-          <span style={{ marginLeft: 'auto' }}><Badge estatus={fus.estatusParticular} /></span>
         </div>
 
         <div className="sec-subseccion">
@@ -287,6 +288,18 @@ export default function FUSComisionados() {
   useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const cargarMas = () => cargar(pagina + 1, true)
+
+  /* En vivo: cualquier notificación ligada a un FUS (asignación nueva,
+     validación, rechazo, etc.) dispara un refresh silencioso — cubre tanto
+     un cambio de estatus en algo que ya se ve en la lista/detalle como una
+     asignación nueva que todavía no aparecía. */
+  const notifCtx = useNotificaciones()
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    const notif = notifCtx?.notifs?.[0]
+    if (!notif?.fusFolio) return
+    cargar(1)
+  }, [ultimaNotifId])
 
   const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
   const { leftWidth, containerRef, startResize } = useResizablePanel('fc-left-width')

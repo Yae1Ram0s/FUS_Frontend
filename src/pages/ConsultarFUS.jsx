@@ -524,7 +524,6 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
                 Comisionar
               </button>
             )}
-            <Badge estatus={fus.estatusParticular} />
           </div>
         </div>
       </div>
@@ -544,7 +543,9 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
           <Row label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
           <Row label="Solicitante interno" value={nombreSolicitante} />
         </div>
-        {fus.idComisionado && (
+        {/* Mismo criterio que el feed de abajo: si se turnó, el comisionado
+            es asunto del Titular — no se le muestra a Rol 1 quién es. */}
+        {fus.idComisionado && !fus.tieneTurnado && (
           <div className="dt-comisionado-chip">
             <span className="dt-comisionado-avatar">{initialesComisionado(fus.idComisionado.nombre, fus.idComisionado.email)}</span>
             <div className="dt-comisionado-info">
@@ -619,7 +620,12 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
         </button>
       </div>
 
-      {fus.idComisionado && <SeguimientoComisionadoFeed fusId={fus.id} />}
+      {/* Solo si el propio Particular comisionó directo (sin pasar por
+          Turnado/Rol 2) se le muestra el feed real del comisionado. Si se
+          turnó, esa delegación es asunto del Titular — aquí solo se ve la
+          actividad del turnado (sección "Se turnó" arriba), como si el
+          Titular lo hubiera atendido él mismo. */}
+      {fus.idComisionado && !fus.tieneTurnado && <SeguimientoComisionadoFeed fusId={fus.id} />}
 
       <AccionesValidacion
         user={user}
@@ -731,6 +737,13 @@ export default function ConsultarFUS() {
         }
         setLista(prev => append ? [...prev, ...items] : items)
         setPagina(pag)
+        // Si el FUS abierto en el detalle sigue en la respuesta, refresca su
+        // estatus in place (sin perder el panel abierto ni el scroll).
+        setSeleccionado(prev => {
+          if (!prev) return prev
+          const actualizado = items.find(f => f.id === prev.id)
+          return actualizado || prev
+        })
       })
       .catch(() => {
         setErrorCarga(true)
@@ -760,6 +773,17 @@ export default function ConsultarFUS() {
       const item = { ...prev[idx], slaPorVencer: true }
       return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
     })
+  }, [ultimaNotifId])
+
+  /* En vivo: cualquier notificación ligada a un FUS (comisionar, atendido,
+     concluir, rechazar, etc.) dispara un refresh silencioso — cubre tanto
+     un cambio de estatus en algo que ya se ve en la lista/detalle como una
+     asignación nueva que todavía no aparecía. SLA_POR_VENCER queda fuera:
+     ya tiene su propio parche puntual arriba, sin recargar todo. */
+  useEffect(() => {
+    const notif = notifCtx?.notifs?.[0]
+    if (!notif?.fusFolio || notif.tipo === 'SLA_POR_VENCER') return
+    cargar(1)
   }, [ultimaNotifId])
 
   useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
@@ -919,7 +943,7 @@ export default function ConsultarFUS() {
         <div className="cfus-right">
           {seleccionado
             ? <DetalleFUS
-                key={seleccionado.id}
+                key={`${seleccionado.id}_${seleccionado.estatusParticular}`}
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
                 onBack={() => setSeleccionado(null)}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import api from '../../api/api'
 import { esParticular } from '../../utils/permisos'
-import { useReaperturaRechazado } from '../../hooks/useReaperturaRechazado'
+import { useMotivoRechazo } from '../../hooks/useMotivoRechazo'
 import { useToast } from '../../context/ToastContext'
 import ConfirmModal from './ConfirmModal'
 import RechazarModal from './RechazarModal'
@@ -19,7 +19,7 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
   const [modalConcluir, setModalConcluir] = useState(false)
   const [modalRechazar, setModalRechazar] = useState(false)
   const toast = useToast()
-  const motivoRechazo = useReaperturaRechazado(fus, setFusData)
+  const motivoRechazo = useMotivoRechazo(fus)
 
   const estatus = fus.estatusParticular
 
@@ -34,38 +34,17 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
     )
   }
 
-  // 'En_seguimiento' = comisionado asignado, aún sin responder — no hay nada
-  // que confirmar todavía. Solo aparece "Atendido" una vez que ya respondió
-  // al menos una vez (el backend hace esa transición automáticamente).
-  if (estatus === 'Atendido' && tieneFacultad) {
-    return (
-      <div className="dt-actions">
-        <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>
-          Atendido
-        </button>
-        {modalAtendido && (
-          <ConfirmModal
-            titulo="Marcar como atendido"
-            texto="¿Confirmas que el seguimiento es satisfactorio? Se enviará al Particular para su validación."
-            textoBoton="Confirmar"
-            colorBoton="verde"
-            onClose={() => setModalAtendido(false)}
-            onConfirmar={async () => {
-              const { data } = await api.post(`/fus/${fus.id}/atendido/`)
-              setFusData(data)
-              setModalAtendido(false)
-              toast.success('Solicitud marcada como atendida.')
-            }}
-          />
-        )}
-      </div>
-    )
-  }
-
-  if (estatus === 'Pendiente_validacion') {
-    if (!esParticular(user)) {
-      return <p className="com-nota-discreta">Pendiente de validación por el Particular.</p>
-    }
+  // Validación final (Concluir asunto / Rechazar solicitud), exclusiva del
+  // Particular (Rol 1 — el nivel jerárquico más alto, nunca tiene el botón
+  // "Atendido"). Aparece en 'Pendiente_validacion' (turnado a Rol 2, que ya
+  // confirmó "Atendido"), o directo en 'Atendido' cuando el FUS no tiene
+  // turnado: ahí Rol 1 comisionó de frente, nadie más confirma "Atendido",
+  // así que valida sobre la primera respuesta del comisionado sin ese paso
+  // intermedio.
+  const puedeValidar = esParticular(user) && (
+    estatus === 'Pendiente_validacion' || (estatus === 'Atendido' && !fus.tieneTurnado)
+  )
+  if (puedeValidar) {
     return (
       <div className="dt-actions dt-actions-comisionado">
         <div className="dt-comisionado-botones">
@@ -101,6 +80,38 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
               setFusData(data)
               setModalConcluir(false)
               toast.success('Solicitud concluida.')
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+
+  if (estatus === 'Pendiente_validacion') {
+    return <p className="com-nota-discreta">Pendiente de validación por el Particular.</p>
+  }
+
+  // 'Atendido' + turnado a Rol 2: solo Rol 2 confirma "Atendido" (pasa a
+  // 'Pendiente_validacion', ver bloque de validación arriba) — Rol 1 nunca
+  // ve este botón.
+  if (estatus === 'Atendido' && tieneFacultad && !esParticular(user)) {
+    return (
+      <div className="dt-actions">
+        <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>
+          Atendido
+        </button>
+        {modalAtendido && (
+          <ConfirmModal
+            titulo="Marcar como atendido"
+            texto="¿Confirmas que el seguimiento es satisfactorio? Se enviará al Particular para su validación."
+            textoBoton="Confirmar"
+            colorBoton="verde"
+            onClose={() => setModalAtendido(false)}
+            onConfirmar={async () => {
+              const { data } = await api.post(`/fus/${fus.id}/atendido/`)
+              setFusData(data)
+              setModalAtendido(false)
+              toast.success('Solicitud marcada como atendida.')
             }}
           />
         )}

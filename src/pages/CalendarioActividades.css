@@ -4,6 +4,12 @@
   height: 100%;
   overflow: hidden;
   color: #1a2f28;
+  background-color: rgba(79, 119, 109, 0.8);
+  background-image: url('../assets/pleca.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-blend-mode: multiply;
 }
 
 /* ── Sidebar propio — mismo glassmorphism verde + pleca que ConsultarFUS/SolicitudesTurnadas ── */
@@ -21,8 +27,7 @@
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   border-right: 1px solid rgba(195, 212, 207, 0.20);
-  border-radius: 0 20px 20px 0;
-  box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25);
+  box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25), 0 20px 45px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: -20px;
@@ -36,7 +41,7 @@
    abierto (290px) — con el margen negativo aplicado a la pestaña angosta de
    44px, queda casi tapada detrás del sidebar y parece que se cierra del
    todo. Sin overlap, vuelve a verse como la pestaña de siempre. */
-.cal-sidebar.panel-cerrado { margin-left: 0; padding-left: 0; border-radius: 20px; }
+.cal-sidebar.panel-cerrado { margin-left: 0; padding-left: 0; }
 
 .cal-sidebar-content {
   flex: 1;
