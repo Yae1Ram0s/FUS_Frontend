@@ -11,7 +11,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
     if (!motivo.trim()) { setError('Debes escribir un motivo antes de rechazar.'); return }
     setError(''); setEnviando(true)
     try {
-      const { data } = await api.post(`/fus/${fusId}/rechazar/`, { motivo })
+      const { data } = await api.post(`/fus/${fusId}/rechazar-solicitud/`, { motivo })
       onRechazado(data)
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo rechazar la solicitud. Intenta nuevamente.')
@@ -24,7 +24,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
     <div className="com-overlay" onClick={() => !enviando && onClose()}>
       <div className="com-modal" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
-          <h3>Rechazar seguimiento</h3>
+          <h3>Rechazar solicitud</h3>
           <button type="button" className="com-modal-x" onClick={onClose} disabled={enviando} aria-label="Cerrar">✕</button>
         </div>
 
@@ -42,7 +42,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
           <button type="button" className="com-btn-ghost" onClick={onClose} disabled={enviando}>Cancelar</button>
           <button type="button" className="com-btn-rojo" onClick={confirmar} disabled={enviando}>
             {enviando && <span className="btn-spinner" />}
-            {enviando ? 'Enviando…' : 'Rechazar'}
+            {enviando ? 'Guardando…' : 'Confirmar rechazo'}
           </button>
         </div>
       </div>

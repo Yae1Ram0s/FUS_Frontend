@@ -9,6 +9,7 @@ const VARIANTS = {
   En_seguimiento: { tint: 'rgba(251,191,36,',  text: '#fde68a', glow: 'rgba(251,191,36,' },
   // ── Comisionado (estatusParticular) ─────────────────────────────────────
   Pendiente_validacion: { tint: 'rgba(167,139,250,', text: '#ddd6fe', glow: 'rgba(167,139,250,' },
+  Rechazado:            { tint: 'rgba(178,48,48,',  text: '#fecaca', glow: 'rgba(178,48,48,' },
 }
 
 // Light-background variants (neomorphism sandy #ddc9a3)
@@ -20,6 +21,7 @@ const VARIANTS_LIGHT = {
   Recibido:       { tint: 'rgba(80,100,130,',  text: '#2a3d5c' },
   En_seguimiento: { tint: 'rgba(160,110,0,',   text: '#6b4800' },
   Pendiente_validacion: { tint: 'rgba(109,40,217,', text: '#5b21b6' },
+  Rechazado:            { tint: 'rgba(178,48,48,',  text: '#7a1f1f' },
 }
 
 const ETIQUETAS = {

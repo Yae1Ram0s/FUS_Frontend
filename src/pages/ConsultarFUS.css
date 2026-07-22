@@ -16,8 +16,11 @@
   overflow: hidden;
 }
 
-/* ── Modo dashboard: ocultar panel izquierdo y handle (PC y móvil) ── */
-.cfus-inner:not(.lista-mode):not(.has-detail) .cfus-left,
+/* ── Modo dashboard: ocultar panel izquierdo y handle (PC y móvil) ──
+   :not(.panel-cerrado) es necesario porque colapsar el panel (botón toggle)
+   también le quita "lista-mode" al contenedor — sin esta excepción, la
+   pestaña colapsada quedaba con display:none en vez de reducirse a 44px. */
+.cfus-inner:not(.lista-mode):not(.has-detail) .cfus-left:not(.panel-cerrado),
 .cfus-inner:not(.lista-mode):not(.has-detail) .resize-handle {
   display: none;
 }
@@ -61,8 +64,13 @@
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   border-right: 1px solid rgba(195, 212, 207, 0.20);
+  border-radius: 0 20px 20px 0;
   box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25);
   overflow: hidden;
+  margin-left: -20px;
+  padding-left: 20px;
+  position: relative;
+  z-index: 150;
 }
 
 .panel-header {
@@ -114,6 +122,12 @@
 .cfus-left { transition: width 220ms cubic-bezier(0.4,0,0.2,1); }
 /* Closing: content fades out first, then panel collapses */
 .cfus-left.panel-cerrado { transition: width 220ms 100ms cubic-bezier(0.4,0,0.2,1); }
+
+/* Colapsado: el overlap sobre el sidebar solo tiene sentido con el panel
+   abierto (290px) — con el margen negativo aplicado a la pestaña angosta de
+   44px, queda casi tapada detrás del sidebar y parece que se cierra del
+   todo. Sin overlap, vuelve a verse como la pestaña de siempre. */
+.cfus-left.panel-cerrado { margin-left: 0; padding-left: 0; border-radius: 20px; }
 
 .panel-cerrado .panel-header { justify-content: center; padding: 12px 0; }
 .panel-cerrado .panel-toggle { margin-left: 0; }
@@ -423,6 +437,7 @@
   background-repeat: no-repeat;
   background-position: center;
   background-blend-mode: normal, multiply;
+  border-radius: 20px;
 }
 
 /* ── Panel de estadísticas ROL1 ── */

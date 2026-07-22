@@ -6,7 +6,8 @@ import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
-import RechazarModal from '../components/Comisionado/RechazarModal'
+import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
+import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
@@ -14,7 +15,7 @@ import { useEstatus } from '../hooks/useEstatus'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import { useToast } from '../context/ToastContext'
-import { puedeGestionarComisionados } from '../utils/permisos'
+import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
 import './ConsultarFUS.css'
 
 const initialesComisionado = (nombre, email) => (nombre || email || '?')
@@ -199,6 +200,11 @@ function Row({ label, value, tall }) {
     </div>
   )
 }
+
+// Relabel puntual del chip de filtro para ROL1 — el catálogo comparte
+// "Pendiente de validación" con ROL2, pero en su propia bandeja se lee mejor
+// como acción pendiente de él: "Por validar".
+const FILTRO_LABEL_ROL1 = { Pendiente_validacion: 'Por validar' }
 
 /* ── Prioridad — pills de solo lectura, resalta la seleccionada ── */
 const PRIORIDAD_NIVELES = [
@@ -451,9 +457,6 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
   const fus = fusData
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const [modalComisionar, setModalComisionar] = useState(false)
-  const [modalRechazar,   setModalRechazar]   = useState(false)
-  const [aprobando,       setAprobando]       = useState(false)
-  const [errorAprobar,    setErrorAprobar]    = useState('')
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -463,24 +466,9 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
   const tieneExterno   = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
 
-  const puedeGestionar = puedeGestionarComisionados(user)
   // ROL1 comisiona directamente desde "Registrado" (antes de turnar); ROL2 lo
   // hace desde "Turnado" en su propia vista (SolicitudesTurnadas), no aquí.
-  const puedesComisionar = puedeGestionar && fus.estatusParticular === 'Registrado'
-  const puedeAprobarRechazar = puedeGestionar && fus.estatusParticular === 'Pendiente_validacion'
-
-  const handleAprobar = async () => {
-    setErrorAprobar(''); setAprobando(true)
-    try {
-      const { data } = await api.post(`/fus/${fus.id}/aprobar/`)
-      setFusData(data)
-      toast.success('Solicitud aprobada y concluida.')
-    } catch (e) {
-      setErrorAprobar(e.response?.data?.detail || 'No se pudo aprobar. Intenta nuevamente.')
-    } finally {
-      setAprobando(false)
-    }
-  }
+  const puedesComisionar = puedeComisionar(user, fus)
 
   const descargarPdf = (conImagenes) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
@@ -631,24 +619,14 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
         </button>
       </div>
 
-      {puedeAprobarRechazar && (
-        <div className="dt-actions dt-actions-comisionado">
-          {errorAprobar && <p className="sec-error" role="alert">{errorAprobar}</p>}
-          <div className="dt-comisionado-botones">
-            <button type="button" className="btn-rechazar" onClick={() => setModalRechazar(true)} disabled={aprobando}>
-              Rechazar
-            </button>
-            <button type="button" className="btn-aprobar" onClick={handleAprobar} disabled={aprobando}>
-              {aprobando && <span className="btn-spinner" />}
-              {aprobando ? 'Aprobando…' : 'Aprobar'}
-            </button>
-          </div>
-        </div>
-      )}
+      {fus.idComisionado && <SeguimientoComisionadoFeed fusId={fus.id} />}
 
-      {fus.estatusParticular === 'Concluido' && fus.idComisionado && (
-        <p className="dt-concluido-texto">Solicitud concluida — sin acciones pendientes</p>
-      )}
+      <AccionesValidacion
+        user={user}
+        fus={fus}
+        setFusData={setFusData}
+        tieneFacultad={puedeGestionarComisionados(user)}
+      />
 
       {modalComisionar && (
         <ComisionarModal
@@ -658,18 +636,6 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
             setFusData(data)
             setModalComisionar(false)
             toast.success('Comisionado asignado correctamente.')
-          }}
-        />
-      )}
-
-      {modalRechazar && (
-        <RechazarModal
-          fusId={fus.id}
-          onClose={() => setModalRechazar(false)}
-          onRechazado={(data) => {
-            setFusData(data)
-            setModalRechazar(false)
-            toast.success('Solicitud regresada al comisionado.')
           }}
         />
       )}
@@ -868,13 +834,13 @@ export default function ConsultarFUS() {
               >
                 Todos
               </button>
-              {estatusROL1.map(e => (
+              {estatusROL1.filter(e => e.clave !== 'Rechazado').map(e => (
                 <button
                   key={e.clave}
                   className={`filtro-chip filtro-chip-${e.clave.toLowerCase()}${filtro === e.clave ? ' filtro-chip-active' : ''}`}
                   onClick={() => toggleFiltro(e.clave)}
                 >
-                  {e.nombre}
+                  {FILTRO_LABEL_ROL1[e.clave] || e.nombre}
                 </button>
               ))}
               <button

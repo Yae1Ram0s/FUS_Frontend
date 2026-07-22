@@ -2,23 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
-import FinalizarModal from '../components/Comisionado/FinalizarModal'
+import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
 import api from '../api/api'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
-import { useToast } from '../context/ToastContext'
 import './FUSComisionados.css'
-
-const fmtHora = d => d
-  ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-  : ''
-
-const TIPO_SEGUIMIENTO_INFO = {
-  accion_por_emprender: { label: 'Acción por emprender', clase: 'fc-tag-azul' },
-  avance:               { label: 'Avance',                clase: 'fc-tag-verde' },
-  finalizacion:         { label: 'Finalización',           clase: 'fc-tag-verde' },
-  rechazo:              { label: 'Rechazo',                clase: 'fc-tag-rojo' },
-}
 
 /* ── Fila de detalle ── */
 function DRow({ label, value, tall }) {
@@ -91,41 +79,18 @@ function PrioridadPills({ valor, criterios }) {
   )
 }
 
-/* ── Feed de Respuestas y seguimiento (comisionado) ── */
-function SeguimientoComisionado({ fusId, estatusParticular, onFinalizado }) {
-  const [lista, setLista]           = useState([])
-  const [cargando, setCargando]     = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
+/* ── Feed de Respuestas y seguimiento (comisionado) ──
+   El historial (lectura) vive en SeguimientoComisionadoFeed, reusado tal
+   cual por ConsultarFUS/SolicitudesTurnadas — aquí solo se le agrega el
+   formulario para agregar, que sigue siendo exclusivo del comisionado.
+   `refreshKey` remonta el feed para reflejar lo recién agregado, ya que el
+   feed compartido administra su propio fetch internamente. */
+function SeguimientoComisionado({ fusId, estatusParticular }) {
+  const [refreshKey, setRefreshKey] = useState(0)
   const [tipo, setTipo]             = useState('avance')
   const [contenido, setContenido]   = useState('')
   const [enviando, setEnviando]     = useState(false)
   const [error, setError]           = useState('')
-  const [modalFinalizar, setModalFinalizar] = useState(false)
-  const autoRetriedRef  = useRef(false)
-  const retryTimeoutRef = useRef(null)
-  const toast = useToast()
-
-  const cargar = () => {
-    setCargando(true)
-    return api.get(`/fus/${fusId}/seguimiento/`)
-      .then(r => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        setLista(Array.isArray(r.data) ? r.data : [])
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
-
-  useEffect(() => { cargar() }, [fusId])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
 
   const agregar = async () => {
     if (!contenido.trim()) { setError('Escribe una descripción antes de agregar.'); return }
@@ -133,7 +98,7 @@ function SeguimientoComisionado({ fusId, estatusParticular, onFinalizado }) {
     try {
       await api.post(`/fus/${fusId}/seguimiento/`, { tipo, contenido })
       setContenido('')
-      cargar()
+      setRefreshKey(k => k + 1)
     } catch (e) {
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
     } finally {
@@ -141,108 +106,52 @@ function SeguimientoComisionado({ fusId, estatusParticular, onFinalizado }) {
     }
   }
 
-  const puedeAgregar = estatusParticular === 'En_seguimiento'
+  // 'En_seguimiento' = aún sin responder; 'Atendido' = ya respondió al menos
+  // una vez (el backend hace esa transición sola) — en ambos puede seguir
+  // agregando avances/acciones mientras el Particular no valide o rechace.
+  // Ya no hay "finalizar" de su parte: quien manda el FUS a validación es
+  // Rol 1/Rol 2 desde el botón "Atendido" (ver AccionesValidacion).
+  const puedeAgregar = estatusParticular === 'En_seguimiento' || estatusParticular === 'Atendido'
 
   return (
-    <div className="seccion">
-      <div className="sec-header sec-resp">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        Respuestas y seguimiento
-      </div>
-      <div className="sec-body">
-        {errorCarga && lista.length > 0 && (
-          <div className="banner-error-carga">
-            <span>No se pudo actualizar — mostrando la última información disponible.</span>
-            <button type="button" onClick={cargar}>Reintentar</button>
-          </div>
-        )}
+    <>
+      <SeguimientoComisionadoFeed key={refreshKey} fusId={fusId} />
 
-        <div className="seg-timeline">
-          {cargando && lista.length === 0 && <Spinner overlay={false} />}
-          {!cargando && errorCarga && lista.length === 0 ? (
-            <div className="seg-error">
-              <p className="seg-error-msg">No se pudo cargar el historial.</p>
-              <button type="button" className="btn-reintentar" onClick={cargar}>Reintentar</button>
-            </div>
-          ) : (!cargando && lista.length === 0) ? (
-            <p className="seg-empty">Sin respuestas registradas aún</p>
-          ) : lista.map((s, i) => {
-            const info = TIPO_SEGUIMIENTO_INFO[s.tipo] || { label: s.tipo, clase: 'fc-tag-azul' }
-            return (
-              <div key={s.id} className="seg-tl-item">
-                <div className="seg-tl-track">
-                  <div className="seg-tl-dot" />
-                  {i < lista.length - 1 && <div className="seg-tl-connector" />}
-                </div>
-                <div className="seg-tl-content">
-                  <div className="seg-tl-meta">
-                    <span className={`fc-tag ${info.clase}`}>{info.label}</span>
-                    <span className="seg-tl-fecha">
-                      {s.idAutor?.nombre ? `${s.idAutor.nombre} · ` : ''}{fmtHora(s.fechaRegistro)}
-                    </span>
-                  </div>
-                  <p className="seg-tl-actividad">{s.contenido}</p>
-                </div>
+      {puedeAgregar && (
+        <div className="seccion">
+          <div className="sec-body">
+            <div className="seg-nueva fc-seg-nueva">
+              <div className="fc-seg-nueva-fila">
+                <select className="fc-tipo-select" value={tipo} onChange={e => setTipo(e.target.value)}>
+                  <option value="avance">Avance</option>
+                  <option value="accion_por_emprender">Acción por emprender</option>
+                </select>
               </div>
-            )
-          })}
-        </div>
-
-        {puedeAgregar && (
-          <div className="seg-nueva fc-seg-nueva">
-            <div className="fc-seg-nueva-fila">
-              <select className="fc-tipo-select" value={tipo} onChange={e => setTipo(e.target.value)}>
-                <option value="avance">Avance</option>
-                <option value="accion_por_emprender">Acción por emprender</option>
-              </select>
+              <textarea
+                className="fc-seg-textarea"
+                placeholder="Describe el avance o la acción por emprender…"
+                value={contenido}
+                onChange={e => setContenido(e.target.value)}
+                rows={2}
+              />
+              <button className="btn-agregar" onClick={agregar} disabled={enviando}>
+                {enviando ? 'Guardando…' : 'Agregar'}
+              </button>
             </div>
-            <textarea
-              className="fc-seg-textarea"
-              placeholder="Describe el avance o la acción por emprender…"
-              value={contenido}
-              onChange={e => setContenido(e.target.value)}
-              rows={2}
-            />
-            <button className="btn-agregar" onClick={agregar} disabled={enviando}>
-              {enviando ? 'Guardando…' : 'Agregar'}
-            </button>
+            {error && <p className="sec-error" role="alert">{error}</p>}
           </div>
-        )}
-
-        {error && <p className="sec-error" role="alert">{error}</p>}
-
-        {puedeAgregar && (
-          <div className="fc-finalizar-row">
-            <button type="button" className="btn-concluir" onClick={() => setModalFinalizar(true)}>
-              Finalizar seguimiento
-            </button>
-          </div>
-        )}
-
-        {estatusParticular === 'Concluido' && (
-          <p className="dt-concluido-texto">Solicitud concluida — sin acciones pendientes</p>
-        )}
-      </div>
-
-      {modalFinalizar && (
-        <FinalizarModal
-          fusId={fusId}
-          onClose={() => setModalFinalizar(false)}
-          onFinalizado={(data) => {
-            setModalFinalizar(false)
-            toast.success('Seguimiento finalizado, enviado al Titular.')
-            onFinalizado(data)
-          }}
-        />
+        </div>
       )}
-    </div>
+
+      {estatusParticular === 'Concluido' && (
+        <p className="dt-concluido-texto">Solicitud concluida — sin acciones pendientes</p>
+      )}
+    </>
   )
 }
 
 /* ── Detalle de FUS comisionado ── */
-function DetalleFUSComisionado({ fus, onBack, onActualizado }) {
+function DetalleFUSComisionado({ fus, onBack }) {
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -308,7 +217,6 @@ function DetalleFUSComisionado({ fus, onBack, onActualizado }) {
       <SeguimientoComisionado
         fusId={fus.id}
         estatusParticular={fus.estatusParticular}
-        onFinalizado={onActualizado}
       />
     </div>
   )
@@ -458,7 +366,6 @@ export default function FUSComisionados() {
             ? <DetalleFUSComisionado
                 fus={seleccionado}
                 onBack={() => setSeleccionado(null)}
-                onActualizado={(data) => { setSeleccionado(data); cargar(1) }}
               />
             : (
               <div className="st-hint-select">

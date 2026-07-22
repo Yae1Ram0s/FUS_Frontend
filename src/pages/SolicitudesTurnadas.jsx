@@ -5,13 +5,16 @@ import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
-import RechazarModal from '../components/Comisionado/RechazarModal'
+import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
+import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
 import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
+import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
 import './SolicitudesTurnadas.css'
 
 const initialesComisionado = (nombre, email) => (nombre || email || '?')
@@ -262,14 +265,12 @@ function PrioridadPills({ valor, criterios }) {
 
 /* ── Detalle del turnado (ROL2) ── */
 function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
+  const { user } = useAuth()
   const [cargando,      setCargando]      = useState(false)
   const [error,         setError]         = useState('')
   const [modalConcluir, setModalConcluir] = useState(false)
   const [fusData,        setFusData]       = useState(turnado.idFus || {})
   const [modalComisionar, setModalComisionar] = useState(false)
-  const [modalRechazar,   setModalRechazar]   = useState(false)
-  const [aprobando,       setAprobando]       = useState(false)
-  const [errorAprobar,    setErrorAprobar]    = useState('')
   const toast = useToast()
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -294,21 +295,10 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
     }
   }
 
-  const puedesComisionar = fus.estatusParticular === 'Turnado'
-  const puedeAprobarRechazar = fus.estatusParticular === 'Pendiente_validacion'
-
-  const handleAprobar = async () => {
-    setErrorAprobar(''); setAprobando(true)
-    try {
-      const { data } = await api.post(`/fus/${fus.id}/aprobar/`)
-      setFusData(data)
-      toast.success('Solicitud aprobada y concluida.')
-    } catch (e) {
-      setErrorAprobar(e.response?.data?.detail || 'No se pudo aprobar. Intenta nuevamente.')
-    } finally {
-      setAprobando(false)
-    }
-  }
+  // puedeComisionar ya resuelve internamente, según el rol, tanto el
+  // estatus del FUS (Registrado/Turnado) como — para ROL2 — que ESTE
+  // turnado (destinatario específico) siga "Recibido".
+  const puedesComisionar = puedeComisionar(user, fus, turnado)
 
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
@@ -423,8 +413,13 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
         </div>
       </div>
 
-      {/* ── Seguimientos ── */}
-      <Seguimientos turnadoId={turnado.id} concluido={turnado.estatusTitular === 'Concluido'} />
+      {/* ── Seguimientos: una vez comisionado, este feed reemplaza al del
+           Turnado — las respuestas ahora las da el comisionado, no el
+           Titular directamente. ── */}
+      {fus.idComisionado
+        ? <SeguimientoComisionadoFeed fusId={fus.id} />
+        : <Seguimientos turnadoId={turnado.id} concluido={turnado.estatusTitular === 'Concluido'} />
+      }
 
       <div className="dt-historial-row">
         <button className="btn-historial" onClick={() => onVerHistorial(fus.folio)}>
@@ -441,24 +436,12 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
         </div>
       )}
 
-      {puedeAprobarRechazar && (
-        <div className="dt-actions dt-actions-comisionado">
-          {errorAprobar && <p className="sec-error" role="alert">{errorAprobar}</p>}
-          <div className="dt-comisionado-botones">
-            <button type="button" className="btn-rechazar" onClick={() => setModalRechazar(true)} disabled={aprobando}>
-              Rechazar
-            </button>
-            <button type="button" className="btn-aprobar" onClick={handleAprobar} disabled={aprobando}>
-              {aprobando && <span className="btn-spinner" />}
-              {aprobando ? 'Aprobando…' : 'Aprobar'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {fus.estatusParticular === 'Concluido' && fus.idComisionado && (
-        <p className="dt-concluido-texto">Solicitud concluida — sin acciones pendientes</p>
-      )}
+      <AccionesValidacion
+        user={user}
+        fus={fus}
+        setFusData={setFusData}
+        tieneFacultad={puedeGestionarComisionados(user)}
+      />
 
       {modalComisionar && (
         <ComisionarModal
@@ -468,18 +451,6 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
             setFusData(data)
             setModalComisionar(false)
             toast.success('Comisionado asignado correctamente.')
-          }}
-        />
-      )}
-
-      {modalRechazar && (
-        <RechazarModal
-          fusId={fus.id}
-          onClose={() => setModalRechazar(false)}
-          onRechazado={(data) => {
-            setFusData(data)
-            setModalRechazar(false)
-            toast.success('Solicitud regresada al comisionado.')
           }}
         />
       )}
@@ -680,6 +651,21 @@ export default function SolicitudesTurnadas() {
                   {e.nombre}
                 </button>
               ))}
+              {/* Rechazado/Pendiente_validacion viven en FUS.estatusParticular, no en
+                  Turnado.estatusTitular (por eso no vienen en estatusROL2 = TITULAR) —
+                  MisTurnadosView los reconoce igual vía el mismo parámetro `estatusTitular`. */}
+              <button
+                className={`filtro-chip filtro-chip-pendiente-validacion${filtro === 'Pendiente_validacion' ? ' filtro-chip-active' : ''}`}
+                onClick={() => toggleFiltro('Pendiente_validacion')}
+              >
+                Pendiente de validación
+              </button>
+              <button
+                className={`filtro-chip filtro-chip-rechazado${filtro === 'Rechazado' ? ' filtro-chip-active' : ''}`}
+                onClick={() => toggleFiltro('Rechazado')}
+              >
+                Rechazados
+              </button>
               <button
                 className={`filtro-chip filtro-chip-vencido${filtro === 'Vencido' ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Vencido')}
