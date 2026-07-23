@@ -158,16 +158,14 @@ export default function Bitacora() {
   const [unidadesCargadas, setUnidadesCargadas] = useState(false)
   const [unidadPopoverAbierto, setUnidadPopoverAbierto] = useState(false)
   const [unidadPopoverPos, setUnidadPopoverPos] = useState({ top: 0, left: 0 })
-  const [unidadSeleccionada, setUnidadSeleccionada] = useState(null)
+  const [unidadSeleccionadas, setUnidadSeleccionadas] = useState([])
+  const [fUnidades, setFUnidades] = useState([])
   const unidadPopoverRef = useRef(null)
   const unidadBtnRef = useRef(null)
 
   const [compacto, setCompacto] = useState(false)
   const bitaBgRef = useRef(null)
-  // Cuando no es null, ignora eventos de scroll mientras scrollTop no cambie
-  // respecto a este valor (evita que un scroll "fantasma" disparado por el
-  // propio cambio de layout al expandir el panel lo vuelva a compactar).
-  const scrollBaselineRef = useRef(null)
+  const ignoreNextScrollRef = useRef(false)
 
   const ordenarPor = (key) => {
     if (sortCol === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -178,11 +176,11 @@ export default function Bitacora() {
     const el = bitaBgRef.current
     if (!el) return
     const onScroll = () => {
-      const top = el.scrollTop
-      if (scrollBaselineRef.current !== null) {
-        if (top === scrollBaselineRef.current) return
-        scrollBaselineRef.current = null
+      if (ignoreNextScrollRef.current) {
+        ignoreNextScrollRef.current = false
+        return
       }
+      const top = el.scrollTop
       setCompacto(top > 50)
     }
     el.addEventListener('scroll', onScroll)
@@ -190,7 +188,9 @@ export default function Bitacora() {
   }, [])
 
   const editarFiltros = () => {
-    scrollBaselineRef.current = bitaBgRef.current ? bitaBgRef.current.scrollTop : 0
+    if (bitaBgRef.current) {
+      ignoreNextScrollRef.current = true
+    }
     setCompacto(false)
   }
 
@@ -216,32 +216,53 @@ export default function Bitacora() {
         .catch(() => {})
       setUnidadesCargadas(true)
     }
+    setColVisibles(v => ({ ...v, unidadAdministrativa: true }))
     setUnidadPopoverAbierto(v => !v)
   }
 
-  const seleccionarUnidad = (u) => {
-    setColVisibles(v => ({ ...v, unidadAdministrativa: true }))
-    setUnidadSeleccionada(u)
-    setUnidadPopoverAbierto(false)
+  const toggleUnidad = (u) => {
+    setUnidadSeleccionadas(prev => {
+      const existe = prev.some(item => item.idUnidadAdministrativa === u.idUnidadAdministrativa)
+      return existe ? prev.filter(item => item.idUnidadAdministrativa !== u.idUnidadAdministrativa) : [...prev, u]
+    })
+    setFUnidades(prev => prev.includes(u.idUnidadAdministrativa)
+      ? prev.filter(item => item !== u.idUnidadAdministrativa)
+      : [...prev, u.idUnidadAdministrativa]
+    )
+  }
+
+  const quitarUnidad = (id) => {
+    setUnidadSeleccionadas(prev => {
+      const siguiente = prev.filter(item => item.idUnidadAdministrativa !== id)
+      setColVisibles(v => ({ ...v, unidadAdministrativa: siguiente.length > 0 }))
+      return siguiente
+    })
+    setFUnidades(prev => prev.filter(item => item !== id))
   }
 
   const quitarColumna = (key) => {
     toggleColumna(key)
-    if (key === 'unidadAdministrativa') setUnidadSeleccionada(null)
+    if (key === 'unidadAdministrativa') {
+      setUnidadSeleccionadas([])
+      setFUnidades([])
+    }
   }
 
   const cargar = useCallback((pag = 1, append = false) => {
     setCargando(true)
     setErrorCarga(false)
-    const params = { page: pag, page_size: PAGE_SIZE }
-    if (fBusquedaDeb)         params.q           = fBusquedaDeb
-    if (fAccion)              params.accion      = fAccion
-    if (fEstatusFus)          params.estatus_fus = fEstatusFus
-    if (fDesde)               params.fecha_desde = fDesde
-    if (fHasta)               params.fecha_hasta = fHasta
-    if (sortCol)              params.ordering    = `${sortDir === 'desc' ? '-' : ''}${sortCol}`
+    const params = new URLSearchParams()
+    params.set('page', pag)
+    params.set('page_size', PAGE_SIZE)
+    if (fBusquedaDeb)         params.set('q',           fBusquedaDeb)
+    if (fAccion)              params.set('accion',      fAccion)
+    if (fEstatusFus)          params.set('estatus_fus', fEstatusFus)
+    fUnidades.forEach(id => params.append('unidadAdministrativa', id))
+    if (fDesde)               params.set('fecha_desde', fDesde)
+    if (fHasta)               params.set('fecha_hasta', fHasta)
+    if (sortCol)              params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
 
-    api.get('/bitacora/', { params })
+    api.get(`/bitacora/?${params.toString()}`)
       .then(r => {
         setTotal(r.data.total)
         setPagina(pag)
@@ -249,16 +270,17 @@ export default function Bitacora() {
       })
       .catch(() => setErrorCarga(true))
       .finally(() => setCargando(false))
-  }, [fBusquedaDeb, fAccion, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
+  }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
 
-  useEffect(() => { cargar(1) }, [fBusquedaDeb, fAccion, fEstatusFus, fDesde, fHasta, sortCol, sortDir])
+  useEffect(() => { cargar(1) }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
 
   const limpiar = () => {
     setFBusqueda(''); setFAccion('')
     setFEstatusFus(''); setFDesde(''); setFHasta('')
     setPresetFecha(null)
     setColVisibles(COL_VISIBLES_DEFAULT)
-    setUnidadSeleccionada(null)
+    setUnidadSeleccionadas([])
+    setFUnidades([])
     setSortCol(null); setSortDir('asc')
   }
   const toggleColumna = (key) => setColVisibles(v => ({ ...v, [key]: !v[key] }))
@@ -266,7 +288,7 @@ export default function Bitacora() {
   // usuario desactivó desde su estado por defecto (esas no generan chip).
   const columnasAgregadas = COLUMNAS_TOGGLEABLES.filter(c => colVisibles[c.key] && !COL_VISIBLES_DEFAULT[c.key])
   const hayColumnasAgregadas = columnasAgregadas.length > 0
-  const filtrosActivosChips = Boolean(fBusqueda || fAccion || fEstatusFus || fDesde || fHasta || hayColumnasAgregadas)
+  const filtrosActivosChips = Boolean(fBusqueda || fAccion || fEstatusFus || fUnidades.length || fDesde || fHasta)
 
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' })
@@ -326,6 +348,7 @@ export default function Bitacora() {
     if (fBusqueda)            p.set('q',           fBusqueda)
     if (fAccion)              p.set('accion',      fAccion)
     if (fEstatusFus)          p.set('estatus_fus', fEstatusFus)
+    fUnidades.forEach(id => p.append('unidadAdministrativa', id))
     if (fDesde)               p.set('fecha_desde', fDesde)
     if (fHasta)               p.set('fecha_hasta', fHasta)
     p.set('columnas', columnasVisibles().join(','))
@@ -444,15 +467,30 @@ export default function Bitacora() {
                 {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esADM).map(c => c.key === 'unidadAdministrativa' ? (
                   <div key={c.key} className="bita-unidad-pill-wrap">
                     <button type="button" ref={unidadBtnRef} className={`bita-pildora${colVisibles.unidadAdministrativa ? ' activa' : ''}`} onClick={abrirUnidadPopover}>
-                      {colVisibles.unidadAdministrativa && unidadSeleccionada ? unidadSeleccionada.unidadAdministrativa : c.label}
+                      {colVisibles.unidadAdministrativa && unidadSeleccionadas.length === 1
+                        ? unidadSeleccionadas[0].unidadAdministrativa
+                        : unidadSeleccionadas.length > 1
+                          ? `${unidadSeleccionadas.length} unidades`
+                          : c.label}
                     </button>
                     {unidadPopoverAbierto && createPortal(
                       <div className="bita-unidad-popover" ref={unidadPopoverRef} style={{ position: 'fixed', top: unidadPopoverPos.top, left: unidadPopoverPos.left }}>
-                        {unidades.map(u => (
-                          <button key={u.idUnidadAdministrativa} type="button" className="bita-unidad-opcion" onClick={() => seleccionarUnidad(u)}>
-                            {u.unidadAdministrativa}
-                          </button>
-                        ))}
+                        {unidades.map(u => {
+                          const seleccionado = unidadSeleccionadas.some(item => item.idUnidadAdministrativa === u.idUnidadAdministrativa)
+                          return (
+                            <label
+                              key={u.idUnidadAdministrativa}
+                              className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={seleccionado}
+                                onChange={() => toggleUnidad(u)}
+                              />
+                              <span>{u.unidadAdministrativa}</span>
+                            </label>
+                          )
+                        })}
                       </div>,
                       document.body
                     )}
@@ -516,6 +554,12 @@ export default function Bitacora() {
                   <button type="button" onClick={() => setFAccion('')} aria-label="Quitar filtro de acción">×</button>
                 </span>
               )}
+              {fUnidades.length > 0 && unidadSeleccionadas.map(u => (
+                <span key={u.idUnidadAdministrativa} className="bita-chip">
+                  Unidad administrativa: {u.unidadAdministrativa}
+                  <button type="button" onClick={() => quitarUnidad(u.idUnidadAdministrativa)} aria-label="Quitar unidad administrativa seleccionada">×</button>
+                </span>
+              ))}
               {fEstatusFus && (
                 <span className="bita-chip">
                   Estatus: {ESTATUS_FUS_LABELS[fEstatusFus] || fEstatusFus}
@@ -534,9 +578,9 @@ export default function Bitacora() {
                   <button type="button" onClick={() => { setFHasta(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha hasta">×</button>
                 </span>
               )}
-              {columnasAgregadas.map(c => (
+              {columnasAgregadas.filter(c => c.key !== 'unidadAdministrativa').map(c => (
                 <span key={c.key} className="bita-chip">
-                  Columnas: {c.key === 'unidadAdministrativa' && unidadSeleccionada ? `${c.label} (${unidadSeleccionada.unidadAdministrativa})` : c.label}
+                  Columnas: {c.label}
                   <button type="button" onClick={() => quitarColumna(c.key)} aria-label={`Quitar columna ${c.label}`}>×</button>
                 </span>
               ))}

@@ -5,6 +5,7 @@ import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
+import ModalDescargarPDF, { descargar } from '../components/ModalDescargarPDF'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
 import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
@@ -24,19 +25,6 @@ const initialesComisionado = (nombre, email) => (nombre || email || '?')
   .map(w => w[0])
   .join('')
   .toUpperCase()
-
-function descargar(url, nombre, token) {
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => r.blob())
-    .then(blob => {
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = nombre
-      a.click()
-      URL.revokeObjectURL(a.href)
-    })
-    .catch(() => alert('No se pudo descargar el archivo.'))
-}
 
 /* ── Modal Turnar ── */
 function ModalTurnar({ fus, onClose, onDone }) {
@@ -291,6 +279,18 @@ const ESTATUS_TURNADO_LABEL = {
   Concluido:      { label: 'Concluido',      color: '#15803d' },
 }
 
+// Estructura uniforme para toda entrada de "Respuestas y seguimiento",
+// venga del flujo directo de Rol 2 (modelo Seguimiento, sin `tipo` propio —
+// se le asigna 'Respuesta' por defecto) o del flujo de Comisionado (trae
+// `tipo`, ver DEFAULT_TIPO_INFO más abajo para el caso sin match).
+const TIPO_SEGUIMIENTO_INFO = {
+  accion_por_emprender: { label: 'Acción',  clase: 'fc-tag-azul' },
+  avance:               { label: 'Respuesta', clase: 'fc-tag-verde' },
+  finalizacion:         { label: 'Respuesta', clase: 'fc-tag-verde' },
+  rechazo:              { label: 'Rechazo',   clase: 'fc-tag-rojo' },
+}
+const DEFAULT_TIPO_INFO = { label: 'Respuesta', clase: 'fc-tag-verde' }
+
 /* ── Timeline de actividad ── */
 function TimelineActividad({ fusId }) {
   const [turnados, setTurnados] = useState([])
@@ -314,137 +314,111 @@ function TimelineActividad({ fusId }) {
     ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
     : ''
 
-  if (cargando) return <Spinner overlay={false} />
-  if (!turnados.length) return <p className="act-msg">Sin actividad registrada aún.</p>
+  const legendTurnado = (
+    <span className="det-section-legend det-section-legend-activity">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Se turnó
+    </span>
+  )
+
+  if (cargando) return (
+    <div className="det-section">
+      {legendTurnado}
+      <Spinner overlay={false} />
+    </div>
+  )
+  if (!turnados.length) return (
+    <div className="det-section">
+      {legendTurnado}
+      <p className="act-msg">Sin actividad registrada aún.</p>
+    </div>
+  )
+
+  // Todas las respuestas de todos los turnados (normalmente hay uno solo) en
+  // una sola línea de tiempo, en su propia sección — mismo tratamiento visual
+  // que "Respuestas y seguimiento" en la vista de Rol 2 (.seccion/.sec-header).
+  // Las que no traen `autorNombre` (flujo directo de Rol 2, modelo
+  // Seguimiento) se atribuyen al destinatario del turnado — mismo Titular
+  // que ya se muestra como "Nombre" en la tarjeta de arriba.
+  const todasRespuestas = turnados.flatMap(t =>
+    (t.seguimientos || []).map(s => ({
+      ...s,
+      autorNombre: 'autorNombre' in s ? s.autorNombre : (t.idDestinatario?.nombre ?? null),
+    }))
+  )
 
   return (
-    <div className="act-timeline">
-      {turnados.map((t, ti) => {
-        const meta = ESTATUS_TURNADO_LABEL[t.estatusTitular] || { label: t.estatusTitular, color: '#6b7280' }
-        return (
-          <div key={t.id} className="act-turnado">
-            <div className="act-turnado-header">
-              <div className="act-turnado-dot" />
-              <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
-            </div>
-            <div className="det-grid-2 act-turnado-datos">
-              <Row label="Nombre" value={t.idDestinatario?.nombre} />
-              <Row label="Área" value={t.idDestinatario?.area} />
-              <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
-              <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
-            </div>
-            {t.solicitudTexto && (
-              <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
-            )}
+    <>
+      <div className="det-section">
+        {legendTurnado}
+        <div className="act-timeline">
+          {turnados.map((t, ti) => {
+            const meta = ESTATUS_TURNADO_LABEL[t.estatusTitular] || { label: t.estatusTitular, color: '#6b7280' }
+            return (
+              <div key={t.id} className="act-turnado">
+                <div className="act-turnado-header">
+                  <div className="act-turnado-dot" />
+                  <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
+                </div>
+                <div className="det-grid-2 act-turnado-datos">
+                  <Row label="Nombre" value={t.idDestinatario?.nombre} />
+                  <Row label="Área" value={t.idDestinatario?.area} />
+                  <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
+                  <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
+                </div>
+                {t.solicitudTexto && (
+                  <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
-            {/* Seguimientos */}
-            {t.seguimientos?.length > 0 && (
-              <div className="act-section">
-                <p className="act-section-title act-title-respuesta">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  Respuestas y seguimiento
-                </p>
-                <div className="act-tl">
-                  {t.seguimientos.map((s, i) => (
-                    <div key={s.id} className="act-tl-item">
-                      <div className="act-tl-track">
-                        <div className="act-tl-dot" />
-                        {i < t.seguimientos.length - 1 && <div className="act-tl-connector" />}
-                      </div>
-                      <div className="act-tl-content">
-                        <span className="act-tl-fecha">
+      <div className="seccion act-seccion-respuestas">
+        <div className="sec-header sec-resp">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Respuestas y seguimiento
+        </div>
+        <div className="sec-body">
+          {todasRespuestas.length > 0 ? (
+            <div className="act-tl">
+              {todasRespuestas.map((s, i) => {
+                const info = TIPO_SEGUIMIENTO_INFO[s.tipo] || DEFAULT_TIPO_INFO
+                return (
+                  <div key={s.id} className="act-tl-item">
+                    <div className="act-tl-track">
+                      <div className="act-tl-dot" />
+                      {i < todasRespuestas.length - 1 && <div className="act-tl-connector" />}
+                    </div>
+                    <div className="act-tl-content">
+                      <div className="seg-tl-meta">
+                        <span className={`fc-tag ${info.clase}`}>{info.label}</span>
+                        <span className="seg-tl-fecha">
+                          {s.autorNombre ? `${s.autorNombre} · ` : ''}
                           {fmtFecha(s.fechaActividad)}
                           {s.fechaRegistro && <span className="act-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
                         </span>
-                        <p className="act-tl-desc">{s.descripcionActividad}</p>
-                        {s.accionTexto && (
-                          <p className="act-tl-accion">→ {s.accionTexto}</p>
-                        )}
                       </div>
+                      <p className="act-tl-desc">{s.descripcionActividad}</p>
+                      {s.accionTexto && (
+                        <p className="act-tl-accion">→ {s.accionTexto}</p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Acciones */}
-            {t.acciones?.length > 0 && (
-              <div className="act-section">
-                <p className="act-section-title act-title-accion">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="9 11 12 14 22 4"/>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                  </svg>
-                  Acciones por emprender
-                </p>
-                <ol className="act-acciones">
-                  {t.acciones.map(a => (
-                    <li key={a.id} className={`act-accion${a.completada ? ' act-accion-ok' : ''}`}>
-                      <span className="act-accion-check">{a.completada ? '✓' : '○'}</span>
-                      {a.descripcion}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-
-            {t.seguimientos?.length === 0 && t.acciones?.length === 0 && (
-              <p className="act-sin-resp">Pendiente de respuesta del titular.</p>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/* ── Modal: elegir con/sin imágenes al descargar el PDF ── */
-function ModalDescargarPDF({ onCancelar, onConfirmar }) {
-  const [conImagenes, setConImagenes] = useState(true)
-  const [cargando, setCargando] = useState(false)
-
-  const confirmar = () => {
-    setCargando(true)
-    Promise.resolve(onConfirmar(conImagenes)).finally(() => setCargando(false))
-  }
-
-  return createPortal(
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card modal-card-pdf">
-        <div className="modal-header">
-          <h3 className="modal-title">Descargar solicitud en PDF</h3>
-          <button className="modal-close" onClick={onCancelar} aria-label="Cerrar" disabled={cargando}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p className="modal-pdf-sub">Elige si deseas incluir las imágenes de evidencia adjuntas.</p>
-
-          <label className={`modal-pdf-opcion${conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
-            <input type="radio" name="pdf-imagenes" checked={conImagenes} onChange={() => setConImagenes(true)} disabled={cargando} />
-            <span>Descargar con imágenes de evidencia</span>
-          </label>
-          <label className={`modal-pdf-opcion${!conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
-            <input type="radio" name="pdf-imagenes" checked={!conImagenes} onChange={() => setConImagenes(false)} disabled={cargando} />
-            <span>Descargar sin imágenes</span>
-          </label>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onCancelar} disabled={cargando}>Cancelar</button>
-          <button className="btn-turnar" onClick={confirmar} disabled={cargando}>
-            {cargando ? <span className="btn-spinner" /> : null}
-            {cargando ? 'Generando…' : 'Descargar'}
-          </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="seg-empty">Pendiente de respuesta del titular.</p>
+          )}
         </div>
       </div>
-    </div>,
-    document.body
+    </>
   )
 }
 
@@ -596,18 +570,9 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
         <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
       </div>
 
-      {/* ── Sección: Se turnó ── */}
-      {tieneActividad && (
-        <div className="det-section">
-          <span className="det-section-legend det-section-legend-activity">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-            Se turnó
-          </span>
-          <TimelineActividad fusId={fus.id} />
-        </div>
-      )}
+      {/* ── Sección: Se turnó + Respuestas y seguimiento (esta última en su
+          propia .seccion, mismo tratamiento visual que la vista de Rol 2) ── */}
+      {tieneActividad && <TimelineActividad fusId={fus.id} />}
 
       <div className="detalle-footer">
         {puedesTurnar && (
@@ -658,11 +623,7 @@ function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">
-          {fus.folio}
-          {fus.slaVencido && <span className="badge-vencido">Vencido</span>}
-          {!fus.slaVencido && fus.slaPorVencer && <span className="badge-por-vencer">Por vencer</span>}
-        </strong>
+        <strong className="fus-folio">{fus.folio}</strong>
         <span className="fus-card-top-actions">
           <button
             className="fus-card-historial-btn"
@@ -675,7 +636,10 @@ function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
               <polyline points="12 7 12 12 15.5 14"/>
             </svg>
           </button>
-          <Badge estatus={fus.estatusParticular} />
+          <span className="fus-card-badges">
+            <Badge estatus={fus.estatusParticular} />
+            {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
+          </span>
         </span>
       </div>
       <p className="fus-meta"><b>Fecha:</b> {fmt(fus.fechaHora)}</p>

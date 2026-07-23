@@ -79,7 +79,21 @@ export default function Login() {
       }
       redirect(u.rol)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Contraseña incorrecta.')
+      if (err.response?.data?.code === 'cuenta_no_activada') {
+        // El correo está autorizado pero nunca se activó la cuenta (no hay
+        // User todavía) — en vez de dejarlo varado, reinicia el flujo de
+        // activación automáticamente (mismo que seguiría un usuario nuevo).
+        setPassword('')
+        try {
+          const { data } = await api.post('/auth/verificar-correo/', { email: email.trim().toLowerCase() })
+          setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
+          setReenvioMsg(data.estado === 'existente' ? '' : 'Tu cuenta aún no estaba activada — te enviamos un código para crearla.')
+        } catch (err2) {
+          setError(err2.response?.data?.detail || err.response.data.detail)
+        }
+      } else {
+        setError(err.response?.data?.detail || 'Contraseña incorrecta.')
+      }
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../../api/api'
 import './Comisionado.css'
 
@@ -20,7 +21,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="com-overlay" onClick={() => !enviando && onClose()}>
       <div className="com-modal" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
@@ -46,6 +47,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

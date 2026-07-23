@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import './Comisionado.css'
 
 /* Confirmación glass genérica reusada por Atendido y Concluir asunto — evita
@@ -17,7 +18,7 @@ export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = '
     }
   }
 
-  return (
+  return createPortal(
     <div className="com-overlay" onClick={() => !enviando && onClose()}>
       <div className="com-modal com-modal-confirm" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
@@ -37,6 +38,7 @@ export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = '
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

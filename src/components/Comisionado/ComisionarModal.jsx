@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../../api/api'
 import './Comisionado.css'
 
@@ -48,7 +49,7 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="com-overlay" onClick={() => !enviando && onClose()}>
       <div className="com-modal" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
@@ -98,6 +99,7 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
           {enviando ? 'Asignando…' : 'Confirmar asignación'}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

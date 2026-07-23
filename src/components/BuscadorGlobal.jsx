@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
@@ -82,7 +83,7 @@ export default function BuscadorGlobal({ onClose }) {
     Concluido: '#4ade80', Recibido: '#9F2241', En_seguimiento: '#fbbf24',
   }
 
-  return (
+  return createPortal(
     <div className="bglob-overlay" onClick={onClose}>
       <div className="bglob-modal" onClick={e => e.stopPropagation()}>
         <div className="bglob-search-row">
@@ -128,6 +129,7 @@ export default function BuscadorGlobal({ onClose }) {
           <p className="bglob-hint">Escribe un folio o descripción para buscar…</p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

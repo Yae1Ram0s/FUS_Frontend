@@ -233,7 +233,12 @@ function FUSCard({ f, activo, onClick }) {
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">{f.folio}</strong>
-        <span className="fus-card-top-actions"><Badge estatus={f.estatusParticular} /></span>
+        <span className="fus-card-top-actions">
+          <span className="fus-card-badges">
+            <Badge estatus={f.estatusParticular} />
+            {f.estadoTemporalidad && <Badge estatus={f.estadoTemporalidad} />}
+          </span>
+        </span>
       </div>
       <p className="fus-meta"><b>Asignado:</b> {fmt(f.fechaAsignacion)}</p>
       <p className="fus-meta"><b>Medio:</b> {f.idMedioRecepcion?.nombreMedio || '—'}</p>

@@ -346,6 +346,7 @@
 .st-left .fus-folio         { font-size: 0.78rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
 .fus-card-top > span { align-self: flex-end; order: -1; }
 .fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
+.fus-card-badges      { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .fus-card-historial-btn {
   display: inline-flex;
   align-items: center;
@@ -1030,6 +1031,11 @@
   line-height: 1.5;
 }
 
+.seg-tl-rechazo {
+  color: #b23030;
+  font-weight: 600;
+}
+
 .seg-tl-accion {
   font-size: 0.80rem;
   color: rgba(35, 91, 78, 0.80);
@@ -1199,8 +1205,6 @@
   position: fixed;
   inset: 0;
   background: rgba(10, 30, 20, 0.50);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1214,9 +1218,9 @@
 }
 
 .concluir-modal {
-  background: rgba(255, 255, 255, 0.13);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(26px) saturate(1.65);
+  -webkit-backdrop-filter: blur(26px) saturate(1.65);
   border: 1px solid rgba(195, 212, 207, 0.40);
   border-radius: 22px;
   padding: 2rem 1.75rem 1.5rem;
@@ -1248,14 +1252,14 @@
 .concluir-modal-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #fff;
+  color: #1a2f28;
   margin: 0 0 0.55rem;
   letter-spacing: 0.01em;
 }
 
 .concluir-modal-body {
   font-size: 0.865rem;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(26, 47, 40, 0.75);
   line-height: 1.6;
   margin: 0 0 1.6rem;
 }

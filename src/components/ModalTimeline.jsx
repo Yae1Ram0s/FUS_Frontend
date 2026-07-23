@@ -10,16 +10,19 @@ const fmtFecha = d => d
   : '—'
 
 const TIPO_INFO = {
-  creacion:  { titulo: 'Registro',  color: 'var(--fg-secondary)' },
-  turnado:   { titulo: 'Turnado',   color: '#1F5647' },
-  respuesta: { titulo: 'Respuesta', color: 'var(--fg-success)' },
-  concluido: { titulo: 'Concluido', color: 'var(--fg-success)' },
+  creacion:    { titulo: 'Registro',    color: 'var(--fg-secondary)' },
+  turnado:     { titulo: 'Turnado',     color: '#1F5647' },
+  comisionado: { titulo: 'Comisionado', color: '#9F2241' },
+  respuesta:   { titulo: 'Respuesta',   color: 'var(--fg-success)' },
+  concluido:   { titulo: 'Concluido',   color: 'var(--fg-success)' },
+  rechazo:     { titulo: 'Rechazado',   color: '#b23030' },
 }
 
 const LEYENDA = [
-  { tipo: 'creacion',  label: 'Registro' },
-  { tipo: 'turnado',   label: 'Turnado' },
-  { tipo: 'respuesta', label: 'Respuesta' },
+  { tipo: 'creacion',    label: 'Registro' },
+  { tipo: 'turnado',     label: 'Turnado' },
+  { tipo: 'comisionado', label: 'Comisionado' },
+  { tipo: 'respuesta',   label: 'Respuesta' },
 ]
 
 export default function ModalTimeline({ folio, onClose }) {

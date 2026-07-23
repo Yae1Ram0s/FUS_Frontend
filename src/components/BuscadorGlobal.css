@@ -8,7 +8,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 12vh;
-  z-index: 8000;
+  z-index: 20000;
   animation: bg-in 160ms ease;
 }
 

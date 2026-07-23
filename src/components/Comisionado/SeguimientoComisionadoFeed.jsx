@@ -6,11 +6,15 @@ const fmtHora = d => d
   ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
   : ''
 
+const fmtFecha = d => d
+  ? new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  : ''
+
 const TIPO_SEGUIMIENTO_INFO = {
-  accion_por_emprender: { label: 'Acción por emprender', clase: 'fc-tag-azul' },
-  avance:               { label: 'Avance',                clase: 'fc-tag-verde' },
-  finalizacion:         { label: 'Finalización',           clase: 'fc-tag-verde' },
-  rechazo:              { label: 'Rechazo',                clase: 'fc-tag-rojo' },
+  accion_por_emprender: { label: 'Acción',  clase: 'fc-tag-azul' },
+  avance:               { label: 'Respuesta', clase: 'fc-tag-verde' },
+  finalizacion:         { label: 'Respuesta', clase: 'fc-tag-verde' },
+  rechazo:              { label: 'Rechazo',   clase: 'fc-tag-rojo' },
 }
 
 /* Historial de respuestas del Comisionado (avances, acciones por emprender,
@@ -85,7 +89,7 @@ export default function SeguimientoComisionadoFeed({ fusId }) {
                   <div className="seg-tl-meta">
                     <span className={`fc-tag ${info.clase}`}>{info.label}</span>
                     <span className="seg-tl-fecha">
-                      {s.idAutor?.nombre ? `${s.idAutor.nombre} · ` : ''}{fmtHora(s.fechaRegistro)}
+                      {s.idAutor?.nombre ? `${s.idAutor.nombre} · ` : ''}{fmtFecha(s.fechaRegistro)} · {fmtHora(s.fechaRegistro)}
                     </span>
                   </div>
                   <p className="seg-tl-actividad">{s.contenido}</p>

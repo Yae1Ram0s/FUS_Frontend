@@ -10,6 +10,10 @@ const VARIANTS = {
   // ── Comisionado (estatusParticular) ─────────────────────────────────────
   Pendiente_validacion: { tint: 'rgba(167,139,250,', text: '#ddd6fe', glow: 'rgba(167,139,250,' },
   Rechazado:            { tint: 'rgba(178,48,48,',  text: '#fecaca', glow: 'rgba(178,48,48,' },
+  // ── Temporalidad (estadoTemporalidad) — indicador secundario, no es un
+  //    estatus del trámite. Mismos colores que Atendido/Rechazado. ────────
+  PorVencer:            { tint: 'rgba(251,191,36,',  text: '#fde68a', glow: 'rgba(251,191,36,' },
+  Vencido:              { tint: 'rgba(178,48,48,',  text: '#fecaca', glow: 'rgba(178,48,48,' },
 }
 
 // Light-background variants (neomorphism sandy #ddc9a3)
@@ -22,11 +26,14 @@ const VARIANTS_LIGHT = {
   En_seguimiento: { tint: 'rgba(160,110,0,',   text: '#6b4800' },
   Pendiente_validacion: { tint: 'rgba(109,40,217,', text: '#5b21b6' },
   Rechazado:            { tint: 'rgba(178,48,48,',  text: '#7a1f1f' },
+  PorVencer:            { tint: 'rgba(160,110,0,',   text: '#6b4800' },
+  Vencido:              { tint: 'rgba(178,48,48,',  text: '#7a1f1f' },
 }
 
 const ETIQUETAS = {
   En_seguimiento: 'En seguimiento',
   Pendiente_validacion: 'Pendiente de validación',
+  PorVencer: 'Por vencer',
 }
 
 const FALLBACK       = { tint: 'rgba(200,205,215,', text: '#dde1ea', glow: 'rgba(200,205,215,' }

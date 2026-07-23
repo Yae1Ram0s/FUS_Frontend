@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -258,7 +259,7 @@ export default function PanelAdmin() {
         </div>
 
         {/* Modal — Agregar */}
-        {modal === 'agregar' && (
+        {modal === 'agregar' && createPortal(
           <div className="adm-overlay" onClick={() => setModal(false)}>
             <div className="adm-modal" onClick={e => e.stopPropagation()}>
               <h3 className="adm-modal-title">Agregar correo autorizado</h3>
@@ -336,11 +337,12 @@ export default function PanelAdmin() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Modal — Editar */}
-        {modal === 'editar' && editando && (
+        {modal === 'editar' && editando && createPortal(
           <div className="adm-overlay" onClick={() => setModal(false)}>
             <div className="adm-modal" onClick={e => e.stopPropagation()}>
               <h3 className="adm-modal-title">Editar usuario</h3>
@@ -362,6 +364,8 @@ export default function PanelAdmin() {
                     onChange={e => setFormEdit(f => ({ ...f, rol: e.target.value }))}>
                     <option value="ROL1">Particular del Titular</option>
                     <option value="ROL2">Titular/Enlace Estratégico</option>
+                    <option value="COMISIONADO">Comisionado</option>
+                    <option value="EQUIPO_PARTICULAR">Equipo del Particular</option>
                   </select>
                 </label>
                 <label>Unidad administrativa
@@ -394,7 +398,8 @@ export default function PanelAdmin() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>

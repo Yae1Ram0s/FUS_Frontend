@@ -376,6 +376,7 @@
 .cfus-left .fus-folio         { font-size: 0.78rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
 .cfus-left .fus-card-top > span { align-self: flex-end; order: -1; }
 .fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
+.fus-card-badges      { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .fus-card-historial-btn {
   display: inline-flex;
   align-items: center;
@@ -1163,6 +1164,12 @@
 /* Secciones internas */
 .act-section { margin-top: 8px; }
 
+/* "Respuestas y seguimiento" separada como su propia tarjeta (.seccion),
+   mismo tratamiento visual que en la vista de Rol 2 — al ser hija directa
+   de .detalle-panel (overflow:hidden), necesita margen propio para no
+   pegarse a los bordes ni perder su sombra. */
+.act-seccion-respuestas { margin: 14px 16px 16px; }
+
 .act-section-title {
   display: inline-flex;
   align-items: center;
@@ -1357,8 +1364,6 @@
   position: fixed;
   inset: 0;
   background: rgba(10, 30, 20, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   z-index: 9999;
 }
 
@@ -1371,9 +1376,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 9999;
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(26px) saturate(1.65) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.65) !important;
   border: 1px solid rgba(195, 212, 207, 0.45);
   border-radius: 20px;
   width: 620px;
@@ -1468,7 +1473,7 @@
 .modal-fila label {
   font-size: 13px;
   font-weight: 700;
-  color: #ffffff;
+  color: #1a2f28;
 }
 
 .modal-row-inline { display: flex; gap: 8px; align-items: center; }
@@ -1521,7 +1526,7 @@
 
 .modal-pdf-sub {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(26, 47, 40, 0.75);
   margin: 0 0 6px;
 }
 

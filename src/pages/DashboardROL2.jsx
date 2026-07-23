@@ -335,7 +335,12 @@ export default function DashboardROL2() {
                         <td>{fechaCorta(t.idFus?.fechaHora)}</td>
                         <td className="dash-td-desc">{t.idFus?.idMedioRecepcion?.nombreMedio || '—'}</td>
                         <td>{t.idFus?.prioridad || '—'}</td>
-                        <td><Badge estatus={t.estatusTitular} theme="light" /></td>
+                        <td>
+                          <span className="fus-card-badges">
+                            <Badge estatus={t.estatusTitular} theme="light" />
+                            {t.idFus?.estadoTemporalidad && <Badge estatus={t.idFus.estadoTemporalidad} theme="light" />}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

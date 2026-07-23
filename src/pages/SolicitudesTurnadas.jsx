@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
+import ModalDescargarPDF, { descargar } from '../components/ModalDescargarPDF'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
 import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
@@ -28,8 +29,13 @@ const fmtHora = d => d
   ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
   : ''
 
+const fmtFechaCorta = d => d
+  ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  : '—'
+
 /* ── Sección Respuestas y Seguimiento ── */
 function Seguimientos({ turnadoId, concluido }) {
+  const { user } = useAuth()
   const [lista,       setLista]       = useState([])
   const hoy = new Date().toISOString().split('T')[0]
   const [fecha,       setFecha]       = useState(hoy)
@@ -125,11 +131,15 @@ function Seguimientos({ turnadoId, concluido }) {
               </div>
               <div className="seg-tl-content">
                 <div className="seg-tl-meta">
+                  <span className={`fc-tag ${s.esRechazo ? 'fc-tag-rojo' : 'fc-tag-verde'}`}>
+                    {s.esRechazo ? 'Rechazo' : 'Respuesta'}
+                  </span>
                   <span className="seg-tl-fecha">
-                    {s.fechaActividad}
+                    {!s.esRechazo && user?.nombre ? `${user.nombre} · ` : ''}
+                    {fmtFechaCorta(s.fechaActividad)}
                     {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
                   </span>
-                  {!concluido && (
+                  {!concluido && !s.esRechazo && (
                     <button className="btn-del" onClick={() => eliminar(s.id)} disabled={eliminandoId === s.id} title="Eliminar">
                       {eliminandoId === s.id
                         ? <span className="btn-spinner" />
@@ -140,7 +150,7 @@ function Seguimientos({ turnadoId, concluido }) {
                     </button>
                   )}
                 </div>
-                <p className="seg-tl-actividad">{s.descripcionActividad}</p>
+                <p className={s.esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>{s.descripcionActividad}</p>
                 {s.accionTexto && (
                   <p className="seg-tl-accion">→ {s.accionTexto}</p>
                 )}
@@ -264,36 +274,17 @@ function PrioridadPills({ valor, criterios }) {
 }
 
 /* ── Detalle del turnado (ROL2) ── */
-function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
-  const { user } = useAuth()
-  const [cargando,      setCargando]      = useState(false)
-  const [error,         setError]         = useState('')
-  const [modalConcluir, setModalConcluir] = useState(false)
+function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
+  const { user, accessToken } = useAuth()
   const [fusData,        setFusData]       = useState(turnado.idFus || {})
   const [modalComisionar, setModalComisionar] = useState(false)
+  const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const toast = useToast()
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
 
   const fus = fusData
-  const puedesConcluir = turnado.estatusTitular !== 'Concluido' && !fus.idComisionado
-
-  const handleConcluir = () => setModalConcluir(true)
-
-  const handleConfirmar = async () => {
-    setCargando(true); setError('')
-    try {
-      await api.post(`/turnados/${turnado.id}/concluir/`)
-      setModalConcluir(false)
-      onConcluido()
-    } catch (e) {
-      setError(e.response?.data?.detail || 'No se pudo concluir. Intenta nuevamente.')
-      setModalConcluir(false)
-    } finally {
-      setCargando(false)
-    }
-  }
 
   // puedeComisionar ya resuelve internamente, según el rol, tanto el
   // estatus del FUS (Registrado/Turnado) como — para ROL2 — que ESTE
@@ -303,31 +294,16 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
 
+  const descargarPdf = (conImagenes) => {
+    const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
+    const query = conImagenes ? '?imagenes=1' : ''
+    return descargar(`/api/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`, accessToken)
+      .finally(() => setMostrarModalPdf(false))
+  }
+
   return (
     <div className="dt-panel" style={{ position: 'relative' }}>
 
-      {modalConcluir && (
-        <div className="concluir-overlay" onClick={() => !cargando && setModalConcluir(false)}>
-          <div className="concluir-modal" onClick={e => e.stopPropagation()}>
-            <div className="concluir-modal-icon">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
-              </svg>
-            </div>
-            <h3 className="concluir-modal-title">Concluir asunto</h3>
-            <p className="concluir-modal-body">¿Confirmas que este asunto ha sido atendido y puede marcarse como concluido? Esta acción no se puede deshacer.</p>
-            <div className="concluir-modal-actions">
-              <button className="concluir-btn-cancel" onClick={() => setModalConcluir(false)} disabled={cargando}>
-                Cancelar
-              </button>
-              <button className="concluir-btn-confirm" onClick={handleConfirmar} disabled={cargando}>
-                {cargando && <span className="btn-spinner" />}
-                {cargando ? 'Concluyendo…' : 'Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <button className="btn-volver-mobile" onClick={onBack} aria-label="Volver a la lista">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
@@ -344,6 +320,21 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
           </svg>
           {fus.folio || 'Datos del FUS'}
           <span className="dt-header-acciones">
+            {fus.folio && (
+              <button
+                type="button"
+                className="btn-descargar-fus"
+                onClick={() => setMostrarModalPdf(true)}
+                title="Descargar PDF"
+                aria-label="Descargar PDF"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            )}
             {puedesComisionar && (
               <button type="button" className="btn-comisionar" onClick={() => setModalComisionar(true)}>
                 Comisionar
@@ -426,15 +417,6 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
         </button>
       </div>
 
-      {puedesConcluir && (
-        <div className="dt-actions">
-          {error && <p className="sec-error" role="alert">{error}</p>}
-          <button className="btn-concluir" onClick={handleConcluir} disabled={cargando}>
-            {cargando ? 'Concluyendo…' : 'Concluir asunto'}
-          </button>
-        </div>
-      )}
-
       <AccionesValidacion
         user={user}
         fus={fus}
@@ -453,6 +435,13 @@ function DetalleTurnado({ turnado, onConcluido, onBack, onVerHistorial }) {
           }}
         />
       )}
+
+      {mostrarModalPdf && (
+        <ModalDescargarPDF
+          onCancelar={() => setMostrarModalPdf(false)}
+          onConfirmar={descargarPdf}
+        />
+      )}
     </div>
   )
 }
@@ -467,11 +456,7 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">
-          {fus.folio || `Turnado #${t.id}`}
-          {fus.slaVencido && <span className="badge-vencido">Vencido</span>}
-          {!fus.slaVencido && fus.slaPorVencer && <span className="badge-por-vencer">Por vencer</span>}
-        </strong>
+        <strong className="fus-folio">{fus.folio || `Turnado #${t.id}`}</strong>
         <span className="fus-card-top-actions">
           {fus.folio && (
             <button
@@ -486,7 +471,10 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
               </svg>
             </button>
           )}
-          <Badge estatus={t.estatusTitular} />
+          <span className="fus-card-badges">
+            <Badge estatus={t.estatusTitular} />
+            {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
+          </span>
         </span>
       </div>
       <p className="fus-meta"><b>Fecha:</b> {fmt(fus.fechaHora)}</p>
@@ -759,7 +747,6 @@ export default function SolicitudesTurnadas() {
             ? <DetalleTurnado
                 key={`${seleccionado.id}_${seleccionado.estatusTitular}_${seleccionado.idFus?.estatusParticular}`}
                 turnado={seleccionado}
-                onConcluido={() => { cargar(); setSeleccionado(null) }}
                 onBack={() => setSeleccionado(null)}
                 onVerHistorial={setModalTimelineFolio}
               />
