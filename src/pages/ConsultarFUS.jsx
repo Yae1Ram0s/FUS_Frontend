@@ -580,9 +580,6 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
             Turnar solicitud
           </button>
         )}
-        <button className="btn-historial" onClick={() => onVerHistorial(fus.folio)}>
-          Ver historial
-        </button>
       </div>
 
       {/* Solo si el propio Particular comisionó directo (sin pasar por
@@ -624,27 +621,39 @@ function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
         <strong className="fus-folio">{fus.folio}</strong>
-        <span className="fus-card-top-actions">
-          <button
-            className="fus-card-historial-btn"
-            title="Ver historial"
-            onClick={e => { e.stopPropagation(); onVerHistorial() }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 1 0 3-6.7"/>
-              <path d="M3 5v4h4"/>
-              <polyline points="12 7 12 12 15.5 14"/>
-            </svg>
-          </button>
-          <span className="fus-card-badges">
-            <Badge estatus={fus.estatusParticular} />
-            {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
-          </span>
+        <span className="fus-card-badges">
+          <Badge estatus={fus.estatusParticular} />
+          {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
         </span>
       </div>
-      <p className="fus-meta"><b>Fecha:</b> {fmt(fus.fechaHora)}</p>
-      <p className="fus-meta"><b>Medio:</b> {fus.idMedioRecepcion?.nombreMedio || '—'}</p>
-      {fus.descripcion && <p className="fus-desc">{fus.descripcion.slice(0, 90)}…</p>}
+      <p className="fus-meta">
+        <span className="fus-meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+          {fmt(fus.fechaHora)}
+        </span>
+        <span className="fus-meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="m22 7-10 6L2 7"/>
+          </svg>
+          {fus.idMedioRecepcion?.nombreMedio || '—'}
+        </span>
+      </p>
+      {fus.descripcion && <p className="fus-desc">{fus.descripcion}</p>}
+      <button
+        className="fus-card-historial-btn"
+        title="Ver historial"
+        onClick={e => { e.stopPropagation(); onVerHistorial() }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7"/>
+          <path d="M3 5v4h4"/>
+          <polyline points="12 7 12 12 15.5 14"/>
+        </svg>
+      </button>
     </div>
   )
 }

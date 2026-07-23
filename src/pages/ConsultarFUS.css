@@ -347,6 +347,9 @@
 /* Tarjeta FUS — glass (scoped para ganar especificidad sobre SolicitudesTurnadas.css) */
 .cfus-left .fus-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   border-radius: var(--radius-base);
   background: rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(8px);
@@ -358,6 +361,8 @@
   box-shadow: 0 3px 10px rgba(10, 30, 20, 0.18);
   transition: all 200ms ease-in-out;
   min-width: 0;
+  min-height: 132px;
+  max-height: 132px;
   overflow: hidden;
 }
 
@@ -372,12 +377,15 @@
 .cfus-left .fus-card-highlight {
   animation: cfus-card-notif-highlight 1.6s cubic-bezier(0.22,1,0.36,1) forwards;
 }
-.cfus-left .fus-card-top      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; min-width: 0; }
+.cfus-left .fus-card-top      { position: relative; min-width: 0; padding-right: 90px; }
 .cfus-left .fus-folio         { font-size: 0.78rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
-.cfus-left .fus-card-top > span { align-self: flex-end; order: -1; }
+.cfus-left .fus-card-top > span { position: absolute; top: 0; right: 0; }
 .fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
 .fus-card-badges      { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .fus-card-historial-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -393,8 +401,43 @@
   transition: background 150ms, color 150ms;
 }
 .fus-card-historial-btn:hover { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
-.cfus-left .fus-meta          { font-size: 0.75rem; color: rgba(255, 255, 255, 0.72) !important; margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cfus-left .fus-desc          { font-size: 0.74rem; color: rgba(255, 255, 255, 0.50) !important; margin-top: 5px; font-style: normal; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfus-left .fus-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.72) !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.cfus-left .fus-meta-item { display: inline-flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cfus-left .fus-desc {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.60) !important;
+  margin: 0;
+  padding-right: 26px;
+  padding-bottom: 26px;
+  font-style: normal;
+  text-align: justify;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .cfus-left .fus-card { min-height: 150px; max-height: none; padding: 12px 14px; }
+  .cfus-left .fus-card-top { padding-right: 0; }
+  .cfus-left .fus-card-top > span { position: static; margin-top: 6px; }
+  .cfus-left .fus-card-top-actions { align-items: flex-start; width: 100%; }
+  .cfus-left .fus-card-badges { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; }
+  .cfus-left .fus-meta { font-size: 0.72rem; }
+}
 
 /* ── FUS con SLA vencido (fechaLimite pasado, estatus "Turnado") ── */
 .fus-card-vencido {
@@ -1687,6 +1730,9 @@
 
   .resize-handle { display: none; }
   .cfus-inner.has-detail { overflow: hidden; }
+
+  /* Detalle: ocultar la lista para que el detalle use toda la pantalla */
+  .cfus-inner.has-detail .cfus-left { display: none; }
 
   /* Lista mode: panel izquierdo toma toda la altura, ocultar el lado derecho */
   .cfus-inner.lista-mode .cfus-left {
