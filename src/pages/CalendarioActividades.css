@@ -507,7 +507,7 @@
     justify-content: center;
     position: fixed;
     right: 18px;
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+    bottom: calc(106px + env(safe-area-inset-bottom, 0px));
     width: 56px;
     height: 56px;
     border-radius: 999px;
@@ -669,7 +669,7 @@
 @media (max-width: 768px) {
   .cal-page { flex-direction: column; height: auto; overflow: visible; }
 
-  .cal-sidebar { width: 100% !important; border-right: none; border-bottom: 1px solid rgba(195, 212, 207, 0.20); }
+  .cal-sidebar { width: 100% !important; margin-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; border-right: none; border-bottom: 1px solid rgba(195, 212, 207, 0.20); }
   .cal-sidebar.panel-cerrado { display: none; }
   .cal-sidebar-content { padding: 12px; }
 
@@ -678,7 +678,7 @@
   /* En móvil el FAB crea la actividad; el botón del sidebar ya no hace falta */
   .cal-btn-nueva-sidebar { display: none; }
 
-  .cal-main { padding: 12px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .cal-main { padding: 12px; padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 
   /* Toolbar en una sola fila con scroll horizontal contenido en vez de encimarse */
   .cal-toolbar {
@@ -859,5 +859,5 @@
   .cal-toolbar-titulo { font-size: 13px; }
   .cal-btn-hoy, .cal-btn-flecha, .cal-toggle-vista button { padding-top: 5px; padding-bottom: 5px; }
   .cal-modal { max-height: calc(var(--app-vh, 100vh) * 0.94); padding: 14px; gap: 8px; }
-  .cal-fab { bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 8px); right: 12px; width: 48px; height: 48px; font-size: 24px; }
+  .cal-fab { bottom: calc(98px + env(safe-area-inset-bottom, 0px)); right: 12px; width: 48px; height: 48px; font-size: 24px; }
 }

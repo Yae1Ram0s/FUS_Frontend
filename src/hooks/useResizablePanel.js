@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 const MIN_WIDTH     = 160
 const MAX_WIDTH     = 520
 const DEFAULT_WIDTH = 290
+const MOBILE_BREAKPOINT = 768
 
 /* Lógica de arrastre para el panel izquierdo redimensionable (ConsultarFUS, SolicitudesTurnadas). */
 export function useResizablePanel(storageKey) {
@@ -10,9 +11,16 @@ export function useResizablePanel(storageKey) {
     const s = localStorage.getItem(storageKey)
     return s ? Math.min(Math.max(parseInt(s), MIN_WIDTH), MAX_WIDTH) : DEFAULT_WIDTH
   })
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT)
   const resizingRef  = useRef(false)
   const widthRef     = useRef(leftWidth)
   const containerRef = useRef(null)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const startResize = useCallback((e) => {
     e.preventDefault()
@@ -43,5 +51,5 @@ export function useResizablePanel(storageKey) {
     document.addEventListener('touchend',  stop)
   }, [storageKey])
 
-  return { leftWidth, containerRef, startResize }
+  return { leftWidth: isMobile ? null : leftWidth, containerRef, startResize }
 }

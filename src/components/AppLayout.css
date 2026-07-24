@@ -44,8 +44,8 @@
   .app-main {
     overflow: hidden;
     overflow-x: hidden;
-    /* Espacio para bottom nav fijo — los child con height:100% se ajustan automáticamente */
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    /* Respiro mínimo — el resto del contenido pasa y se difumina detrás del bottom nav flotante */
+    padding-bottom: calc(-35px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Para páginas que hacen scroll en el main (RegistrarFUS) */

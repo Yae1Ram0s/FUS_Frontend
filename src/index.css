@@ -145,6 +145,6 @@ button { font-family: var(--font-display); font-weight: 800; }
 input, select, textarea { font-family: var(--font-thin); font-weight: 400; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

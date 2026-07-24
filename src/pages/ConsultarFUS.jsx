@@ -291,8 +291,11 @@ const TIPO_SEGUIMIENTO_INFO = {
 }
 const DEFAULT_TIPO_INFO = { label: 'Respuesta', clase: 'fc-tag-verde' }
 
-/* ── Timeline de actividad ── */
-function TimelineActividad({ fusId }) {
+/* ── Datos de turnados + respuestas, compartidos por SeTurnoSection y
+   RespuestasSeguimientoSection (cada una hace su propio fetch — mismo
+   patrón que SeguimientoComisionadoFeed — para poder vivir en puntos
+   distintos del DOM). ── */
+function useTurnadosFUS(fusId) {
   const [turnados, setTurnados] = useState([])
   const [cargando, setCargando] = useState(true)
 
@@ -304,15 +307,16 @@ function TimelineActividad({ fusId }) {
       .finally(() => setCargando(false))
   }, [fusId])
 
+  return { turnados, cargando }
+}
+
+/* ── Sección "Se turnó" (datos del FUS — vive dentro de .detalle-panel) ── */
+function SeTurnoSection({ fusId }) {
+  const { turnados, cargando } = useTurnadosFUS(fusId)
+
   const fmt = d => d
     ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
-  const fmtFecha = d => d
-    ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : '—'
-  const fmtHora = d => d
-    ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-    : ''
 
   const legendTurnado = (
     <span className="det-section-legend det-section-legend-activity">
@@ -336,12 +340,50 @@ function TimelineActividad({ fusId }) {
     </div>
   )
 
-  // Todas las respuestas de todos los turnados (normalmente hay uno solo) en
-  // una sola línea de tiempo, en su propia sección — mismo tratamiento visual
-  // que "Respuestas y seguimiento" en la vista de Rol 2 (.seccion/.sec-header).
+  return (
+    <div className="det-section">
+      {legendTurnado}
+      <div className="act-timeline">
+        {turnados.map((t, ti) => {
+          const meta = ESTATUS_TURNADO_LABEL[t.estatusTitular] || { label: t.estatusTitular, color: '#6b7280' }
+          return (
+            <div key={t.id} className="act-turnado">
+              <div className="act-turnado-header">
+                <div className="act-turnado-dot" />
+                <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
+              </div>
+              <div className="det-grid-2 act-turnado-datos">
+                <Row label="Nombre" value={t.idDestinatario?.nombre} />
+                <Row label="Área" value={t.idDestinatario?.area} />
+                <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
+                <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
+              </div>
+              {t.solicitudTexto && (
+                <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ── Sección "Respuestas y seguimiento" — tarjeta .seccion independiente,
+   fuera de .detalle-panel, mismo tratamiento visual que la vista de Rol 2. ── */
+function RespuestasSeguimientoSection({ fusId }) {
+  const { turnados, cargando } = useTurnadosFUS(fusId)
+
+  const fmtFecha = d => d
+    ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—'
+  const fmtHora = d => d
+    ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    : ''
+
   // Las que no traen `autorNombre` (flujo directo de Rol 2, modelo
   // Seguimiento) se atribuyen al destinatario del turnado — mismo Titular
-  // que ya se muestra como "Nombre" en la tarjeta de arriba.
+  // que ya se muestra como "Nombre" en la sección "Se turnó".
   const todasRespuestas = turnados.flatMap(t =>
     (t.seguimientos || []).map(s => ({
       ...s,
@@ -349,76 +391,67 @@ function TimelineActividad({ fusId }) {
     }))
   )
 
-  return (
-    <>
-      <div className="det-section">
-        {legendTurnado}
-        <div className="act-timeline">
-          {turnados.map((t, ti) => {
-            const meta = ESTATUS_TURNADO_LABEL[t.estatusTitular] || { label: t.estatusTitular, color: '#6b7280' }
-            return (
-              <div key={t.id} className="act-turnado">
-                <div className="act-turnado-header">
-                  <div className="act-turnado-dot" />
-                  <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
-                </div>
-                <div className="det-grid-2 act-turnado-datos">
-                  <Row label="Nombre" value={t.idDestinatario?.nombre} />
-                  <Row label="Área" value={t.idDestinatario?.area} />
-                  <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
-                  <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
-                </div>
-                {t.solicitudTexto && (
-                  <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
-                )}
-              </div>
-            )
-          })}
-        </div>
+  if (cargando) return (
+    <div className="seccion act-seccion-respuestas">
+      <div className="sec-header sec-resp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Respuestas y seguimiento
       </div>
+      <div className="sec-body">
+        <Spinner overlay={false} />
+      </div>
+    </div>
+  )
 
-      <div className="seccion act-seccion-respuestas">
-        <div className="sec-header sec-resp">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          Respuestas y seguimiento
-        </div>
-        <div className="sec-body">
-          {todasRespuestas.length > 0 ? (
-            <div className="act-tl">
-              {todasRespuestas.map((s, i) => {
-                const info = TIPO_SEGUIMIENTO_INFO[s.tipo] || DEFAULT_TIPO_INFO
-                return (
-                  <div key={s.id} className="act-tl-item">
-                    <div className="act-tl-track">
-                      <div className="act-tl-dot" />
-                      {i < todasRespuestas.length - 1 && <div className="act-tl-connector" />}
-                    </div>
-                    <div className="act-tl-content">
-                      <div className="seg-tl-meta">
-                        <span className={`fc-tag ${info.clase}`}>{info.label}</span>
-                        <span className="seg-tl-fecha">
-                          {s.autorNombre ? `${s.autorNombre} · ` : ''}
-                          {fmtFecha(s.fechaActividad)}
-                          {s.fechaRegistro && <span className="act-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
-                        </span>
-                      </div>
-                      <p className="act-tl-desc">{s.descripcionActividad}</p>
-                      {s.accionTexto && (
-                        <p className="act-tl-accion">→ {s.accionTexto}</p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="seg-empty">Pendiente de respuesta del titular.</p>
-          )}
-        </div>
+  // Sin turnado no hay "Respuestas y seguimiento" que mostrar aquí — mismo
+  // criterio que el early-return original: esta tarjeta solo existe cuando
+  // sí hubo turnado (si no, el feed real del comisionado la reemplaza).
+  if (!turnados.length) return null
+
+  return (
+    <div className="seccion act-seccion-respuestas">
+      <div className="sec-header sec-resp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Respuestas y seguimiento
       </div>
-    </>
+      <div className="sec-body">
+        {todasRespuestas.length > 0 ? (
+          <div className="act-tl">
+            {todasRespuestas.map((s, i) => {
+              const info = TIPO_SEGUIMIENTO_INFO[s.tipo] || DEFAULT_TIPO_INFO
+              return (
+                <div key={s.id} className="act-tl-item">
+                  <div className="act-tl-track">
+                    <div className="act-tl-dot" />
+                    {i < todasRespuestas.length - 1 && <div className="act-tl-connector" />}
+                  </div>
+                  <div className="act-tl-content">
+                    <div className="seg-tl-meta">
+                      <span className={`fc-tag ${info.clase}`}>{info.label}</span>
+                      <span className="seg-tl-fecha">
+                        {s.autorNombre ? `${s.autorNombre} · ` : ''}
+                        {fmtFecha(s.fechaActividad)}
+                        {s.fechaRegistro && <span className="act-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
+                      </span>
+                    </div>
+                    <p className="act-tl-desc">{s.descripcionActividad}</p>
+                    {s.accionTexto && (
+                      <p className="act-tl-accion">→ {s.accionTexto}</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="seg-empty">Pendiente de respuesta del titular.</p>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -452,6 +485,7 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
   }
 
   return (
+    <>
     <div className="detalle-panel">
 
       {/* ── Cabecera ── */}
@@ -570,9 +604,8 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
         <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
       </div>
 
-      {/* ── Sección: Se turnó + Respuestas y seguimiento (esta última en su
-          propia .seccion, mismo tratamiento visual que la vista de Rol 2) ── */}
-      {tieneActividad && <TimelineActividad fusId={fus.id} />}
+      {/* ── Sección: Se turnó (datos del FUS, se queda dentro de .detalle-panel) ── */}
+      {tieneActividad && <SeTurnoSection fusId={fus.id} />}
 
       <div className="detalle-footer">
         {puedesTurnar && (
@@ -581,6 +614,11 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
           </button>
         )}
       </div>
+      </div>
+
+      {/* ── Respuestas y seguimiento — tarjeta .seccion aparte, fuera de
+          .detalle-panel, mismo tratamiento visual que la vista de Rol 2 ── */}
+      {tieneActividad && <RespuestasSeguimientoSection fusId={fus.id} />}
 
       {/* Solo si el propio Particular comisionó directo (sin pasar por
           Turnado/Rol 2) se le muestra el feed real del comisionado. Si se
@@ -607,7 +645,7 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
           }}
         />
       )}
-    </div>
+    </>
   )
 }
 
@@ -793,7 +831,7 @@ export default function ConsultarFUS() {
       <div className={`cfus-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
 
         {/* ── Panel izquierdo ── */}
-        <div className={`cfus-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={{ width: panelAbierto ? leftWidth : 44 }}>
+        <div className={`cfus-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={leftWidth != null ? { width: panelAbierto ? leftWidth : 44 } : undefined}>
           <div className="panel-header">
             {panelAbierto && (
               <div className="panel-header-left">
@@ -919,7 +957,7 @@ export default function ConsultarFUS() {
                 key={`${seleccionado.id}_${seleccionado.estatusParticular}`}
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
-                onBack={() => setSeleccionado(null)}
+                onBack={() => { setSeleccionado(null); setPanelAbierto(true) }}
                 onVerHistorial={setModalTimelineFolio}
               />
             : (

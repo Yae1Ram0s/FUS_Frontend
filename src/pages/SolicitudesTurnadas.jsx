@@ -623,7 +623,7 @@ export default function SolicitudesTurnadas() {
       <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
 
         {/* ── Panel izquierdo ── */}
-        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={{ width: panelAbierto ? leftWidth : 44 }}>
+        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={leftWidth != null ? { width: panelAbierto ? leftWidth : 44 } : undefined}>
           <div className="panel-header">
             {panelAbierto && <h3 className="panel-title">Solicitudes turnadas</h3>}
             <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
@@ -753,7 +753,7 @@ export default function SolicitudesTurnadas() {
             ? <DetalleTurnado
                 key={`${seleccionado.id}_${seleccionado.estatusTitular}_${seleccionado.idFus?.estatusParticular}`}
                 turnado={seleccionado}
-                onBack={() => setSeleccionado(null)}
+                onBack={() => { setSeleccionado(null); setPanelAbierto(true) }}
                 onVerHistorial={setModalTimelineFolio}
               />
             : (

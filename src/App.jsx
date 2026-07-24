@@ -73,6 +73,7 @@ export default function App() {
                 <Route element={<PrivateRoute roles={['COMISIONADO']} />}>
                   <Route path="/comisionado/calendario"       element={<CalendarioActividades />} />
                   <Route path="/comisionado/fus-comisionados" element={<FUSComisionados />} />
+                  <Route path="/comisionado/bitacora"         element={<Bitacora />} />
                 </Route>
 
                 {/* Raíz → login */}

@@ -688,7 +688,10 @@
 }
 
 @media (max-width: 768px) {
-  .reg-content { padding: 1rem; }
+  .reg-content {
+    padding: 1rem;
+    padding-bottom: calc(1rem + 90px + env(safe-area-inset-bottom, 0px));
+  }
 
   /* align-items: stretch hace que label e input llenen el ancho completo */
   .reg-row {
@@ -748,7 +751,10 @@
 
 @media (max-width: 480px) {
   .reg-page-title { font-size: 1rem; }
-  .reg-content    { padding: 0.75rem; }
+  .reg-content    {
+    padding: 0.75rem;
+    padding-bottom: calc(0.75rem + 90px + env(safe-area-inset-bottom, 0px));
+  }
   .reg-fieldset   { padding: 14px 12px; }
   .reg-form-card  { border-radius: 14px; }
   .reg-row > label { font-size: .78rem; }
@@ -769,7 +775,10 @@
 }
 
 @media (max-width: 360px) {
-  .reg-content  { padding: 0.5rem; }
+  .reg-content  {
+    padding: 0.5rem;
+    padding-bottom: calc(0.5rem + 90px + env(safe-area-inset-bottom, 0px));
+  }
   .reg-fieldset { padding: 12px 10px; }
   .reg-actions  { padding: 12px 14px; }
   .btn-primary,

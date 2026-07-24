@@ -874,7 +874,7 @@
   }
   .bita-pildoras-scroll::-webkit-scrollbar { display: none; }
 
-  .bita-wrap    { padding: 1rem; gap: .8rem; }
+  .bita-wrap    { padding: 1rem; padding-bottom: calc(1rem + 90px + env(safe-area-inset-bottom, 0px)); gap: .8rem; }
   .bita-header  { padding: 12px 14px; gap: 8px; }
   .bita-header-left h1 { font-size: .95rem; }
   .bita-header-right { gap: 6px; }
@@ -1033,7 +1033,7 @@
 }
 
 @media (max-width: 480px) {
-  .bita-wrap { padding: .75rem; gap: .65rem; }
+  .bita-wrap { padding: .75rem; padding-bottom: calc(.75rem + 90px + env(safe-area-inset-bottom, 0px)); gap: .65rem; }
   .bita-header { flex-direction: column; align-items: flex-start; }
   .bita-header-right { width: 100%; justify-content: flex-end; }
   .bita-export-btn span { display: none; }
@@ -1041,5 +1041,5 @@
 }
 
 @media (max-width: 360px) {
-  .bita-wrap { padding: .5rem; }
+  .bita-wrap { padding: .5rem; padding-bottom: calc(.5rem + 90px + env(safe-area-inset-bottom, 0px)); }
 }

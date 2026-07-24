@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import './BottomNav.css'
@@ -8,6 +9,14 @@ const ICON_BITACORA = (
     <polyline points="14 2 14 8 20 8"/>
     <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
     <polyline points="10 9 9 9 8 9"/>
+  </svg>
+)
+
+const ICON_USUARIOS = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
   </svg>
 )
 
@@ -26,17 +35,10 @@ const ICON_CALENDARIO = (
   </svg>
 )
 
+/* ── Ítems principales de la barra, por rol ── */
 const NAV_ROL1 = [
-  {
-    path: '/rol1/dashboard',
-    label: 'Inicio',
-    icon: ICON_INICIO,
-  },
-  {
-    path: '/rol1/calendario',
-    label: 'Calendario',
-    icon: ICON_CALENDARIO,
-  },
+  { path: '/rol1/dashboard', label: 'Inicio', icon: ICON_INICIO },
+  { path: '/rol1/calendario', label: 'Calendario', icon: ICON_CALENDARIO },
   {
     path: '/rol1/consultar-fus',
     label: 'Consultar FUS',
@@ -59,31 +61,11 @@ const NAV_ROL1 = [
       </svg>
     ),
   },
-  { path: '/rol1/bitacora', label: 'Búsqueda', icon: ICON_BITACORA },
-  {
-    path: '/rol1/panel',
-    label: 'Usuarios',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-    ),
-  },
 ]
 
 const NAV_ROL2 = [
-  {
-    path: '/rol2/dashboard',
-    label: 'Inicio',
-    icon: ICON_INICIO,
-  },
-  {
-    path: '/rol2/calendario',
-    label: 'Calendario',
-    icon: ICON_CALENDARIO,
-  },
+  { path: '/rol2/dashboard', label: 'Inicio', icon: ICON_INICIO },
+  { path: '/rol2/calendario', label: 'Calendario', icon: ICON_CALENDARIO },
   {
     path: '/rol2/solicitudes',
     label: 'Solicitudes',
@@ -95,18 +77,10 @@ const NAV_ROL2 = [
       </svg>
     ),
   },
-  { path: '/rol2/bitacora', label: 'Búsqueda', icon: ICON_BITACORA },
 ]
 
-// Rol 4 (asistente de ROL1): mismas pantallas que ROL1, sin administración de usuarios.
-const NAV_EQUIPO_PARTICULAR = NAV_ROL1.filter(item => item.path !== '/rol1/panel')
-
 const NAV_COMISIONADO = [
-  {
-    path: '/comisionado/calendario',
-    label: 'Calendario',
-    icon: ICON_CALENDARIO,
-  },
+  { path: '/comisionado/calendario', label: 'Calendario', icon: ICON_CALENDARIO },
   {
     path: '/comisionado/fus-comisionados',
     label: 'FUS Comisionados',
@@ -120,10 +94,40 @@ const NAV_COMISIONADO = [
   },
 ]
 
+/* Rol 4 (asistente de ROL1): mismas pantallas principales que ROL1. */
+const NAV_EQUIPO_PARTICULAR = NAV_ROL1
+
+/* ── 5º ícono: popover de Bitácora (+ Usuarios y accesos solo en ROL1) ── */
+const MENU_ROL1 = [
+  { path: '/rol1/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+  { path: '/rol1/panel', label: 'Usuarios y accesos', icon: ICON_USUARIOS },
+]
+const MENU_ROL2 = [
+  { path: '/rol2/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+]
+const MENU_COMISIONADO = [
+  { path: '/comisionado/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+]
+const MENU_EQUIPO_PARTICULAR = [
+  { path: '/rol1/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+]
+
 export default function BottomNav() {
   const { user } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
+  const [open, setOpen] = useState(false)
+  const navRef = useRef(null)
+
+  /* Cerrar el popover al tocar fuera */
+  useEffect(() => {
+    if (!open) return
+    const handle = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
 
   if (!user) return null
 
@@ -132,32 +136,75 @@ export default function BottomNav() {
     : user.rol === 'EQUIPO_PARTICULAR' ? NAV_EQUIPO_PARTICULAR
     : NAV_ROL1
 
+  const menuItems = user.rol === 'ROL2' ? MENU_ROL2
+    : user.rol === 'COMISIONADO' ? MENU_COMISIONADO
+    : user.rol === 'EQUIPO_PARTICULAR' ? MENU_EQUIPO_PARTICULAR
+    : MENU_ROL1
+
+  const isActive = (item) => item.consultar
+    ? location.pathname === item.path && location.search.includes('modo=lista')
+    : location.pathname === item.path
+
+  const menuActive = menuItems.some(mi => location.pathname === mi.path)
+
+  const ir = (item) => {
+    if (item.consultar) {
+      window.dispatchEvent(new CustomEvent('scs:consultar'))
+      navigate(`${item.path}?modo=lista`)
+    } else {
+      navigate(item.path)
+    }
+  }
+
   return (
-    <nav className="bottom-nav" role="navigation" aria-label="Navegación principal">
-      {items.map((item, idx) => {
-        const active = item.consultar
-          ? location.pathname === item.path && location.search.includes('modo=lista')
-          : location.pathname === item.path
-        return (
-          <button
-            key={`${item.path}-${idx}`}
-            className={`bn-item${item.raised ? ' bn-item-raised' : ''}${active ? ' bn-item-active' : ''}`}
-            onClick={() => {
-              if (item.consultar) {
-                window.dispatchEvent(new CustomEvent('scs:consultar'))
-                navigate(`${item.path}?modo=lista`)
-              } else {
-                navigate(item.path)
-              }
-            }}
-            aria-label={item.label}
-            aria-current={active ? 'page' : undefined}
-          >
-            <span className="bn-icon">{item.icon}</span>
-            <span className="bn-label">{item.label}</span>
-          </button>
-        )
-      })}
+    <nav
+      className={`bottom-nav${items.length <= 2 ? ' bottom-nav-compact' : ''}`}
+      role="navigation"
+      aria-label="Navegación principal"
+      ref={navRef}
+    >
+      {items.map((item, idx) => (
+        <button
+          key={`${item.path}-${idx}`}
+          className={`bn-item${item.raised ? ' bn-item-raised' : ''}${isActive(item) ? ' bn-item-active' : ''}`}
+          onClick={() => ir(item)}
+          aria-label={item.label}
+          aria-current={isActive(item) ? 'page' : undefined}
+        >
+          <span className="bn-icon">{item.icon}</span>
+          <span className="bn-label">{item.label}</span>
+        </button>
+      ))}
+
+      <button
+        className={`bn-item bn-more${menuActive ? ' bn-item-active' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Bitácora y más opciones"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <span className="bn-icon">
+          {ICON_BITACORA}
+          {menuItems.length > 1 && <span className="bn-more-badge" aria-hidden="true" />}
+        </span>
+        <span className="bn-label">Bitácora</span>
+      </button>
+
+      {open && (
+        <div className="bn-popover" role="menu" aria-label="Bitácora y más opciones">
+          {menuItems.map(mi => (
+            <button
+              key={mi.path}
+              className="bn-popover-item"
+              role="menuitem"
+              onClick={() => { setOpen(false); navigate(mi.path) }}
+            >
+              <span className="bn-popover-icon">{mi.icon}</span>
+              {mi.label}
+            </button>
+          ))}
+        </div>
+      )}
     </nav>
   )
 }

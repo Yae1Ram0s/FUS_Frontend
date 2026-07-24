@@ -1,4 +1,4 @@
-/* ── Bottom tab bar — solo visible en móvil ── */
+/* ── Bottom tab bar — barra flotante tipo pill, solo visible en móvil ── */
 .bottom-nav {
   display: none;
 }
@@ -10,62 +10,69 @@
     grid-auto-columns: 1fr;
     align-items: center;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    left: 16px;
+    right: 16px;
+    bottom: calc(13px + env(safe-area-inset-bottom, 0px));
     z-index: 1000;
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: #235b4e;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.28), 0 -1px 0 rgba(255, 255, 255, 0.06);
-    overflow: hidden;
+    height: 64px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow:
+      0 14px 34px rgba(10, 30, 20, 0.25),
+      0 4px 12px rgba(10, 30, 20, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+
+  /* Comisionado — solo 2 íconos principales + Bitácora: centrados y más separados */
+  .bottom-nav-compact {
+    grid-auto-flow: column;
+    grid-auto-columns: 72px;
+    justify-content: center;
+    column-gap: 24px;
   }
 
   .bn-item {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 60px;
+    height: 64px;
     background: transparent;
     border: none;
     cursor: pointer;
-    color: rgba(212, 168, 67, 0.55);
-    transition: color 150ms ease, background 150ms ease;
+    color: rgba(20, 51, 42, 0.80);
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.35));
+    transition: color 150ms ease;
     -webkit-tap-highlight-color: transparent;
     outline: none;
     position: relative;
-  }
-
-  .bn-item:active {
-    background: rgba(212, 168, 67, 0.12);
-  }
-
-  .bn-item-active {
-    color: #d4a843;
-  }
-
-  /* Indicador activo — puntito dorado abajo del ícono */
-  .bn-item-active::after {
-    content: '';
-    position: absolute;
-    bottom: 9px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #d4a843;
-    box-shadow: 0 0 6px rgba(212, 168, 67, 0.65);
   }
 
   .bn-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
     flex-shrink: 0;
+    position: relative;
+    transition: background 150ms ease;
+  }
+
+  .bn-item:active .bn-icon {
+    background: rgba(35, 91, 78, 0.16);
+  }
+
+  /* Ícono activo — chip de fondo + color más claro que el resto */
+  .bn-item-active {
+    color: #14332a;
+  }
+  .bn-item-active .bn-icon {
+    background: rgba(255, 255, 255, 0.30);
   }
 
   /* Etiqueta oculta visualmente — accesible para lectores de pantalla */
@@ -81,23 +88,69 @@
     border: 0;
   }
 
-  /* ── Botón elevado central — acción principal (p.ej. Registrar) ── */
-  .bn-item-raised .bn-icon {
-    width: 44px;
-    height: 44px;
+  /* ── 5º ícono: Bitácora (abre popover) ── */
+  .bn-more-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: #d4a843;
-    color: #14332a;
-    box-shadow: 0 6px 16px rgba(212, 168, 67, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
-    transform: translateY(-8px);
-    transition: transform 150ms ease, box-shadow 150ms ease;
+    background: #9F2241;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 5px rgba(159, 34, 65, 0.55);
   }
 
-  .bn-item-raised:active .bn-icon {
-    transform: translateY(-8px) scale(0.94);
+  /* ── Popover de Bitácora — mismo patrón anclado que la campana de notificaciones,
+     pero crece hacia arriba desde la esquina del ícono ── */
+  .bn-popover {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    right: 4px;
+    min-width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.82));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(10, 30, 20, 0.30), 0 4px 14px rgba(10, 30, 20, 0.20);
+    transform-origin: bottom right;
+    animation: bn-pop-in 190ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1001;
   }
 
-  .bn-item-raised.bn-item-active { color: rgba(212, 168, 67, 0.55); }
-  .bn-item-raised.bn-item-active::after { display: none; }
-  .bn-item-raised.bn-item-active .bn-icon { background: #e0b75c; }
+  @keyframes bn-pop-in {
+    from { opacity: 0; transform: scale(0.3); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .bn-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    color: #1a2f28;
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bn-popover-item:active { background: rgba(35, 91, 78, 0.10); }
+
+  .bn-popover-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(35, 91, 78, 0.75);
+    flex-shrink: 0;
+  }
 }
