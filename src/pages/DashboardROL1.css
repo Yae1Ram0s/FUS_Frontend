@@ -477,3 +477,329 @@
   .dash-donut-multi-wrap { flex-direction: column; align-items: stretch; }
   .dash-donut-multi-figure { margin: 0 auto; }
 }
+
+/* ══════════════════════════════════════
+   REDISEÑO "LIQUID GLASS" — exclusivo ROL1 (ver DashboardROL1.jsx).
+   Namespace propio (dash2-/kpi2-/venc-/segmented) para no tocar ni una
+   sola regla de las de arriba, que rol 4 (EQUIPO_PARTICULAR) sigue usando.
+══════════════════════════════════════ */
+.dash2-wrap {
+  --dash2-card-bg: rgba(255, 255, 255, 0.6);
+  --dash2-card-border: 1px solid rgba(255, 255, 255, 0.7);
+  --dash2-radius-lg: 28px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1400px;
+  min-width: 0;
+  /* .dash-bg es flex (fila) sin flex-direction — por el align-items:stretch
+     por defecto este hijo se estiraba a la altura fija del contenedor en vez
+     de crecer con su propio contenido, y el padding-bottom de abajo quedaba
+     "enterrado" dentro de esa caja recortada sin generar scroll real. */
+  align-self: flex-start;
+  padding: 2.5rem 2.5rem 3rem;
+  box-sizing: border-box;
+  color: #1d1d1f;
+}
+.dash2-wrap * { box-sizing: border-box; }
+
+.dash2-ambient {
+  position: absolute; inset: -60px -20px auto -20px; height: 420px;
+  z-index: 0; pointer-events: none; filter: blur(60px); opacity: 0.55;
+}
+.dash2-blob { position: absolute; border-radius: 50%; }
+.dash2-blob--1 { width: 320px; height: 320px; top: -80px; left: 0; background: radial-gradient(circle, #7fc9a0 0%, transparent 70%); }
+.dash2-blob--2 { width: 280px; height: 280px; top: -40px; right: 10%; background: radial-gradient(circle, #9fc8ea 0%, transparent 70%); }
+.dash2-blob--3 { width: 260px; height: 260px; top: 40px; right: -40px; background: radial-gradient(circle, #f0c98a 0%, transparent 70%); }
+
+.dash2-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 20px; }
+
+.dash2-header h1 { margin: 0; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; }
+.dash2-header p { margin: 4px 0 0; font-size: .95rem; color: #55555a; }
+
+@keyframes kpi2In {
+  from { opacity: 0; transform: translateY(18px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes kpi2Pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.kpi2-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.kpi2-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--dash2-card-bg);
+  backdrop-filter: saturate(220%) blur(40px);
+  -webkit-backdrop-filter: saturate(220%) blur(40px);
+  border: var(--dash2-card-border);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 1px 2px rgba(0,0,0,0.03), 0 12px 32px rgba(0,0,0,0.06);
+  border-radius: var(--dash2-radius-lg);
+  padding: 20px;
+  opacity: 0;
+  animation: kpi2In 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+  will-change: transform;
+  cursor: pointer;
+}
+.kpi2-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 10px rgba(0,0,0,0.05), 0 24px 48px rgba(0,0,0,0.10);
+}
+.kpi2-glow {
+  position: absolute; top: -30px; left: -30px; width: 100px; height: 100px;
+  border-radius: 50%; filter: blur(30px); opacity: 0.35; pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+.kpi2-card:hover .kpi2-glow { opacity: 0.55; }
+.kpi2-glow--blue  { background: #4da3e0; }
+.kpi2-glow--amber { background: #e0a83f; }
+.kpi2-glow--green { background: #5fae3f; }
+.kpi2-glow--red   { background: #e05f5f; }
+
+.kpi2-icon {
+  position: relative;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 12px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+}
+.kpi2-card:hover .kpi2-icon { transform: scale(1.12) rotate(-4deg); }
+.kpi2-icon svg { width: 16px; height: 16px; }
+.kpi2-icon--blue  { background: linear-gradient(160deg, #eaf4fd, #d5e9fa); color: #185fa5; }
+.kpi2-icon--amber { background: linear-gradient(160deg, #fdf3e3, #faeacb); color: #854f0b; }
+.kpi2-icon--green { background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #3b6d11; }
+.kpi2-icon--red   { background: linear-gradient(160deg, #fdecec, #fbd9d9); color: #a32d2d; }
+.kpi2-link {
+  position: absolute; top: 20px; right: 20px; color: #86868b;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+.kpi2-card:hover .kpi2-link { transform: translate(2px, -2px); color: #1d1d1f; }
+.kpi2-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.kpi2-sub { font-size: 11px; color: #86868b; margin-top: 2px; margin-bottom: 12px; }
+.kpi2-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: transform 0.3s ease; }
+.kpi2-card:hover .kpi2-value { transform: scale(1.05); }
+
+.dash2-grid-tendencia { display: grid; grid-template-columns: 1fr 260px; gap: 14px; }
+.dash2-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.dash2-card {
+  background: var(--dash2-card-bg);
+  backdrop-filter: saturate(220%) blur(40px);
+  -webkit-backdrop-filter: saturate(220%) blur(40px);
+  border: var(--dash2-card-border);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 12px 32px rgba(0,0,0,0.06);
+  border-radius: var(--dash2-radius-lg);
+  padding: 24px;
+  min-width: 0;
+}
+.dash2-card-title {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 16px 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+/* Segmented control (rango 7/30/90 días) */
+.segmented { display: inline-flex; background: rgba(0,0,0,0.045); border-radius: 999px; padding: 3px; gap: 2px; }
+.segmented button {
+  border: none; background: transparent; font: inherit;
+  font-size: 11.5px; font-weight: 600; color: #86868b;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.segmented button.active {
+  background: #ffffff; color: #1d1d1f;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.6) inset;
+}
+
+.dash2-total-card { display: flex; flex-direction: column; gap: 10px; }
+.dash2-total-icon {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #3b6d11;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+}
+.dash2-total-icon svg { width: 16px; height: 16px; }
+.dash2-total-label { font-size: 12px; color: #86868b; }
+.dash2-total-value { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.dash2-total-nota { display: flex; gap: 6px; font-size: 11px; color: #86868b; margin-top: 6px; align-items: flex-start; line-height: 1.4; }
+.dash2-total-nota svg { margin-top: 1px; flex-shrink: 0; }
+
+/* Próximos vencimientos — reusa .venc-* (namespace propio, nada choca con dash-*) */
+.venc-item {
+  display: flex; align-items: center; gap: 10px; padding: 11px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  transition: padding-left 0.25s ease;
+}
+.venc-item:hover { padding-left: 4px; }
+.venc-item:last-child { border-bottom: none; }
+.venc-icon {
+  width: 28px; height: 28px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+}
+.venc-icon svg { width: 14px; height: 14px; }
+.venc-icon--red   { background: linear-gradient(160deg, #fdecec, #fbd9d9); color: #a32d2d; }
+.venc-icon--amber { background: linear-gradient(160deg, #fdf3e3, #faeacb); color: #854f0b; }
+.venc-icon--blue  { background: linear-gradient(160deg, #eaf4fd, #d5e9fa); color: #185fa5; }
+.venc-icon--green { background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #3b6d11; }
+.venc-texto { flex: 1; min-width: 0; }
+.venc-folio { font-size: 12px; font-weight: 600; letter-spacing: -0.005em; }
+.venc-fecha { font-size: 11px; color: #86868b; margin-top: 1px; }
+.venc-badge { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.venc-badge--red   { background: linear-gradient(160deg, #fdecec, #fbd9d9); color: #a32d2d; }
+.venc-badge--amber { background: linear-gradient(160deg, #fdf3e3, #faeacb); color: #854f0b; }
+.venc-badge--blue  { background: linear-gradient(160deg, #eaf4fd, #d5e9fa); color: #185fa5; }
+.venc-badge--green { background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #3b6d11; }
+.ver-todos {
+  margin-top: 14px; font-size: 12px; font-weight: 600; color: #185fa5;
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+  transition: gap 0.25s ease;
+}
+.ver-todos:hover { gap: 8px; }
+.ver-todos svg { flex-shrink: 0; }
+
+.venc-item-clickable { cursor: pointer; border-radius: 10px; transition: padding-left 0.25s ease, background 150ms ease; }
+.venc-item-clickable:hover { background: rgba(0,0,0,0.03); }
+
+/* Avisos — actividad reciente (bitácora), bajo los vencimientos en la misma tarjeta */
+.dash2-subhead {
+  margin: 18px 0 6px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #86868b;
+}
+.aviso-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  font-size: 12px;
+}
+.aviso-item:last-child { border-bottom: none; }
+.aviso-folio { font-weight: 600; color: #1d1d1f; flex-shrink: 0; }
+.aviso-texto { color: #55555a; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aviso-fecha { color: #86868b; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
+.aviso-item-clickable { cursor: pointer; border-radius: 8px; transition: background 150ms ease; }
+.aviso-item-clickable:hover { background: rgba(0,0,0,0.03); }
+
+/* Total del periodo integrado a la tarjeta de tendencia (fila compacta) —
+   oculto en escritorio, donde .dash2-total-card (tarjeta aparte) es la que
+   se ve; se intercambian por CSS en el breakpoint móvil, mismo dato. */
+.dash2-total-inline { display: none; }
+.dash2-total-inline-icon {
+  width: 30px; height: 30px; border-radius: 10px;
+  background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #3b6d11;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.dash2-total-inline-icon svg { width: 14px; height: 14px; }
+.dash2-total-inline-value { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.dash2-total-inline-label { font-size: 11px; color: #86868b; }
+
+/* ══════════════════════════════════════
+   REDISEÑO "LIQUID GLASS" — piezas añadidas para ROL2 (ver
+   DashboardROL2.jsx), reusables por ambos dashboards. El resto (kpi2-*,
+   dash2-card, venc-*, segmented, ver-todos) ya estaba definido arriba.
+══════════════════════════════════════ */
+
+/* Pill estática junto al título de una tarjeta (ej. "Esta semana") */
+.dash2-pill {
+  font-size: 11.5px; font-weight: 700; color: #55555a;
+  background: rgba(0, 0, 0, 0.045); border-radius: 999px; padding: 6px 12px;
+  white-space: nowrap;
+}
+
+/* Nota al pie de una gráfica (ej. "Mejor que la semana pasada") */
+.dash2-chart-foot {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: #2f7a4f;
+}
+
+/* "Próximo FUS por atender" — tarjeta destacada, tinte rosado translúcido */
+.proximo-card { background: linear-gradient(160deg, rgba(253, 241, 240, 0.85), rgba(251, 230, 228, 0.75)); }
+.proximo-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.proximo-folio { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.proximo-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #ffffff; color: #a32d2d; font-size: 11.5px; font-weight: 700;
+  padding: 5px 12px; border-radius: 999px;
+}
+.proximo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.proximo-l { font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
+.proximo-v { font-size: 13.5px; font-weight: 700; color: #1d1d1f; display: flex; align-items: center; gap: 5px; }
+.proximo-v svg { flex-shrink: 0; width: 14px; height: 14px; }
+.proximo-btn {
+  width: 100%; border: none; background: #1f4a3b; color: #ffffff;
+  font: inherit; font-size: 14px; font-weight: 700; padding: 13px; border-radius: 12px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 150ms ease;
+}
+.proximo-btn:hover { background: #163527; }
+
+/* "Productividad del día" — donut SVG puro */
+.prod-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.prod-card-head { width: 100%; text-align: left; }
+.donut-wrap { position: relative; width: 150px; height: 150px; margin: 8px 0 4px; }
+.donut-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #1d1d1f; }
+.prod-count { font-size: 14px; font-weight: 700; margin-top: 8px; color: #1d1d1f; }
+.prod-count span { color: #86868b; font-weight: 500; }
+.prod-note { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #2f7a4f; }
+
+@media (max-width: 1100px) {
+  .kpi2-row { grid-template-columns: repeat(3, 1fr); }
+  .dash2-grid-tendencia { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .dash2-wrap { padding: 1.25rem 1rem calc(160px + env(safe-area-inset-bottom, 0px)); }
+  .dash2-header h1 { font-size: 1.4rem; }
+  .dash2-header p { font-size: .85rem; }
+
+  /* KPI row → carrusel horizontal con snap, en vez de grid */
+  .kpi2-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .kpi2-row::-webkit-scrollbar { display: none; }
+  .kpi2-card {
+    flex: 0 0 118px;
+    scroll-snap-align: start;
+    padding: 13px;
+  }
+  .kpi2-value { font-size: 22px; }
+
+  .dash2-grid-bottom { grid-template-columns: 1fr; }
+  .dash2-card { padding: 16px 18px; border-radius: 16px; }
+
+  /* Total del periodo: tarjeta aparte → fila integrada en la de tendencia */
+  .dash2-total-card { display: none; }
+  .dash2-total-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,0,0,.06);
+  }
+
+  /* "Próximo FUS por atender" (ROL2) — grid de 3 columnas no cabe en móvil */
+  .proximo-grid { grid-template-columns: 1fr; gap: 10px; }
+  .proximo-folio { font-size: 17px; }
+
+  /* "Productividad del día" (ROL2) — donut un poco más chico */
+  .donut-wrap { width: 130px; height: 130px; }
+  .donut-wrap svg { width: 130px; height: 130px; }
+  .donut-pct { font-size: 22px; }
+}

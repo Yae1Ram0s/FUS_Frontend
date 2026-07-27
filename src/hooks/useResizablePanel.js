@@ -2,7 +2,10 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 
 const MIN_WIDTH     = 160
 const MAX_WIDTH     = 520
-const DEFAULT_WIDTH = 290
+// 290 dejaba los folios ("ANAM/PARTICULAR/FUS/0016/2026") envueltos a media
+// palabra y el badge de estatus más largo ("Pendiente de validación")
+// encimado sobre el título — ver .fus-card-top padding-right.
+const DEFAULT_WIDTH = 340
 const MOBILE_BREAKPOINT = 768
 
 /* Lógica de arrastre para el panel izquierdo redimensionable (ConsultarFUS, SolicitudesTurnadas). */

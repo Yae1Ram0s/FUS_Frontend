@@ -4,10 +4,10 @@
 export const puedeGestionarComisionados = (user) =>
   user?.rol === 'ROL1' || user?.rol === 'ROL2'
 
-// Único Particular de la solicitud. La validación final (concluir/rechazar
-// solicitud) quedó exclusiva de este rol — el Titular (ROL2) ya no puede
-// llamar a esos dos endpoints.
-export const esParticular = (user) => user?.rol === 'ROL1'
+// Particular de la solicitud, o su asistente EQUIPO_PARTICULAR. La
+// validación final (concluir/rechazar solicitud) quedó exclusiva de este
+// lado — el Titular (ROL2) ya no puede llamar a esos dos endpoints.
+export const esParticular = (user) => user?.rol === 'ROL1' || user?.rol === 'EQUIPO_PARTICULAR'
 
 // Resuelve si corresponde mostrar "Comisionar" según el rol de quien mira,
 // sin repetir el if/else en cada pantalla. ROL1 comisiona directo desde

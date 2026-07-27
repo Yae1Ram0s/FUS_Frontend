@@ -316,23 +316,52 @@
 
 /* Pills de selección */
 .prioridad-pills {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
+  position: relative;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 1px 1px 3px rgba(255, 255, 255, 0.45),
+    inset -1px -1px 4px rgba(15, 23, 42, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.prioridad-glider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 16px) / 3);
+  border-radius: 999px;
+  z-index: 0;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s ease, box-shadow 0.3s ease;
+  transform: translateX(calc(var(--prioridad-index, 0) * (100% + 8px)));
 }
 
 .prioridad-pill {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 18px;
-  border-radius: 20px;
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.52);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 160ms ease-in-out;
+  transition: transform 160ms ease-in-out, color 160ms ease-in-out, box-shadow 160ms ease-in-out;
+}
+
+.prioridad-pill:hover {
+  transform: translateY(-1px);
 }
 
 /* Contenedor de criterios */
@@ -405,12 +434,15 @@
 }
 
 /* Alta */
+.prioridad-glider.prioridad-alta {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.35), rgba(185, 28, 28, 0.88));
+  box-shadow: 0 0 16px rgba(185, 28, 28, 0.24);
+}
 .prioridad-alta { border-color: rgba(220, 38, 38, 0.20); color: #b91c1c; }
-.prioridad-alta:hover { border-color: rgba(220, 38, 38, 0.45); background: rgba(254, 226, 226, 0.50); }
+.prioridad-alta:hover { border-color: rgba(220, 38, 38, 0.45); background: rgba(254, 226, 226, 0.25); }
 .prioridad-alta.prioridad-selected {
-  background: rgba(254, 226, 226, 0.80);
-  border-color: rgba(220, 38, 38, 0.70);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .prioridad-criterios.prioridad-alta {
   background: rgba(254, 226, 226, 0.45);
@@ -420,12 +452,15 @@
 .prioridad-criterios.prioridad-alta .criterios-hint { color: #b91c1c; }
 
 /* Media */
+.prioridad-glider.prioridad-media {
+  background: linear-gradient(135deg, rgba(253, 230, 138, 0.36), rgba(202, 138, 4, 0.9));
+  box-shadow: 0 0 16px rgba(202, 138, 4, 0.24);
+}
 .prioridad-media { border-color: rgba(202, 138, 4, 0.22); color: #92400e; }
-.prioridad-media:hover { border-color: rgba(202, 138, 4, 0.45); background: rgba(254, 243, 199, 0.50); }
+.prioridad-media:hover { border-color: rgba(202, 138, 4, 0.45); background: rgba(254, 243, 199, 0.25); }
 .prioridad-media.prioridad-selected {
-  background: rgba(254, 243, 199, 0.80);
-  border-color: rgba(202, 138, 4, 0.70);
-  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.12);
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .prioridad-criterios.prioridad-media {
   background: rgba(254, 243, 199, 0.45);
@@ -435,12 +470,15 @@
 .prioridad-criterios.prioridad-media .criterios-hint { color: #92400e; }
 
 /* Baja */
+.prioridad-glider.prioridad-baja {
+  background: linear-gradient(135deg, rgba(187, 247, 208, 0.34), rgba(21, 128, 61, 0.86));
+  box-shadow: 0 0 16px rgba(21, 128, 61, 0.24);
+}
 .prioridad-baja { border-color: rgba(21, 128, 61, 0.20); color: #15803d; }
-.prioridad-baja:hover { border-color: rgba(21, 128, 61, 0.45); background: rgba(220, 252, 231, 0.50); }
+.prioridad-baja:hover { border-color: rgba(21, 128, 61, 0.45); background: rgba(220, 252, 231, 0.25); }
 .prioridad-baja.prioridad-selected {
-  background: rgba(220, 252, 231, 0.80);
-  border-color: rgba(21, 128, 61, 0.70);
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .prioridad-criterios.prioridad-baja {
   background: rgba(220, 252, 231, 0.45);

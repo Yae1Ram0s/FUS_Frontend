@@ -291,10 +291,9 @@ const TIPO_SEGUIMIENTO_INFO = {
 }
 const DEFAULT_TIPO_INFO = { label: 'Respuesta', clase: 'fc-tag-verde' }
 
-/* ── Datos de turnados + respuestas, compartidos por SeTurnoSection y
-   RespuestasSeguimientoSection (cada una hace su propio fetch — mismo
-   patrón que SeguimientoComisionadoFeed — para poder vivir en puntos
-   distintos del DOM). ── */
+/* ── Datos de turnados + respuestas — un solo fetch en DetalleFUS,
+   compartido por el chip "Turnado a" y RespuestasSeguimientoSection
+   (pasado hacia abajo como props). ── */
 function useTurnadosFUS(fusId) {
   const [turnados, setTurnados] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -310,70 +309,125 @@ function useTurnadosFUS(fusId) {
   return { turnados, cargando }
 }
 
-/* ── Sección "Se turnó" (datos del FUS — vive dentro de .detalle-panel) ── */
-function SeTurnoSection({ fusId }) {
-  const { turnados, cargando } = useTurnadosFUS(fusId)
+/* ── Chip "Turnado a" — mismo patrón visual que .dt-comisionado-chip pero
+   en verde institucional y clickeable: abre un popover con los datos
+   completos del destinatario del turnado más reciente. ── */
+function TurnadoChip({ turnado }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
 
-  const fmt = d => d
-    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  useEffect(() => {
+    if (!open) return
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  const fmtCorta = d => d
+    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : '—'
 
-  const legendTurnado = (
-    <span className="det-section-legend det-section-legend-activity">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-      </svg>
-      Se turnó
-    </span>
-  )
-
-  if (cargando) return (
-    <div className="det-section">
-      {legendTurnado}
-      <Spinner overlay={false} />
-    </div>
-  )
-  if (!turnados.length) return (
-    <div className="det-section">
-      {legendTurnado}
-      <p className="act-msg">Sin actividad registrada aún.</p>
-    </div>
-  )
+  const d = turnado.idDestinatario || {}
+  const nombre = d.nombre || d.email || 'Sin nombre'
+  const meta = ESTATUS_TURNADO_LABEL[turnado.estatusTitular] || { label: turnado.estatusTitular, color: '#6b7280' }
 
   return (
-    <div className="det-section">
-      {legendTurnado}
-      <div className="act-timeline">
-        {turnados.map((t, ti) => {
-          const meta = ESTATUS_TURNADO_LABEL[t.estatusTitular] || { label: t.estatusTitular, color: '#6b7280' }
-          return (
-            <div key={t.id} className="act-turnado">
-              <div className="act-turnado-header">
-                <div className="act-turnado-dot" />
-                <span className="act-estatus-pill" style={{ '--c': meta.color }}>{meta.label}</span>
-              </div>
-              <div className="det-grid-2 act-turnado-datos">
-                <Row label="Nombre" value={t.idDestinatario?.nombre} />
-                <Row label="Área" value={t.idDestinatario?.area} />
-                <Row label="Medio de envío" value={t.idMedio?.nombreMedio} />
-                <Row label="Fecha y hora" value={fmt(t.fechaHoraTurnado)} />
-              </div>
-              {t.solicitudTexto && (
-                <Row label="Texto de la solicitud" value={t.solicitudTexto} tall />
-              )}
+    <div className="dt-turnado-chip-wrap" ref={ref}>
+      <button
+        type="button"
+        className="dt-turnado-chip"
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <span className="dt-turnado-avatar">{initialesComisionado(d.nombre, d.email)}</span>
+        <div className="dt-turnado-info">
+          <span className="dt-turnado-nombre">{nombre}</span>
+          <span className="dt-turnado-direccion">{d.area || 'Sin área asignada'}</span>
+        </div>
+        <svg className="dt-turnado-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="dt-turnado-popover" role="dialog" aria-label="Datos del destinatario del turnado">
+          <span className="act-estatus-pill dt-turnado-pop-estatus" style={{ '--c': meta.color }}>{meta.label}</span>
+
+          <div className="dt-turnado-pop-grid">
+            <div className="dt-turnado-pop-row">
+              <span className="dt-turnado-pop-label">Nombre</span>
+              <span className="dt-turnado-pop-value">{nombre}</span>
             </div>
-          )
-        })}
-      </div>
+            <div className="dt-turnado-pop-row">
+              <span className="dt-turnado-pop-label">Área</span>
+              <span className={`dt-turnado-pop-value${d.area ? '' : ' dt-turnado-pop-value-muted'}`}>{d.area || 'Sin asignar'}</span>
+            </div>
+          </div>
+
+          {d.email && (
+            <div className="dt-turnado-pop-row">
+              <span className="dt-turnado-pop-label">Correo</span>
+              <span className="dt-turnado-pop-value">{d.email}</span>
+            </div>
+          )}
+
+          <div className="dt-turnado-pop-divider" />
+
+          <div className="dt-turnado-pop-grid">
+            <div className="dt-turnado-pop-row">
+              <span className="dt-turnado-pop-label">Medio de envío</span>
+              <span className="dt-turnado-pop-value">{turnado.idMedio?.nombreMedio || '—'}</span>
+            </div>
+            <div className="dt-turnado-pop-row">
+              <span className="dt-turnado-pop-label">Fecha y hora</span>
+              <span className="dt-turnado-pop-value">{fmtCorta(turnado.fechaHoraTurnado)}</span>
+            </div>
+          </div>
+
+          {turnado.solicitudTexto && (
+            <>
+              <div className="dt-turnado-pop-divider" />
+              <div className="dt-turnado-pop-row">
+                <span className="dt-turnado-pop-label">Texto de la solicitud</span>
+                <p className="dt-turnado-pop-texto">{turnado.solicitudTexto}</p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Chip "Prioridad" — el chip visible es un .filtro-chip normal; el
+   catálogo Alta/Media/Baja lo abre un <select> nativo superpuesto e
+   invisible, así en móvil se ve el picker propio del dispositivo (100%
+   responsivo, no hay nada que mantener). Reusa PRIORIDAD_NIVELES. ── */
+function PrioridadFiltroChip({ valor, onChange }) {
+  return (
+    <div className="prioridad-filtro-wrap">
+      <button type="button" className={`filtro-chip filtro-chip-alta${valor ? ' filtro-chip-active' : ''}`} tabIndex={-1}>
+        {valor ? `Prioridad: ${valor}` : 'Prioridad'}
+      </button>
+      <select
+        className="prioridad-filtro-select"
+        value={valor}
+        onChange={e => onChange(e.target.value)}
+        aria-label="Filtrar por prioridad"
+      >
+        <option value="">Prioridad</option>
+        {PRIORIDAD_NIVELES.map(p => (
+          <option key={p.valor} value={p.valor}>{p.valor}</option>
+        ))}
+      </select>
     </div>
   )
 }
 
 /* ── Sección "Respuestas y seguimiento" — tarjeta .seccion independiente,
    fuera de .detalle-panel, mismo tratamiento visual que la vista de Rol 2. ── */
-function RespuestasSeguimientoSection({ fusId }) {
-  const { turnados, cargando } = useTurnadosFUS(fusId)
-
+function RespuestasSeguimientoSection({ turnados, cargando }) {
   const fmtFecha = d => d
     ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '—'
@@ -383,7 +437,7 @@ function RespuestasSeguimientoSection({ fusId }) {
 
   // Las que no traen `autorNombre` (flujo directo de Rol 2, modelo
   // Seguimiento) se atribuyen al destinatario del turnado — mismo Titular
-  // que ya se muestra como "Nombre" en la sección "Se turnó".
+  // que ya se muestra en el chip "Turnado a" en Datos generales.
   const todasRespuestas = turnados.flatMap(t =>
     (t.seguimientos || []).map(s => ({
       ...s,
@@ -472,6 +526,13 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
   const tieneActividad = fus.estatusParticular !== 'Registrado'
   const tieneExterno   = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
+
+  // Un solo fetch de turnados, compartido por el chip "Turnado a", "Se
+  // turnó" y "Respuestas y seguimiento" (evita 3 llamadas duplicadas).
+  const { turnados, cargando: turnadosCargando } = useTurnadosFUS(fus.id)
+  const turnadoReciente = turnados.length
+    ? turnados.reduce((mas, t) => new Date(t.fechaHoraTurnado) > new Date(mas.fechaHoraTurnado) ? t : mas)
+    : null
 
   // ROL1 comisiona directamente desde "Registrado" (antes de turnar); ROL2 lo
   // hace desde "Turnado" en su propia vista (SolicitudesTurnadas), no aquí.
@@ -562,6 +623,9 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
             </div>
           </div>
         )}
+        {fus.tieneTurnado && turnadoReciente && (
+          <TurnadoChip turnado={turnadoReciente} />
+        )}
       </div>
 
       {fus.fechaLimite && (
@@ -604,9 +668,6 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
         <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
       </div>
 
-      {/* ── Sección: Se turnó (datos del FUS, se queda dentro de .detalle-panel) ── */}
-      {tieneActividad && <SeTurnoSection fusId={fus.id} />}
-
       <div className="detalle-footer">
         {puedesTurnar && (
           <button className="btn-turnar" onClick={() => onTurnar(fus)}>
@@ -618,7 +679,7 @@ function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onVerHistorial }) {
 
       {/* ── Respuestas y seguimiento — tarjeta .seccion aparte, fuera de
           .detalle-panel, mismo tratamiento visual que la vista de Rol 2 ── */}
-      {tieneActividad && <RespuestasSeguimientoSection fusId={fus.id} />}
+      {tieneActividad && <RespuestasSeguimientoSection turnados={turnados} cargando={turnadosCargando} />}
 
       {/* Solo si el propio Particular comisionó directo (sin pasar por
           Turnado/Rol 2) se le muestra el feed real del comisionado. Si se
@@ -706,6 +767,7 @@ export default function ConsultarFUS() {
   const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
   const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
+  const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
   const [seleccionado, setSeleccionado] = useState(null)
   const [turnarFUS,    setTurnarFUS]    = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
@@ -723,8 +785,9 @@ export default function ConsultarFUS() {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
     setCargando(true)
     const params = { page: pag, page_size: PAGE_SIZE }
-    if (!folioParam && filtro)   params.estatusParticular = filtro
-    if (!folioParam && busqueda) params.search = busqueda
+    if (!folioParam && filtro)          params.estatusParticular = filtro
+    if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
+    if (!folioParam && busqueda)        params.search = busqueda
     api.get('/fus/', { params })
       .then(r => {
         setErrorCarga(false)
@@ -737,6 +800,7 @@ export default function ConsultarFUS() {
           if (match) {
             setLista([match, ...items.filter(f => f.id !== match.id)])
             setFiltro('')
+            setPrioridadFiltro('')
             setBusqueda('')
             setSeleccionado(match)
             setHighlightId(match.id)
@@ -797,7 +861,7 @@ export default function ConsultarFUS() {
     cargar(1)
   }, [ultimaNotifId])
 
-  useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
+  useEffect(() => { setPagina(1); cargar(1) }, [filtro, prioridadFiltro, busqueda, folioParam])
 
   const handleTurnarDone = () => {
     setTurnarFUS(null)
@@ -808,12 +872,13 @@ export default function ConsultarFUS() {
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
   /* ── Panel izquierdo: cerrado por defecto (modo dashboard) ── */
-  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')))
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
 
   useEffect(() => {
-    if (searchParams.get('filtro')) {
+    if (searchParams.get('filtro') || searchParams.get('prioridad')) {
       const next = new URLSearchParams(searchParams)
       next.delete('filtro')
+      next.delete('prioridad')
       setSearchParams(next, { replace: true })
     }
   }, [])
@@ -890,6 +955,7 @@ export default function ConsultarFUS() {
               >
                 Por vencer
               </button>
+              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} />
             </div>
 
             {errorCarga && lista.length > 0 && (

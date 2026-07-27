@@ -130,6 +130,10 @@ export default function RegistrarFUS() {
 
   const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [] }))
 
+  const prioridadOrden = ['Alta', 'Media', 'Baja']
+  const prioridadIndex = prioridadOrden.indexOf(form.prioridad)
+  const prioridadSeleccionada = form.prioridad && PRIORIDAD_INFO[form.prioridad] ? PRIORIDAD_INFO[form.prioridad].color : ''
+
   const previewsRef = useRef([])
 
   const agregarArchivos = (files) => {
@@ -198,9 +202,14 @@ export default function RegistrarFUS() {
       form.evidencias.forEach(ev => fd.append('evidencias', ev.file))
       fd.append('comentariosEvidencias', JSON.stringify(form.evidencias.map(ev => ev.comentario || '')))
 
+      // Sin Content-Type manual: axios detecta FormData y deja que el navegador
+      // genere "multipart/form-data; boundary=..." — forzarlo aquí sin boundary
+      // producía un multipart mal formado que el parser de Django rechazaba
+      // (o interpretaba vacío) después de que el guardado ya había ocurrido en
+      // otros casos, mostrando el error genérico aunque el cambio sí aplicara.
       const { data } = editId
-        ? await api.patch(`/fus/${editId}/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-        : await api.post('/fus/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        ? await api.patch(`/fus/${editId}/`, fd)
+        : await api.post('/fus/', fd)
       setExito(editId ? 'Solicitud actualizada correctamente.' : 'Solicitud registrada correctamente.')
       setTimeout(() => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(data.folio)}`), 1200)
       // se mantiene loading=true a propósito: el formulario queda deshabilitado
@@ -409,13 +418,15 @@ export default function RegistrarFUS() {
               <div className="reg-row">
                 <label htmlFor="reg-prioridad">Seleccione la prioridad <span className="req">*</span></label>
                 <div className="prioridad-wrapper">
-                  <div className="prioridad-pills">
+                  <div className="prioridad-pills" style={{ '--prioridad-index': prioridadIndex >= 0 ? prioridadIndex : 0 }}>
+                    <div className={`prioridad-glider${prioridadSeleccionada ? ` prioridad-${prioridadSeleccionada}` : ''}`} aria-hidden="true" />
                     {Object.entries(PRIORIDAD_INFO).map(([valor, info]) => (
                       <button
                         key={valor}
                         type="button"
                         className={`prioridad-pill prioridad-${info.color}${form.prioridad === valor ? ' prioridad-selected' : ''}`}
                         onClick={() => setPrioridad(valor)}
+                        aria-pressed={form.prioridad === valor}
                       >
                         {info.icono} {info.titulo}
                       </button>

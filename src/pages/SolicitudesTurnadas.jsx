@@ -34,7 +34,15 @@ const fmtFechaCorta = d => d
   : '—'
 
 /* ── Sección Respuestas y Seguimiento ── */
-function Seguimientos({ turnadoId, concluido }) {
+function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
+  // Fuente única de verdad: fus.estatusParticular (ya se refresca via
+  // setFusData en cada acción). 'Pendiente_validacion' bloquea nuevas
+  // respuestas mientras el Particular valida — si rechaza, vuelve a
+  // 'Rechazado', que SÍ sigue abierto (la siguiente respuesta reabre el
+  // FUS, mismo criterio que ya tiene el flujo de Comisionado).
+  const concluido = estatusFus === 'Concluido'
+  const pendienteValidacion = estatusFus === 'Pendiente_validacion'
+  const soloLectura = concluido || pendienteValidacion
   const { user } = useAuth()
   const [lista,       setLista]       = useState([])
   const hoy = new Date().toISOString().split('T')[0]
@@ -71,13 +79,17 @@ function Seguimientos({ turnadoId, concluido }) {
     if (!fecha || !actividad.trim()) { setError('Completa la fecha y la actividad.'); return }
     setError(''); setLoading(true)
     try {
-      await api.post(`/turnados/${turnadoId}/seguimientos/`, {
+      const r = await api.post(`/turnados/${turnadoId}/seguimientos/`, {
         fechaActividad: fecha,
         descripcionActividad: actividad,
         accionTexto,
       })
       setFecha(hoy); setActividad(''); setAccionTexto('')
       cargar()
+      // El backend regresa el estatus vigente del turnado/FUS tras esta
+      // respuesta — se lo pasamos al padre para que el botón "Atendido"
+      // (AccionesValidacion) aparezca de inmediato, sin refrescar la página.
+      onRegistrado?.(r.data.estatusParticular, r.data.estatusTitular)
     } catch (e) {
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
     } finally { setLoading(false) }
@@ -105,6 +117,15 @@ function Seguimientos({ turnadoId, concluido }) {
               <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
             Asunto concluido — las respuestas son de solo lectura
+          </div>
+        )}
+
+        {pendienteValidacion && (
+          <div className="seg-concluido-banner">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Enviado a validación del Particular — no se pueden agregar más respuestas
           </div>
         )}
 
@@ -139,7 +160,7 @@ function Seguimientos({ turnadoId, concluido }) {
                     {fmtFechaCorta(s.fechaActividad)}
                     {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
                   </span>
-                  {!concluido && !s.esRechazo && (
+                  {!soloLectura && !s.esRechazo && (
                     <button className="btn-del" onClick={() => eliminar(s.id)} disabled={eliminandoId === s.id} title="Eliminar">
                       {eliminandoId === s.id
                         ? <span className="btn-spinner" />
@@ -159,7 +180,7 @@ function Seguimientos({ turnadoId, concluido }) {
           ))}
         </div>
 
-        {!concluido && (
+        {!soloLectura && (
           <div className="seg-nueva">
             <div className="seg-nueva-inputs">
               <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="seg-nueva-fecha" />
@@ -269,6 +290,31 @@ function PrioridadPills({ valor, criterios }) {
           {listaCriterios.map((c, i) => <li key={i}>{c}</li>)}
         </ul>
       )}
+    </div>
+  )
+}
+
+/* ── Chip "Prioridad" — el chip visible es un .filtro-chip normal; el
+   catálogo Alta/Media/Baja lo abre un <select> nativo superpuesto e
+   invisible, así en móvil se ve el picker propio del dispositivo (100%
+   responsivo, no hay nada que mantener). Reusa PRIORIDAD_NIVELES. ── */
+function PrioridadFiltroChip({ valor, onChange }) {
+  return (
+    <div className="prioridad-filtro-wrap">
+      <button type="button" className={`filtro-chip filtro-chip-alta${valor ? ' filtro-chip-active' : ''}`} tabIndex={-1}>
+        {valor ? `Prioridad: ${valor}` : 'Prioridad'}
+      </button>
+      <select
+        className="prioridad-filtro-select"
+        value={valor}
+        onChange={e => onChange(e.target.value)}
+        aria-label="Filtrar por prioridad"
+      >
+        <option value="">Prioridad</option>
+        {PRIORIDAD_NIVELES.map(p => (
+          <option key={p.valor} value={p.valor}>{p.valor}</option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -408,7 +454,13 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
            Titular directamente. ── */}
       {fus.idComisionado
         ? <SeguimientoComisionadoFeed fusId={fus.id} />
-        : <Seguimientos turnadoId={turnado.id} concluido={turnado.estatusTitular === 'Concluido'} />
+        : <Seguimientos
+            turnadoId={turnado.id}
+            estatusFus={fus.estatusParticular}
+            onRegistrado={(estatusParticular) => {
+              if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
+            }}
+          />
       }
 
       <AccionesValidacion
@@ -501,6 +553,7 @@ export default function SolicitudesTurnadas() {
   const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
   const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
+  const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
   const [seleccionado, setSeleccionado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargando,     setCargando]     = useState(true)
@@ -517,8 +570,9 @@ export default function SolicitudesTurnadas() {
     if (reordenadoRef.current) { reordenadoRef.current = false; return }
     setCargando(true)
     const params = { page: pag, page_size: PAGE_SIZE }
-    if (!folioParam && filtro)   params.estatusTitular = filtro
-    if (!folioParam && busqueda) params.search = busqueda
+    if (!folioParam && filtro)          params.estatusTitular = filtro
+    if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
+    if (!folioParam && busqueda)        params.search = busqueda
     api.get('/turnados/mis-turnados/', { params })
       .then(r => {
         setErrorCarga(false)
@@ -531,6 +585,7 @@ export default function SolicitudesTurnadas() {
           if (match) {
             setLista([match, ...items.filter(t => t.id !== match.id)])
             setFiltro('')
+            setPrioridadFiltro('')
             setBusqueda('')
             setSeleccionado(match)
             setHighlightId(match.id)
@@ -563,7 +618,7 @@ export default function SolicitudesTurnadas() {
 
   const cargarMas = () => cargar(pagina + 1, true)
 
-  useEffect(() => { setPagina(1); cargar(1) }, [filtro, busqueda, folioParam])
+  useEffect(() => { setPagina(1); cargar(1) }, [filtro, prioridadFiltro, busqueda, folioParam])
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
   useEffect(() => {
@@ -601,12 +656,13 @@ export default function SolicitudesTurnadas() {
   const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
 
   /* ── Resize panel izquierdo ── */
-  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')))
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
 
   useEffect(() => {
-    if (searchParams.get('filtro')) {
+    if (searchParams.get('filtro') || searchParams.get('prioridad')) {
       const next = new URLSearchParams(searchParams)
       next.delete('filtro')
+      next.delete('prioridad')
       setSearchParams(next, { replace: true })
     }
   }, [])
@@ -690,6 +746,7 @@ export default function SolicitudesTurnadas() {
               >
                 Por vencer
               </button>
+              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} />
             </div>
 
             {errorCarga && lista.length > 0 && (

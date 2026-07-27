@@ -36,11 +36,19 @@ const ACCION_LABELS = {
   CIERRE_SESION:      'Cierre sesión',
   RESTABLECER_CONTRASENA: 'Restablecer contraseña',
   ELIMINACION:        'Eliminación',
+  ASIGNACION_COMISIONADO:   'Asignación a comisionado',
+  SEGUIMIENTO_COMISIONADO:  'Seguimiento de comisionado',
+  FINALIZACION_SEGUIMIENTO: 'Finalización de seguimiento',
+  ATENCION_FUS:       'Atención de FUS (comisionado)',
+  APROBACION_FUS:     'Aprobación de FUS',
+  RECHAZO_FUS:        'Rechazo de FUS',
+  REAPERTURA_FUS:     'Reapertura de FUS',
 }
 
 const ACCIONES_POR_ROL = {
   ROL1: ['REGISTRO_FUS','TURNAR_FUS','ASIGNACION_ESTADO','REGISTRO_RESPUESTA',
-         'REGISTRO_ACCION','CONCLUSION_FUS','ELIMINACION'],
+         'REGISTRO_ACCION','CONCLUSION_FUS','ELIMINACION',
+         'ASIGNACION_COMISIONADO','ATENCION_FUS','APROBACION_FUS','RECHAZO_FUS','REAPERTURA_FUS'],
   ROL2: ['CONCLUSION_FUS','REGISTRO_RESPUESTA','REGISTRO_ACCION'],
 }
 
