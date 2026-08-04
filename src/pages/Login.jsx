@@ -12,6 +12,8 @@ const STEP_PASS     = 'pass'
 const STEP_OTP      = 'otp'
 const STEP_NEWPASS  = 'newpass'
 const DOMINIO_INSTITUCIONAL = '@anam.gob.mx'
+const REENVIO_COOLDOWN_MS = 2 * 60 * 1000
+const REENVIO_STORAGE_KEY = 'scs_otp_reenvio'
 
 export default function Login() {
   const [step,        setStep]        = useState(STEP_EMAIL)
@@ -25,6 +27,8 @@ export default function Login() {
   const [loading,     setLoading]     = useState(false)
   const [reenvioMsg,  setReenvioMsg]  = useState('')
   const [reenviando,  setReenviando]  = useState(false)
+  const [reenvioHasta, setReenvioHasta] = useState(0)
+  const [reenvioRestante, setReenvioRestante] = useState(0)
   const [isRecovery,  setIsRecovery]  = useState(false)
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
@@ -44,6 +48,43 @@ export default function Login() {
     return () => media.removeEventListener('change', actualizar)
   }, [])
 
+  useEffect(() => {
+    if (step !== STEP_OTP || !email) return undefined
+
+    try {
+      const guardado = JSON.parse(localStorage.getItem(REENVIO_STORAGE_KEY) || 'null')
+      if (guardado?.email === email && guardado?.hasta > Date.now()) {
+        setReenvioHasta(guardado.hasta)
+      } else {
+        setReenvioHasta(0)
+        localStorage.removeItem(REENVIO_STORAGE_KEY)
+      }
+    } catch {
+      localStorage.removeItem(REENVIO_STORAGE_KEY)
+    }
+    return undefined
+  }, [step, email])
+
+  useEffect(() => {
+    if (!reenvioHasta) {
+      setReenvioRestante(0)
+      return undefined
+    }
+
+    const actualizarContador = () => {
+      const restante = Math.max(0, Math.ceil((reenvioHasta - Date.now()) / 1000))
+      setReenvioRestante(restante)
+      if (restante === 0) {
+        setReenvioHasta(0)
+        localStorage.removeItem(REENVIO_STORAGE_KEY)
+      }
+    }
+
+    actualizarContador()
+    const intervalo = window.setInterval(actualizarContador, 1000)
+    return () => window.clearInterval(intervalo)
+  }, [reenvioHasta])
+
   // La franja de status bar (notch/Dynamic Island) en Safari/iOS no es parte
   // del DOM — la pinta el navegador con el color de <meta name="theme-color">,
   // así que el fondo verde de .login-wrap no le llega. Solo el Login la quiere
@@ -58,6 +99,12 @@ export default function Login() {
   }, [])
 
   const redirect = (rol) => navigate(rutaInicioPorRol(rol))
+
+  const activarEsperaReenvio = (correo = email) => {
+    const hasta = Date.now() + REENVIO_COOLDOWN_MS
+    localStorage.setItem(REENVIO_STORAGE_KEY, JSON.stringify({ email: correo, hasta }))
+    setReenvioHasta(hasta)
+  }
 
   const resetAll = () => {
     setError(''); setOtp(''); setNewPass(''); setConfirmPass('')
@@ -81,6 +128,7 @@ export default function Login() {
     try {
       const { data } = await api.post('/auth/verificar-correo/', { email: limpio })
       setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
+      if (data.estado !== 'existente') activarEsperaReenvio(limpio)
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al verificar el correo.')
     } finally {
@@ -112,6 +160,7 @@ export default function Login() {
         try {
           const { data } = await api.post('/auth/verificar-correo/', { email: email.trim().toLowerCase() })
           setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
+          if (data.estado !== 'existente') activarEsperaReenvio(email.trim().toLowerCase())
           setReenvioMsg(data.estado === 'existente' ? '' : 'Tu cuenta aún no estaba activada — te enviamos un código para crearla.')
         } catch (err2) {
           setError(err2.response?.data?.detail || err.response.data.detail)
@@ -132,6 +181,7 @@ export default function Login() {
       setIsRecovery(true)
       setOtp('')
       setStep(STEP_OTP)
+      activarEsperaReenvio()
       setReenvioMsg('Código de recuperación enviado a tu correo.')
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo enviar el código.')
@@ -182,12 +232,13 @@ export default function Login() {
 
   /* ── Reenviar OTP ── */
   const handleReenviar = async () => {
-    if (reenviando) return
+    if (reenviando || reenvioRestante > 0) return
     setReenvioMsg(''); setError(''); setReenviando(true)
     try {
       const endpoint = isRecovery ? '/auth/recuperar-contrasena/' : '/auth/reenviar-otp/'
       await api.post(endpoint, { email })
       setOtp('')
+      activarEsperaReenvio()
       setReenvioMsg('Nuevo código enviado a tu correo.')
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo reenviar el código.')
@@ -342,9 +393,19 @@ export default function Login() {
           <button type="button" className="lf-link" onClick={() => { resetAll(); setStep(isRecovery ? STEP_PASS : STEP_EMAIL) }}>
             ← {isRecovery ? 'Volver al login' : 'Cambiar correo'}
           </button>
-          <button type="button" className="lf-link" onClick={handleReenviar} disabled={reenviando}>
+          <button
+            type="button"
+            className="lf-link lf-resend-link"
+            onClick={handleReenviar}
+            disabled={reenviando || reenvioRestante > 0}
+            aria-live="polite"
+          >
             {reenviando && <span className="btn-spinner" />}
-            {reenviando ? 'Reenviando…' : 'Reenviar código'}
+            {reenviando
+              ? 'Reenviando…'
+              : reenvioRestante > 0
+                ? `Reenviar en ${String(Math.floor(reenvioRestante / 60)).padStart(2, '0')}:${String(reenvioRestante % 60).padStart(2, '0')}`
+                : 'Reenviar código'}
           </button>
         </div>
       </form>
