@@ -318,7 +318,7 @@ export default function Login() {
             : <>Enviamos un código de 6 dígitos a <strong>{email}</strong>. Revisa tu bandeja.</>
           }
         </p>
-        <div className="lf-group">
+        <div className="lf-group lf-group-otp">
           <label htmlFor="login-otp">Código de verificación</label>
           <input
             id="login-otp"

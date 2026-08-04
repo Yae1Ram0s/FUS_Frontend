@@ -571,6 +571,25 @@
   color: #c9a227 !important;
 }
 
+/* El código OTP no usa la animación de etiqueta flotante. La etiqueta
+   permanece fija para evitar el salto visual al recibir el autoFocus. */
+.lf-group-otp {
+  margin-top: 1.6rem;
+}
+
+.lf-group-otp label,
+.lf-group-otp:has(input:focus) label,
+.lf-group-otp:has(input:not(:placeholder-shown)) label {
+  top: -20px;
+  left: 4px;
+  transform: none;
+  font-size: 0.78rem;
+  color: #3a3a3a;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: none;
+}
+
 /* ── Links secundarios ── */
 .lf-actions-row {
   display: flex;
