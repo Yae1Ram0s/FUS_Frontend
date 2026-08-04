@@ -5,12 +5,12 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://scs-backend-fm6o.onrender.com/api/:path*"
+      "source": "^/api/(.*)$",
+      "destination": "https://scs-backend-fm6o.onrender.com/api/$1"
     },
     {
-      "source": "/media/:path*",
-      "destination": "https://scs-backend-fm6o.onrender.com/media/:path*"
+      "source": "^/media/(.*)$",
+      "destination": "https://scs-backend-fm6o.onrender.com/media/$1"
     },
     {
       "source": "/:path*",
