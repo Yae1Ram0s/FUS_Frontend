@@ -1,0 +1,115 @@
+/* Tarjeta "seccion" (encabezado + cuerpo) y etiquetas fc-tag — usadas por
+   componentes compartidos entre páginas/roles (SeguimientoComisionadoFeed,
+   RespuestasSeguimientoSection...). Global (ver main.jsx) por la misma razón
+   que styles/modal.css: cada ruta carga su propio chunk de CSS vía
+   lazy-loading, así que un componente reusado entre páginas no puede
+   depender del CSS particular de una sola de ellas. */
+
+.seccion {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(195, 212, 207, 0.45);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(190, 208, 203, 0.80), inset 0 -1px 0 rgba(190, 208, 203, 0.25);
+  position: relative;
+}
+.seccion::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.seccion::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 1px; height: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent, rgba(255, 255, 255, 0.2));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sec-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: rgba(35, 91, 78, 0.90);
+  border-bottom: 1px solid rgba(195, 212, 207, 0.20);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+.sec-resp { color: #ffffff; }
+
+.sec-body { background: rgba(235, 248, 244, 0.07); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+/* En paneles claros (ej. sec-body) el contraste del banner se invierte */
+.sec-body .banner-error-carga { color: #8a5a00; }
+.sec-body .banner-error-carga button {
+  background: rgba(35, 91, 78, 0.10);
+  border-color: rgba(35, 91, 78, 0.30);
+  color: #235b4e;
+}
+.sec-body .banner-error-carga button:hover { background: rgba(35, 91, 78, 0.18); }
+
+.fc-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.fc-tag-verde { background: rgba(35, 91, 78, 0.12);  color: #1a4338; }
+.fc-tag-azul  { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+.fc-tag-rojo  { background: rgba(178, 48, 48, 0.12);  color: #8f2626; }
+
+.seg-empty {
+  text-align: center;
+  color: rgba(30, 80, 65, 0.45);
+  font-style: italic;
+  font-size: 0.875rem;
+  padding: 16px 0;
+  margin: 0;
+}
+
+.seg-error { text-align: center; padding: 16px 0; }
+.seg-error-msg { margin: 0 0 10px; color: #b23030; font-size: 0.875rem; font-weight: 600; }
+.seg-error .btn-reintentar {
+  background: rgba(35, 91, 78, 0.10);
+  border: 1px solid rgba(35, 91, 78, 0.30);
+  color: #235b4e;
+}
+.seg-error .btn-reintentar:hover { background: rgba(35, 91, 78, 0.18); border-color: rgba(35, 91, 78, 0.45); }
+
+/* Botón icono redondo en encabezado oscuro (detalle FUS) — editar (solo
+   Rol 1) y descargar PDF (Rol 1 y Rol 2). */
+.btn-editar-fus,
+.btn-descargar-fus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 150ms ease-in-out;
+}
+.btn-editar-fus:hover,
+.btn-descargar-fus:hover  { background: rgba(255, 255, 255, 0.20); }
+.btn-editar-fus:active,
+.btn-descargar-fus:active { background: rgba(255, 255, 255, 0.06); }

@@ -119,18 +119,25 @@
 }
 
 /* La app es de viewport único — todo el scroll ocurre en contenedores
-   internos dedicados (app-main-scroll, listas, etc.), nunca en la página. */
+   internos dedicados (app-main-scroll, listas, etc.), nunca en la página.
+   background en html (no solo en body): en el "rubber-band" de iOS Safari
+   el color que se asoma en el rebote es el de html, no el de body. */
 html, body {
   height: 100%;
   overflow: hidden;
+  background: #ffffff;
 }
 
+/* Fondo blanco (no el verde institucional --bg) heredado de html/body arriba:
+   páginas como Login ya ponen su propio fondo verde encima, así que ese
+   blanco solo se ve en bordes sin cubrir — ej. la franja de
+   safe-area-inset-top en iOS/Safari (notch o Dynamic Island), donde antes
+   se veía una tira verde sobre el header. */
 body {
   font-family: var(--font-thin);
   font-weight: 400;
   font-size: 0.92rem;
   letter-spacing: 0.02em;
-  background: var(--bg);
   color: var(--body);
   -webkit-font-smoothing: antialiased;
 }

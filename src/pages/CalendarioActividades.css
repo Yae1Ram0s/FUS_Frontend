@@ -402,6 +402,7 @@
   overflow-y: auto;
   display: grid;
   grid-template-columns: 46px repeat(7, 1fr);
+  padding-top: 6px;
   position: relative;
   background: #ffffff;
   border: 1px solid rgba(35, 91, 78, 0.12);
@@ -439,6 +440,7 @@
 .cal-dia-grid {
   display: grid;
   grid-template-columns: 52px 1fr;
+  padding-top: 6px;
   position: relative;
   background: #ffffff;
   border: 1px solid rgba(35, 91, 78, 0.12);
@@ -496,33 +498,6 @@
   bottom: auto;
 }
 
-/* ── FAB — crear actividad (solo móvil) ── */
-.cal-fab {
-  display: none;
-}
-@media (max-width: 768px) {
-  .cal-fab {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    right: 18px;
-    bottom: calc(106px + env(safe-area-inset-bottom, 0px));
-    width: 56px;
-    height: 56px;
-    border-radius: 999px;
-    border: none;
-    background: #235b4e;
-    color: #ffffff;
-    font-size: 28px;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 8px 22px rgba(10, 30, 20, 0.35);
-    z-index: 1500;
-  }
-  .cal-fab:active { background: #1a4338; }
-}
-
 /* ══════════════════════════════════════
    MODAL
 ══════════════════════════════════════ */
@@ -546,8 +521,12 @@
   max-width: 92vw;
   max-height: calc(var(--app-vh, 100vh) * 0.88);
   overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(10, 30, 20, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 24px 60px rgba(10, 30, 20, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
   padding: 22px;
   display: flex;
   flex-direction: column;
@@ -600,7 +579,7 @@
 
 .cal-pill-input {
   border: 1px solid rgba(35, 91, 78, 0.20);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 10px;
   padding: 10px 13px;
   font-size: 13.5px;
@@ -609,13 +588,44 @@
   color: #1a2f28;
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cal-pill-input:focus { border-color: rgba(35, 91, 78, 0.45); }
+.cal-pill-input:focus { border-color: rgba(35, 91, 78, 0.45); background: rgba(255, 255, 255, 0.92); }
 .cal-pill-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .cal-pill-textarea { resize: vertical; font-size: 13px; }
 
-.cal-modal-row2 { display: flex; gap: 8px; }
-.cal-modal-row2 .cal-pill-input { flex: 1; }
+input[type="date"].cal-pill-input,
+input[type="time"].cal-pill-input {
+  max-width: 100%;
+  -webkit-min-logical-width: 0%;
+}
+
+.cal-pill-clip {
+  border: 1px solid rgba(35, 91, 78, 0.20);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.cal-pill-clip:focus-within { border-color: rgba(35, 91, 78, 0.45); background: rgba(255, 255, 255, 0.92); }
+.cal-pill-clip .cal-pill-input {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  display: block;
+}
+
+/* FechaInput envuelve el <input type="date"> en un <span> — sin ancho
+   propio por default, así que aquí se le pasa el 100% que .cal-pill-clip
+   ya le daba directo al input. */
+.cal-pill-input-wrap { width: 100%; }
+
+.cal-modal-row2 { display: flex; gap: 8px; min-width: 0; }
+.cal-modal-row2 .cal-pill-clip { flex: 1; min-width: 0; }
 
 .cal-modal-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #235b4e; margin: 0 0 6px; }
 .cal-participantes-lista {
@@ -667,9 +677,17 @@
    MÓVIL
 ══════════════════════════════════════ */
 @media (max-width: 768px) {
-  .cal-page { flex-direction: column; height: auto; overflow: visible; }
+  .cal-page { flex-direction: column; }
 
-  .cal-sidebar { width: 100% !important; margin-left: 0 !important; padding-left: 0 !important; padding-right: 0 !important; border-right: none; border-bottom: 1px solid rgba(195, 212, 207, 0.20); }
+  .cal-sidebar {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    border-right: none;
+    border-bottom: 1px solid rgba(195, 212, 207, 0.20);
+    max-height: 45vh;
+  }
   .cal-sidebar.panel-cerrado { display: none; }
   .cal-sidebar-content { padding: 12px; }
 
@@ -678,7 +696,7 @@
   /* En móvil el FAB crea la actividad; el botón del sidebar ya no hace falta */
   .cal-btn-nueva-sidebar { display: none; }
 
-  .cal-main { padding: 12px; padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .cal-main { padding: 12px; padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); min-height: 0; }
 
   /* Toolbar en una sola fila con scroll horizontal contenido en vez de encimarse */
   .cal-toolbar {
@@ -704,14 +722,7 @@
   .cal-semana-header, .cal-semana-body { grid-template-columns: 34px repeat(7, 1fr); }
   .cal-dia-grid { grid-template-columns: 40px 1fr; }
 
-  .cal-modal-overlay { align-items: flex-end; }
-  .cal-modal {
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(var(--app-vh, 100vh) * 0.9);
-    border-radius: 20px 20px 0 0;
-    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
-  }
+  .cal-modal { max-height: calc(var(--app-vh, 100vh) * 0.9); }
   .cal-modal-row2 { flex-direction: column; }
 
   /* 16px evita el auto-zoom de iOS Safari al enfocar un campo */
@@ -804,13 +815,62 @@
     gap: 8px;
   }
   .cal-dia-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 13px;
     font-weight: 700;
     color: #235b4e;
-    text-transform: capitalize;
   }
+  .cal-dia-panel-header > span { text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-dia-panel-agregar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    border: none;
+    background: #DDC9A3;
+    color: #1a4338;
+    border-radius: 999px;
+    padding: 6px 12px 6px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(10, 30, 20, 0.20);
+  }
+  .cal-dia-panel-agregar:active { background: #e8d7b3; }
+  .cal-dia-panel-agregar .cal-btn-nueva-icon { width: 18px; height: 18px; font-size: 13px; }
   .cal-dia-panel-vacio { font-size: 12.5px; color: rgba(0, 0, 0, 0.45); margin: 0; }
+  .cal-dia-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 104px;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(35, 91, 78, 0.3) transparent;
+    padding-right: 3px;
+  }
+  .cal-dia-panel-list::-webkit-scrollbar { width: 4px; }
+  .cal-dia-panel-list::-webkit-scrollbar-track { background: transparent; }
+  .cal-dia-panel-list::-webkit-scrollbar-thumb {
+    background: rgba(35, 91, 78, 0.3);
+    border-radius: 999px;
+  }
+  .cal-dia-panel-list:focus-visible {
+    outline: 2px solid rgba(35, 91, 78, 0.3);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
   .cal-dia-panel-item {
+    flex: 0 0 48px;
+    min-height: 48px;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -859,5 +919,4 @@
   .cal-toolbar-titulo { font-size: 13px; }
   .cal-btn-hoy, .cal-btn-flecha, .cal-toggle-vista button { padding-top: 5px; padding-bottom: 5px; }
   .cal-modal { max-height: calc(var(--app-vh, 100vh) * 0.94); padding: 14px; gap: 8px; }
-  .cal-fab { bottom: calc(98px + env(safe-area-inset-bottom, 0px)); right: 12px; width: 48px; height: 48px; font-size: 24px; }
 }

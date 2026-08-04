@@ -15,6 +15,7 @@ export function useEstatus(tipoFlujo) {
 
   useEffect(() => {
     if (cache[key]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidrata desde cache en memoria (sin red) al cambiar `key`
       setEstatus(cache[key])
       setLoading(false)
       return

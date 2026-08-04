@@ -20,6 +20,20 @@ const ICON_USUARIOS = (
   </svg>
 )
 
+const ICON_REPORTES = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+  </svg>
+)
+
+/* Ícono del botón "más" — solo se usa cuando el menú tiene varios ítems
+   (con uno solo, el botón muestra directo el ícono de ese ítem, ver abajo). */
+const ICON_MAS = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+)
+
 const ICON_INICIO = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -97,9 +111,12 @@ const NAV_COMISIONADO = [
 /* Rol 4 (asistente de ROL1): mismas pantallas principales que ROL1. */
 const NAV_EQUIPO_PARTICULAR = NAV_ROL1
 
-/* ── 5º ícono: popover de Bitácora (+ Usuarios y accesos solo en ROL1) ── */
+/* ── 5º ícono: con un solo ítem, el botón navega directo a él (mismo ícono,
+   ej. ROL2/Comisionado → Bitácora); con varios, se vuelve un botón "+" que
+   despliega un popover con todos (ROL1: Bitácora, Reportes, Usuarios). ── */
 const MENU_ROL1 = [
   { path: '/rol1/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+  { path: '/rol1/reportes', label: 'Reportes', icon: ICON_REPORTES },
   { path: '/rol1/panel', label: 'Usuarios y accesos', icon: ICON_USUARIOS },
 ]
 const MENU_ROL2 = [
@@ -110,6 +127,7 @@ const MENU_COMISIONADO = [
 ]
 const MENU_EQUIPO_PARTICULAR = [
   { path: '/rol1/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+  { path: '/rol1/reportes', label: 'Reportes', icon: ICON_REPORTES },
 ]
 
 export default function BottomNav() {
@@ -146,6 +164,11 @@ export default function BottomNav() {
     : location.pathname === item.path
 
   const menuActive = menuItems.some(mi => location.pathname === mi.path)
+  // Con un solo ítem no hay nada que "desplegar" — el botón navega directo
+  // a él (mismo ícono que ese ítem, ej. Bitácora para ROL2/Comisionado). El
+  // botón "+"/popover solo aparece cuando de verdad hay varias opciones.
+  const tieneVarios = menuItems.length > 1
+  const itemUnico = !tieneVarios ? menuItems[0] : null
 
   const ir = (item) => {
     if (item.consultar) {
@@ -154,6 +177,11 @@ export default function BottomNav() {
     } else {
       navigate(item.path)
     }
+  }
+
+  const alClicMas = () => {
+    if (itemUnico) navigate(itemUnico.path)
+    else setOpen(o => !o)
   }
 
   return (
@@ -178,19 +206,16 @@ export default function BottomNav() {
 
       <button
         className={`bn-item bn-more${menuActive ? ' bn-item-active' : ''}`}
-        onClick={() => setOpen(o => !o)}
-        aria-label="Bitácora y más opciones"
-        aria-haspopup="menu"
-        aria-expanded={open}
+        onClick={alClicMas}
+        aria-label={itemUnico ? itemUnico.label : 'Más opciones'}
+        aria-haspopup={tieneVarios ? 'menu' : undefined}
+        aria-expanded={tieneVarios ? open : undefined}
       >
-        <span className="bn-icon">
-          {ICON_BITACORA}
-          {menuItems.length > 1 && <span className="bn-more-badge" aria-hidden="true" />}
-        </span>
-        <span className="bn-label">Bitácora</span>
+        <span className="bn-icon">{itemUnico ? itemUnico.icon : ICON_MAS}</span>
+        <span className="bn-label">{itemUnico ? itemUnico.label : 'Más'}</span>
       </button>
 
-      {open && (
+      {tieneVarios && open && (
         <div className="bn-popover" role="menu" aria-label="Bitácora y más opciones">
           {menuItems.map(mi => (
             <button

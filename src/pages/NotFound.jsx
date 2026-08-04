@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
+import { rutaInicioPorRol } from '../utils/rutas'
 
 export default function NotFound() {
   const navigate  = useNavigate()
@@ -8,8 +9,7 @@ export default function NotFound() {
 
   const goHome = () => {
     if (!user) { navigate('/login'); return }
-    if (user.rol === 'ROL2') navigate('/rol2/dashboard')
-    else navigate('/rol1/dashboard')
+    navigate(rutaInicioPorRol(user.rol))
   }
 
   return (

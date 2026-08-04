@@ -1,5 +1,6 @@
-/* Reutiliza las clases de layout ya definidas globalmente por SolicitudesTurnadas.css
-   (bundle único, sin code-splitting por ruta) — aquí solo lo específico de Comisionado. */
+/* Reutiliza las clases de layout de SolicitudesTurnadas.css (importado
+   explícitamente en FUSComisionados.jsx) — aquí solo lo específico de
+   Comisionado. */
 
 .fc-tag {
   display: inline-flex;

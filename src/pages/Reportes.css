@@ -1,0 +1,385 @@
+/* ══════════════════════════════════════
+   REPORTES — reusa el sistema "liquid glass" de DashboardROL1.css
+   (.dash-bg, .dash2-wrap, .dash2-ambient, .kpi2-*, .dash2-card, .segmented,
+   .venc-*, .dash-donut-multi-*, .dash-table). Aquí solo lo específico de
+   esta página, con namespace propio (rep-) para no chocar con nada.
+══════════════════════════════════════ */
+
+.rep-wrap {
+  width: 100%;
+  max-width: 1800px;
+}
+
+/* ── Encabezado ── */
+.rep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.rep-heading { display: flex; align-items: center; gap: 12px; }
+.rep-heading-icon {
+  width: 42px; height: 42px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #eef7e4, #dcf0cb); color: #1F5647;
+  flex-shrink: 0;
+}
+.rep-heading h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; }
+.rep-heading p { margin: 2px 0 0; font-size: .82rem; color: #55555a; }
+
+.rep-export { display: flex; gap: 8px; }
+.rep-export button {
+  background: #1F5647; border: none; border-radius: 12px; color: #fff;
+  cursor: pointer; font-size: .78rem; font-weight: 700; padding: 10px 16px;
+  transition: background 150ms;
+}
+.rep-export button:hover:not(:disabled) { background: #163527; }
+.rep-export button:disabled { opacity: .45; cursor: not-allowed; }
+
+.rep-error {
+  background: rgba(178, 48, 48, 0.08); border: 1px solid rgba(178, 48, 48, 0.25);
+  border-radius: 14px; color: #9d1f1f; padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px; font-size: .85rem;
+}
+.rep-error button {
+  background: #9d1f1f; border: none; border-radius: 999px; color: #fff;
+  padding: 6px 14px; font-size: .78rem; font-weight: 700; cursor: pointer;
+}
+
+/* ── Filtros ──
+   position:relative + z-index explícito es necesario aquí: .dash2-card usa
+   backdrop-filter, que crea su propio contexto de apilamiento — sin esto, el
+   z-index:30 del desplegable de "Secciones del reporte" (.rep-selector > div,
+   más abajo) solo gana DENTRO de esta tarjeta. Las tarjetas KPI y los
+   paneles que vienen después en el DOM tienen position:relative propio, así
+   que sin este z-index se pintan por ENCIMA de toda la tarjeta de filtros
+   (incluido el desplegable), dejándolo tapado y casi inutilizable. */
+.rep-filtros {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 22px;
+}
+.rep-filtros-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+.rep-filtros-fila + .rep-filtros-fila {
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.rep-filtros label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: .68rem; font-weight: 700; color: #344d46;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.rep-filtros input,
+.rep-filtros select {
+  font: inherit; font-size: .82rem; font-weight: 500; text-transform: none;
+  letter-spacing: normal; color: #1d1d1f;
+  padding: 8px 11px; border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  min-width: 150px;
+}
+.rep-filtro-periodo { display: flex; flex-direction: column; gap: 6px; }
+.rep-filtro-periodo > span {
+  font-size: .68rem; font-weight: 700; color: #344d46;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.rep-segmented { background: rgba(0, 0, 0, 0.05); }
+
+.rep-btn-avanzado {
+  font: inherit; font-size: .78rem; font-weight: 700; color: #1F5647;
+  background: rgba(31, 86, 71, 0.08); border: 1px solid rgba(31, 86, 71, 0.2);
+  border-radius: 10px; padding: 9px 14px; cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 150ms;
+}
+.rep-btn-avanzado:hover { background: rgba(31, 86, 71, 0.14); }
+.rep-btn-avanzado svg { transition: transform 150ms ease; }
+.rep-btn-avanzado--abierto svg { transform: rotate(180deg); }
+
+/* Fila 3 (condicional): filtros avanzados. Reusa .rep-filtros-fila para el
+   separador superior — solo agrega el wrap por si los checks/detalle no caben. */
+.rep-avanzado { flex-wrap: wrap; }
+
+/* "Guardar copia" + "Secciones del reporte" van en su propia caja, juntas —
+   ambas controlan la exportación, a diferencia de Estado/Prioridad que son
+   filtros de datos. */
+.rep-grupo-exportar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  background: rgba(31, 86, 71, 0.06);
+  border: 1px solid rgba(31, 86, 71, 0.15);
+  border-radius: 10px;
+}
+.rep-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 7px !important;
+  font-size: .78rem !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: #1d1d1f !important;
+  cursor: pointer;
+}
+.rep-selector {
+  position: relative;
+  font-size: .78rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.rep-selector summary { cursor: pointer; font-weight: 700; color: #1d1d1f; text-transform: none; }
+.rep-selector > div {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  display: grid; gap: 8px; min-width: 260px; padding: 12px;
+  background: #ffffff; border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14);
+}
+.rep-selector label { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; text-transform: none; letter-spacing: normal; color: #1d1d1f; cursor: pointer; }
+
+/* ── KPIs con variación vs periodo anterior ──
+   .kpi2-value trae 32px por defecto (pensado para las tarjetas anchas del
+   dashboard) — aquí el renglón tiene 6 columnas angostas, así que se achica
+   para que el número no domine la tarjeta ni empuje el badge de variación. */
+.rep-kpi-row { grid-template-columns: repeat(6, 1fr); }
+.rep-kpi-card { min-height: 128px; }
+.rep-kpi-card .kpi2-value { font-size: 22px; }
+.rep-kpi-delta {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 8px; font-size: 11px; font-weight: 700; color: #86868b;
+}
+.rep-kpi-delta--up { color: #2f7a4f; }
+.rep-kpi-delta--down { color: #a32d2d; }
+
+/* ── Layout de contenido: columna principal (filtros + KPIs + paneles) + columna lateral.
+   La lateral arranca a la altura de los filtros (align-items: start) y no se estira
+   con el alto de la columna principal. ── */
+.rep-content { display: grid; grid-template-columns: minmax(0, 1fr) 270px; align-items: start; gap: 16px; }
+.rep-main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.rep-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.rep-span-2 { grid-column: span 2; }
+.rep-span-full { grid-column: 1 / -1; }
+
+.rep-panel { min-width: 0; }
+.rep-panel-title { display: flex; align-items: center; gap: 8px; }
+.rep-panel-icon { color: #1F5647; display: inline-flex; flex-shrink: 0; }
+
+/* ── Tablas (reusan .dash-table, aquí solo ajustes puntuales) ── */
+.rep-table th, .rep-table td { font-size: .76rem; }
+.rep-carga-scroll { overflow-x: hidden; }
+.rep-table-carga {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+.rep-table-carga .rep-carga-col-responsable { width: 31%; }
+.rep-table-carga .rep-carga-col-numero { width: 13%; }
+.rep-table-carga .rep-carga-col-capacidad { width: 30%; }
+.rep-table-carga th,
+.rep-table-carga td {
+  padding: 7px 4px;
+  font-size: .68rem;
+  line-height: 1.2;
+}
+.rep-table-carga th {
+  font-size: .59rem;
+  letter-spacing: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.rep-table-carga th:not(:first-child),
+.rep-table-carga td:not(:first-child) { text-align: center; }
+.rep-carga-responsable {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rep-table-carga td:last-child { white-space: nowrap; }
+.rep-td-alerta { color: #a32d2d; font-weight: 700; }
+.rep-capacidad {
+  display: inline-block; width: 28px; height: 5px; border-radius: 4px;
+  background: #ecf0ee; overflow: hidden; margin-right: 3px; vertical-align: middle;
+}
+.rep-capacidad i { display: block; height: 100%; background: #4f9d3f; }
+.rep-capacidad--alta i { background: #b91c1c; }
+.rep-nota-truncado { margin: 8px 2px 0; font-size: .68rem; color: #86868b; }
+
+/* ── Análisis de productividad ── */
+.rep-productividad { display: grid; gap: 10px; }
+.rep-mini {
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.07); border-radius: 12px;
+  padding: 10px 12px; background: rgba(255, 255, 255, 0.5);
+}
+.rep-mini span { font-size: .72rem; color: #55555a; }
+.rep-mini strong { display: block; margin-top: 2px; font-size: .95rem; font-weight: 700; color: #1d1d1f; }
+.rep-mini small { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: .68rem; color: #2f7a4f; font-weight: 600; }
+.rep-mini-nota--baja { color: #a32d2d !important; }
+.rep-mini-arrow { display: inline-flex; }
+
+/* ── Columna lateral ── */
+.rep-aside { display: grid; gap: 14px; align-content: start; }
+.rep-side-card { padding: 0; overflow: hidden; }
+.rep-side-card h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; padding: 16px 18px 12px;
+  font-size: .88rem; font-weight: 700; color: #1d1d1f;
+}
+.rep-side-toggle { cursor: pointer; user-select: none; }
+.rep-side-chevron {
+  margin-left: auto; color: #86868b; display: inline-flex; flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+.rep-side-chevron--abierto { transform: rotate(180deg); }
+.rep-side-empty { padding: 0 18px 16px; }
+.rep-side-text { margin: 0; padding: 0 18px; font-size: .78rem; color: #55555a; line-height: 1.5; }
+.rep-side-text--pad { padding-bottom: 18px; }
+
+/* "FUS por estado" en la barra lateral — la dona reusa .dash-donut-multi-*
+   (ver DashboardROL1.css), aquí solo se centra y se le da el padding que
+   .rep-side-card quita por defecto (overflow:hidden + padding:0). */
+.rep-side-card--estados .dash-donut-multi-wrap { justify-content: center; padding: 4px 18px 18px; }
+.rep-side-card--estados .dash-donut-multi-total-value { font-size: 1.3rem; }
+.rep-side-card--productividad .rep-productividad { padding: 0 18px 18px; }
+.rep-side-card--unidades { padding-bottom: 8px; }
+
+.rep-guardados-lista { list-style: none; margin: 0; padding: 4px 0 8px; display: flex; flex-direction: column; }
+.rep-guardados-lista li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 18px; border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+.rep-guardados-lista li:last-child { border-bottom: none; }
+.rep-guardado-info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.rep-guardado-nombre { font-size: .78rem; font-weight: 600; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rep-guardado-meta { font-size: .68rem; color: #86868b; }
+.rep-guardado-acciones { display: flex; gap: 4px; flex-shrink: 0; }
+.rep-guardado-acciones button {
+  width: 28px; height: 28px; border-radius: 8px; border: none;
+  background: rgba(31, 86, 71, 0.08); color: #1F5647;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background 150ms;
+}
+.rep-guardado-acciones button:last-child { color: #a32d2d; background: rgba(178, 48, 48, 0.08); }
+.rep-guardado-acciones button:hover { background: rgba(31, 86, 71, 0.16); }
+.rep-guardado-acciones button:last-child:hover { background: rgba(178, 48, 48, 0.16); }
+
+/* ══════════════════════════════════════
+   RESPONSIVO
+══════════════════════════════════════ */
+@media (max-width: 1450px) {
+  .rep-kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .rep-content { grid-template-columns: 1fr; }
+  .rep-aside { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rep-grid { grid-template-columns: repeat(2, 1fr); }
+  .rep-span-2 { grid-column: span 2; }
+}
+
+@media (max-width: 900px) {
+  .rep-grid { grid-template-columns: 1fr; }
+  .rep-span-2 { grid-column: auto; }
+  .rep-aside { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .rep-header { flex-direction: column; align-items: stretch; }
+  .rep-heading h1 { font-size: 1.2rem; }
+  .rep-export { width: 100%; }
+  .rep-export button { flex: 1; }
+
+  .rep-filtros { padding: 14px 16px; gap: 12px; }
+  .rep-filtros input, .rep-filtros select { min-width: 0; width: 100%; }
+  /* Cada fila de filtros a una columna completa — en el ancho de un celular
+     la versión "wrap" dejaba controles de distinto tamaño encimados/mal
+     alineados en vez de una lista clara de arriba a abajo. */
+  .rep-filtros-fila { flex-direction: column; align-items: stretch; }
+  .rep-filtro-periodo { width: 100%; }
+  .rep-btn-avanzado { justify-content: center; }
+  .rep-selector, .rep-selector > div { width: 100%; box-sizing: border-box; }
+  .rep-selector > div { position: static; box-shadow: none; margin-top: 8px; }
+  .rep-grupo-exportar { flex-direction: column; align-items: stretch; gap: 10px; }
+
+  /* .kpi2-row ya pasa a carrusel horizontal con scroll-snap en este
+     breakpoint (ver DashboardROL1.css) — aquí solo se ajusta el tamaño de
+     cada tarjeta dentro de ese carrusel. */
+  .rep-kpi-card { min-height: 108px; padding: 14px; }
+  .rep-kpi-card .kpi2-value { font-size: 20px; }
+
+  .rep-side-card h3 { font-size: .82rem; padding: 14px 16px 10px; }
+  .rep-side-text { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ══════════════════════════════════════
+   Celulares angostos (≤480px) — iPhone SE/mini, Android compactos
+══════════════════════════════════════ */
+@media (max-width: 480px) {
+  .rep-heading { gap: 10px; }
+  .rep-heading-icon { width: 36px; height: 36px; border-radius: 12px; }
+  .rep-heading-icon svg { width: 14px; height: 14px; }
+  .rep-heading h1 { font-size: 1.05rem; }
+  .rep-heading p { font-size: .76rem; }
+
+  /* Botones de exportar — 3 en fila siguen cabiendo (flex:1 los reparte),
+     solo se achican tipografía/relleno para que "Presentación" no obligue
+     a una segunda línea dentro del botón. */
+  .rep-export { gap: 6px; }
+  .rep-export button { font-size: .70rem; padding: 9px 6px; }
+
+  /* El segmentado de Periodo tiene 5 opciones (Mes/Trimestre/Semestre/Año/
+     Personalizado) — como pill de una sola fila (.segmented base, pensado
+     para 3 opciones cortas) no cabe en un celular y se salía del contenedor.
+     Se pasa a una grilla de chips individuales, propia de Reportes. */
+  .rep-segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    background: transparent;
+    padding: 0;
+    gap: 6px;
+  }
+  .rep-segmented button {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    padding: 7px 4px;
+    font-size: 10.5px;
+    text-align: center;
+  }
+  .rep-segmented button.active { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.6) inset; }
+
+  .rep-filtros label { font-size: .64rem; }
+  .rep-filtros input, .rep-filtros select { font-size: .8rem; padding: 8px 10px; }
+
+  .rep-panel-title { font-size: .8rem; }
+
+  .rep-kpi-card .kpi2-value { font-size: 18px; }
+
+  .rep-mini { padding: 9px 10px; }
+  .rep-mini strong { font-size: .9rem; }
+
+  .rep-guardado-nombre { font-size: .74rem; }
+  .rep-guardado-meta { font-size: .64rem; }
+  .rep-guardados-lista li { padding: 8px 16px; }
+}
+
+/* ══════════════════════════════════════
+   Celulares muy angostos (≤360px)
+══════════════════════════════════════ */
+@media (max-width: 360px) {
+  .rep-export { flex-wrap: wrap; }
+  .rep-export button { flex: 1 1 calc(50% - 3px); }
+
+  .rep-segmented { grid-template-columns: repeat(2, 1fr); }
+
+  .rep-kpi-card { min-height: 96px; padding: 12px; }
+  .rep-kpi-card .kpi2-value { font-size: 16px; }
+}

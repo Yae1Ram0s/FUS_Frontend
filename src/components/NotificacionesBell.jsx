@@ -75,7 +75,7 @@ export default function NotificacionesBell() {
   if (!ctx) return null
 
   const {
-    notifs, noLeidas, cargar, marcarLeida, marcarTodas,
+    notifs, noLeidas, cargar, marcarLeida, marcarTodas, limpiarTodas,
     browserNotif, activarBrowserNotif, desactivarBrowserNotif,
   } = ctx
 
@@ -100,8 +100,12 @@ export default function NotificacionesBell() {
   const handleNotifClick = async (n) => {
     if (!n.leida) await marcarLeida(n.id)
     setOpen(false)
+    // Mismo criterio de ruta por rol que NotificacionesContext._disparar
+    // (notificación del navegador) — FUSComisionados no lee `folio` de la URL.
     const destino = user?.rol === 'ROL2'
       ? `/rol2/solicitudes?folio=${encodeURIComponent(n.fusFolio)}`
+      : user?.rol === 'COMISIONADO'
+      ? '/comisionado/fus-comisionados'
       : `/rol1/consultar-fus?folio=${encodeURIComponent(n.fusFolio)}`
     navigate(destino)
   }
@@ -113,6 +117,8 @@ export default function NotificacionesBell() {
         className={`notif-bell-btn${noLeidas > 0 ? ' notif-bell-active' : ''}`}
         onClick={toggle}
         aria-label={`Notificaciones${noLeidas > 0 ? ` (${noLeidas} nuevas)` : ''}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -135,10 +141,17 @@ export default function NotificacionesBell() {
                 <span className="notif-panel-count">{noLeidas} nueva{noLeidas > 1 ? 's' : ''}</span>
               )}
             </div>
-            {noLeidas > 0 && (
-              <button className="notif-read-all" onClick={marcarTodas}>
-                Marcar leídas
-              </button>
+            {notifs.length > 0 && (
+              <div className="notif-panel-actions">
+                {noLeidas > 0 && (
+                  <button className="notif-read-all" onClick={marcarTodas}>
+                    Marcar leídas
+                  </button>
+                )}
+                <button className="notif-clear-all" onClick={limpiarTodas}>
+                  Borrar
+                </button>
+              </div>
             )}
           </div>
 
@@ -160,7 +173,12 @@ export default function NotificacionesBell() {
                   onClick={() => handleNotifClick(n)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && handleNotifClick(n)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleNotifClick(n)
+                    }
+                  }}
                 >
                   <span className={`notif-icon-wrap notif-icon-${n.tipo || 'default'}`}>
                     <NotifIcon tipo={n.tipo} />

@@ -30,13 +30,12 @@ api.interceptors.request.use(config => {
   return config
 })
 
-let refreshFallidosSeguidos = 0
 // Varias peticiones pueden 401 casi al mismo tiempo (ej. los dashboards
 // disparan 2 llamadas en paralelo) -- comparten un solo refresh en curso en
 // vez de contar cada 401 simultáneo como un fallo separado.
 let refreshEnCurso = null
 
-function refrescarToken() {
+export function refreshAccessToken() {
   if (!refreshEnCurso) {
     refreshEnCurso = axios.post(
       '/api/auth/token/refresh/',
@@ -44,20 +43,10 @@ function refrescarToken() {
       { withCredentials: true, headers: { 'ngrok-skip-browser-warning': 'true' } }
     )
       .then(({ data }) => {
-        refreshFallidosSeguidos = 0
         setAccessToken(data.access)
         return data.access
       })
       .catch(err => {
-        refreshFallidosSeguidos += 1
-        setAccessToken(null)
-        // Una falla aislada de refresh no debe sacar al usuario de la app --
-        // se deja que la pantalla que hizo la petición maneje el error con
-        // su propio banner/"Reintentar". Solo tras 2 fallos consecutivos se
-        // asume que la sesión realmente murió.
-        if (refreshFallidosSeguidos >= 2) {
-          window.location.href = '/login'
-        }
         throw err
       })
       .finally(() => { refreshEnCurso = null })
@@ -72,11 +61,17 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true
       try {
-        const access = await refrescarToken()
+        const access = await refreshAccessToken()
         original.headers.Authorization = `Bearer ${access}`
         return api(original)
-      } catch {
-        // El fallo ya quedó contabilizado/manejado dentro de refrescarToken().
+      } catch (refreshError) {
+        const status = refreshError.response?.status
+        if (status === 401 || status === 403) {
+          setAccessToken(null)
+          localStorage.removeItem('scs_user')
+          localStorage.removeItem('scs_last_activity')
+          if (window.location.pathname !== '/login') window.location.href = '/login'
+        }
       }
     }
     return Promise.reject(err)

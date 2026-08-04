@@ -1,23 +1,13 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-
-export function descargar(url, nombre, token) {
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => r.blob())
-    .then(blob => {
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = nombre
-      a.click()
-      URL.revokeObjectURL(a.href)
-    })
-    .catch(() => alert('No se pudo descargar el archivo.'))
-}
+import { useModalBehavior } from '../hooks/useModalBehavior'
+import './ModalDescargarPDF.css'
 
 /* ── Modal: elegir con/sin imágenes al descargar el PDF ── */
 export default function ModalDescargarPDF({ onCancelar, onConfirmar }) {
   const [conImagenes, setConImagenes] = useState(true)
   const [cargando, setCargando] = useState(false)
+  useModalBehavior(onCancelar, { closeEnabled: !cargando })
 
   const confirmar = () => {
     setCargando(true)

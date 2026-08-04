@@ -95,6 +95,16 @@
   z-index: 1;
 }
 
+/* Destello al reiniciar el formulario con "Cancelar" — confirma visualmente
+   que sí se limpió, ya que ese clic no navega a ningún lado. */
+.reg-form-card-limpiado {
+  animation: reg-flash-limpiado 700ms ease-out;
+}
+@keyframes reg-flash-limpiado {
+  0%   { box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.55), 0 8px 32px rgba(0, 0, 0, 0.10); }
+  100% { box-shadow: 0 0 0 0   rgba(21, 128, 61, 0),    0 8px 32px rgba(0, 0, 0, 0.10); }
+}
+
 /* ── Formulario ── */
 .reg-form { display: flex; flex-direction: column; }
 
@@ -169,6 +179,10 @@
   transition: all 200ms ease-in-out;
   line-height: 1.5;
 }
+
+/* FechaInput envuelve el <input type="datetime-local"> en un <span> — el
+   flex:1 de arriba ya no le llega directo, se lo pasa a su envoltorio. */
+.reg-row .fecha-input-wrap { flex: 1; }
 
 .reg-form textarea {
   resize: vertical;
@@ -660,14 +674,14 @@
   font-weight: 500;
 }
 
-.reg-ok {
-  color: #15803d;
+.reg-aviso-borrador {
+  color: #8a5a00;
   font-size: 0.82rem;
-  font-weight: 600;
-  margin: 0 24px;
+  font-weight: 500;
+  margin: 0 24px 16px;
   padding: 10px 14px;
-  border: 1px solid rgba(21, 128, 61, 0.30);
-  background: rgba(220, 252, 231, 0.70);
+  border: 1px solid rgba(224, 160, 32, 0.35);
+  background: rgba(255, 248, 230, 0.80);
   border-radius: 12px;
 }
 

@@ -1,5 +1,7 @@
+import { useCallback, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PerfilModal from './PerfilModal'
 import './Sidebar.css'
 
 const ICON_BITACORA = (
@@ -59,6 +61,15 @@ const NAV_ROL1 = [
     ),
   },
   { path: '/rol1/bitacora', label: 'Búsqueda Avanzada', icon: ICON_BITACORA },
+  {
+    path: '/rol1/reportes',
+    label: 'Reportes',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19H2"/>
+      </svg>
+    ),
+  },
   {
     path: '/rol1/panel',
     label: 'Usuarios y accesos',
@@ -121,8 +132,27 @@ const NAV_COMISIONADO = [
 
 export default function Sidebar({ isOpen, onClose, onToggle }) {
   const { user } = useAuth()
+  const [perfilAbierto, setPerfilAbierto] = useState(false)
+  const [perfilCerrando, setPerfilCerrando] = useState(false)
+  const [perfilAncla, setPerfilAncla] = useState(null)
   const navigate  = useNavigate()
   const location  = useLocation()
+  const cerrarPerfil = useCallback(() => setPerfilCerrando(true), [])
+  const finalizarCierrePerfil = useCallback(() => {
+    setPerfilAbierto(false)
+    setPerfilCerrando(false)
+  }, [])
+
+  const abrirPerfil = event => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setPerfilAncla({
+      top: rect.top,
+      left: rect.right,
+      centroY: rect.top + (rect.height / 2),
+    })
+    setPerfilCerrando(false)
+    setPerfilAbierto(true)
+  }
 
   const items = user?.rol === 'ROL2' ? NAV_ROL2
     : user?.rol === 'COMISIONADO' ? NAV_COMISIONADO
@@ -169,13 +199,19 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
       </div>
 
       {/* Usuario */}
-      <div className="sidebar-user">
+      <button
+        type="button"
+        className="sidebar-user"
+        onClick={abrirPerfil}
+        aria-label="Ver mi perfil"
+        title="Ver mi perfil"
+      >
         <div className="sidebar-avatar">{initials}</div>
         <div className="sidebar-user-info">
           <span className="sidebar-user-name">{user?.nombre || user?.email}</span>
           <span className="sidebar-user-role">{user?.unidadAdministrativa || 'Sin unidad asignada'}</span>
         </div>
-      </div>
+      </button>
 
       {/* Navegación */}
       <nav className="sidebar-nav">
@@ -197,6 +233,15 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
           )
         })}
       </nav>
+
+      <PerfilModal
+        abierto={perfilAbierto}
+        cerrando={perfilCerrando}
+        user={user}
+        ancla={perfilAncla}
+        onClose={cerrarPerfil}
+        onCierreCompleto={finalizarCierrePerfil}
+      />
     </aside>
   )
 }

@@ -2,9 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
+import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { validarEvidencias } from '../utils/archivos'
+import { guardarBorrador, leerBorrador, borrarBorrador, tieneContenido } from '../utils/borradorFUS'
 import './RegistrarFUS.css'
 
 const PRIORIDAD_INFO = {
@@ -44,6 +49,20 @@ const PRIORIDAD_INFO = {
   },
 }
 
+const formVacio = () => ({
+  descripcion:         '',
+  contexto:            '',
+  idMedioRecepcion:    '',
+  medioEspecificacion: '',
+  prioridad:           '',
+  criterios:           [],
+  fechaLimite:         '',
+  solicitante_nombre:  '',
+  solicitante_tel:     '',
+  solicitante_correo:  '',
+  evidencias:          [],
+})
+
 /* ── Enlace a evidencia ya guardada (descarga autenticada) ── */
 function EvidenciaExistenteLink({ ev }) {
   const url = useEvidenciaUrl(ev.id)
@@ -66,6 +85,7 @@ function EvidenciaExistenteLink({ ev }) {
 
 export default function RegistrarFUS() {
   const { user }   = useAuth()
+  const toast      = useToast()
   const navigate   = useNavigate()
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('editar')
@@ -76,20 +96,23 @@ export default function RegistrarFUS() {
   const [exito,   setExito]   = useState('')
   const [cargandoFus, setCargandoFus] = useState(!!editId)
   const [evidenciasExistentes, setEvidenciasExistentes] = useState([])
+  const [limpiado, setLimpiado] = useState(false)
+  const envioEnCursoRef = useRef(false)
 
-  const [form, setForm] = useState({
-    descripcion:         '',
-    contexto:            '',
-    idMedioRecepcion:    '',
-    medioEspecificacion: '',
-    prioridad:           '',
-    criterios:           [],
-    fechaLimite:         '',
-    solicitante_nombre:  '',
-    solicitante_tel:     '',
-    solicitante_correo:  '',
-    evidencias:          [],
-  })
+  // Un FUS en edición no usa borrador local (ya vive guardado en el
+  // servidor) — el borrador es solo para una solicitud nueva a medio llenar.
+  const borradorInicial = editId ? null : leerBorrador(user?.email)
+  const [avisoBorrador] = useState(() => (
+    !editId && tieneContenido(borradorInicial) && borradorInicial.evidenciasNombres?.length
+      ? `Recuperamos tu borrador — vuelve a adjuntar: ${borradorInicial.evidenciasNombres.join(', ')}.`
+      : ''
+  ))
+
+  const [form, setForm] = useState(() => (
+    !editId && tieneContenido(borradorInicial)
+      ? { ...borradorInicial, evidencias: [] }
+      : formVacio()
+  ))
 
   useEffect(() => {
     api.get('/catalogos/medios/').then(r => setMedios(r.data)).catch(() => {})
@@ -104,6 +127,7 @@ export default function RegistrarFUS() {
 
   useEffect(() => {
     if (!editId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marca "cargando" antes del fetch al entrar en modo edición
     setCargandoFus(true)
     api.get(`/fus/${editId}/`).then(r => {
       const f = r.data
@@ -126,6 +150,34 @@ export default function RegistrarFUS() {
     }).finally(() => setCargandoFus(false))
   }, [editId])
 
+  // Borrador local: guarda en localStorage mientras se llena una solicitud
+  // nueva (no en modo edición) — si se pierde la conexión, se cierra la
+  // pestaña sin querer o navega a otra pantalla, BorradorFUSPrompt (en
+  // AppLayout) avisa y deja retomarlo. No depende de red, así que sigue
+  // funcionando aunque la API esté caída.
+  const formParaGuardar = useDebouncedValue(form, 600)
+  useEffect(() => {
+    if (editId || exito) return
+    guardarBorrador(user?.email, formParaGuardar)
+  }, [formParaGuardar, editId, exito, user?.email])
+
+  // Guardado de último momento al salir de la pantalla (ej. clic al menú
+  // antes de que pasen los 600ms del debounce de arriba): sin esto, lo
+  // escrito en esa ventana corta se perdía porque el debounce nunca llegaba
+  // a disparar el guardado antes de desmontarse el componente. `noGuardarRef`
+  // evita que este mismo guardado de salida resucite el borrador justo
+  // después de que ya se borró a propósito (envío exitoso o "Cancelar").
+  const formRef      = useRef(form)
+  const noGuardarRef = useRef(false)
+  useEffect(() => { formRef.current = form }, [form])
+  useEffect(() => { if (exito) noGuardarRef.current = true }, [exito])
+  useEffect(() => {
+    return () => {
+      if (editId || noGuardarRef.current) return
+      guardarBorrador(user?.email, formRef.current)
+    }
+  }, [editId, user?.email])
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [] }))
@@ -137,7 +189,13 @@ export default function RegistrarFUS() {
   const previewsRef = useRef([])
 
   const agregarArchivos = (files) => {
-    const nuevos = Array.from(files).map(f => ({
+    const validacion = validarEvidencias(files, form.evidencias)
+    if (validacion.error) {
+      setError(validacion.error)
+      return
+    }
+    setError('')
+    const nuevos = validacion.archivos.map(f => ({
       file: f,
       preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null,
       comentario: '',
@@ -179,6 +237,7 @@ export default function RegistrarFUS() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (envioEnCursoRef.current) return
     if (!form.descripcion || form.descripcion.length < 20) {
       setError('La descripción debe tener al menos 20 caracteres.')
       return
@@ -186,6 +245,7 @@ export default function RegistrarFUS() {
     if (!form.idMedioRecepcion) { setError('Selecciona un medio de recepción.'); return }
     if (!form.prioridad)         { setError('Selecciona una prioridad.'); return }
 
+    envioEnCursoRef.current = true
     setError(''); setLoading(true)
     try {
       const fd = new FormData()
@@ -202,26 +262,95 @@ export default function RegistrarFUS() {
       form.evidencias.forEach(ev => fd.append('evidencias', ev.file))
       fd.append('comentariosEvidencias', JSON.stringify(form.evidencias.map(ev => ev.comentario || '')))
 
-      // Sin Content-Type manual: axios detecta FormData y deja que el navegador
-      // genere "multipart/form-data; boundary=..." — forzarlo aquí sin boundary
-      // producía un multipart mal formado que el parser de Django rechazaba
-      // (o interpretaba vacío) después de que el guardado ya había ocurrido en
-      // otros casos, mostrando el error genérico aunque el cambio sí aplicara.
+      // La instancia de `api` fija Content-Type: application/json por defecto
+      // (api/api.js) — sin overridearlo aquí, axios ve ese header ya puesto y
+      // en vez de mandar el FormData como multipart, lo serializa con
+      // JSON.stringify() (formDataToJSON). Los File no tienen propiedades
+      // enumerables, así que se pierden en silencio: el FUS se guardaba bien
+      // (los campos de texto sí sobreviven), pero ninguna evidencia llegaba a
+      // crearse nunca, aunque el formulario mostrara éxito. Pasar
+      // Content-Type: undefined borra el header heredado y deja que el
+      // navegador genere el "multipart/form-data; boundary=..." real.
+      const config = { headers: { 'Content-Type': undefined } }
       const { data } = editId
-        ? await api.patch(`/fus/${editId}/`, fd)
-        : await api.post('/fus/', fd)
-      setExito(editId ? 'Solicitud actualizada correctamente.' : 'Solicitud registrada correctamente.')
-      setTimeout(() => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(data.folio)}`), 1200)
+        ? await api.patch(`/fus/${editId}/`, fd, config)
+        : await api.post('/fus/', fd, config)
+      if (!editId) borrarBorrador(user?.email)
+      const mensajeExito = editId ? 'Solicitud actualizada correctamente.' : 'Solicitud registrada correctamente.'
+      setExito(mensajeExito)
+      toast.success(mensajeExito)
+      setTimeout(() => navigate(
+        `/rol1/consultar-fus?folio=${encodeURIComponent(data.folio)}`,
+        { state: { recienRegistrado: true } },
+      ), 1200)
       // se mantiene loading=true a propósito: el formulario queda deshabilitado
       // hasta que ocurre la navegación, para evitar un doble envío en ese lapso.
     } catch (err) {
-      setError(err.response?.data?.detail || 'No se pudo guardar la solicitud. Intenta nuevamente.')
+      // Sin err.response = no llegó respuesta del servidor (conexión caída) —
+      // se distingue del resto de errores porque el borrador local sigue
+      // intacto (no depende de la red) y conviene decirlo, no solo "reintenta".
+      const mensaje = err.response?.data?.detail
+        ?? (err.response
+          ? 'No se pudo guardar la solicitud. Intenta nuevamente.'
+          : 'Se perdió la conexión. Lo que llevas llenado sigue guardado en este formulario — intenta de nuevo cuando vuelva la conexión.')
+      setError(mensaje)
+      envioEnCursoRef.current = false
       setLoading(false)
     }
   }
 
+  // Registrando de cero (no en edición): si el formulario ya está vacío no
+  // hay nada que "Cancelar" pueda limpiar — el botón se deshabilita para que
+  // no de la impresión de que hace algo, y no dispara el toast/destello.
+  const hayAlgoQueLimpiar = editId || tieneContenido(form)
+
+  const cancelar = () => {
+    // En edición no hay "formulario en blanco" al que volver — se sale a
+    // Consultar FUS igual que antes. Registrando de cero, en cambio, se
+    // reinicia la misma pantalla (sin navegar) para poder capturar otra
+    // solicitud de inmediato.
+    if (editId) {
+      navigate('/rol1/consultar-fus')
+      return
+    }
+    if (!tieneContenido(form)) return
+    borrarBorrador(user?.email)
+    previewsRef.current.forEach(url => URL.revokeObjectURL(url))
+    previewsRef.current = []
+    setForm(formVacio())
+    setError('')
+    setExito('')
+    // El reinicio no navega a ningún lado, así que sin una señal aparte el
+    // usuario no tiene forma de saber si el clic realmente limpió el
+    // formulario — destello en la tarjeta + toast, mismo patrón de
+    // confirmación que usa el resto de la app (ToastContext).
+    setLimpiado(true)
+    setTimeout(() => setLimpiado(false), 700)
+    toast.info('Formulario limpiado — puedes registrar una nueva solicitud.')
+  }
+
+  // Confirmación nativa del navegador al cerrar/recargar con cambios sin
+  // guardar — complementa al borrador (que ya cubre la recuperación): esto
+  // intenta evitar el cierre accidental antes de que pase.
+  useEffect(() => {
+    if (editId || loading || exito) return
+    const onBeforeUnload = e => {
+      if (!tieneContenido(form)) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [editId, loading, exito, form])
+
   return (
     <AppLayout mainClass="app-main-scroll">
+      {/* Fuera de .reg-bg/.reg-form-card a propósito: esos contenedores tienen
+          backdrop-filter, que crea su propio "containing block" para los
+          descendientes position:fixed — anidado ahí, el overlay del Spinner
+          quedaba recortado/posicionado relativo a la tarjeta en vez de a toda
+          la pantalla, y por eso no se veía. */}
+      {exito && <Spinner overlay dots label={exito} />}
       <div className="reg-bg">
       <div className="reg-content">
         <div className="reg-header">
@@ -241,9 +370,10 @@ export default function RegistrarFUS() {
           </div>
         </div>
 
-        <div className="reg-form-card">
+        <div className={`reg-form-card${limpiado ? ' reg-form-card-limpiado' : ''}`}>
+          {avisoBorrador && <p className="reg-aviso-borrador" role="status">{avisoBorrador}</p>}
           {cargandoFus && <Spinner overlay={false} />}
-          {!cargandoFus && <form className="reg-form" onSubmit={handleSubmit} noValidate>
+          {!cargandoFus && !exito && <form className="reg-form" onSubmit={handleSubmit} noValidate>
 
             <fieldset className="reg-fieldset">
               <legend className="reg-legend">Datos generales</legend>
@@ -456,7 +586,7 @@ export default function RegistrarFUS() {
 
               <div className="reg-row">
                 <label htmlFor="reg-fecha-limite">Fecha y hora límite (opcional)</label>
-                <input
+                <FechaInput
                   id="reg-fecha-limite"
                   type="datetime-local"
                   value={form.fechaLimite}
@@ -466,10 +596,9 @@ export default function RegistrarFUS() {
             </fieldset>
 
             {error && <p className="reg-error" role="alert">{error}</p>}
-            {exito && <p className="reg-ok"  role="status">{exito}</p>}
 
             <div className="reg-actions">
-              <button type="button" className="btn-secondary" onClick={() => navigate('/rol1/consultar-fus')} disabled={loading}>
+              <button type="button" className="btn-secondary" onClick={cancelar} disabled={loading || !hayAlgoQueLimpiar}>
                 Cancelar
               </button>
               <button type="submit" className="btn-primary" disabled={loading}>

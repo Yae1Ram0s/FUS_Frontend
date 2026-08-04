@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
+import { formatearFechaHora } from '../utils/fechas'
 import Spinner from './Spinner'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useModalBehavior } from '../hooks/useModalBehavior'
 import './ModalTimeline.css'
 
-const fmtFecha = d => d
-  ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '—'
+const fmtFecha = formatearFechaHora
 
 const TIPO_INFO = {
   creacion:    { titulo: 'Registro',    color: 'var(--fg-secondary)' },
@@ -26,32 +27,29 @@ const LEYENDA = [
 ]
 
 export default function ModalTimeline({ folio, onClose }) {
-  const [eventos,  setEventos]  = useState([])
-  const [error,    setError]    = useState(false)
-  const [cargando, setCargando] = useState(true)
+  useModalBehavior(onClose)
   const notifCtx = useNotificaciones()
 
-  const cargarTrazabilidad = useCallback(() => {
+  const cargarTrazabilidad = useCallback(({ signal }) => {
     const url = `/fus/trazabilidad/${folio.split('/').map(encodeURIComponent).join('/')}/`
-    return api.get(url)
-      .then(r => {
-        setEventos(r.data.eventos || [])
-        setError(false)
-      })
-      .catch(() => setError(true))
+    return api.get(url, { signal }).then(respuesta => respuesta.data.eventos || [])
   }, [folio])
 
-  useEffect(() => {
-    cargarTrazabilidad().finally(() => setCargando(false))
-  }, [cargarTrazabilidad])
+  const {
+    data: eventos,
+    error,
+    loading: cargando,
+    reload: recargarTrazabilidad,
+  } = useAsyncResource(cargarTrazabilidad, { initialData: [] })
 
   // En vivo: si llega por WebSocket una notificación de este mismo folio
   // (turnado, respuesta, cambio de estado, conclusión), se refresca sola —
   // sin spinner de pantalla completa, sin que el usuario recargue nada.
   const ultimaNotifId = notifCtx?.notifs?.[0]?.id
   useEffect(() => {
-    if (notifCtx?.notifs?.[0]?.fusFolio === folio) cargarTrazabilidad()
-  }, [ultimaNotifId, folio, cargarTrazabilidad])
+    if (notifCtx?.notifs?.[0]?.fusFolio === folio) recargarTrazabilidad()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
+  }, [ultimaNotifId, folio, recargarTrazabilidad])
 
   const hayContenido = eventos.length > 0
 

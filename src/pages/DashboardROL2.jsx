@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import AppLayout from '../components/AppLayout'
@@ -7,10 +7,10 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
+import { useAsyncResource } from '../hooks/useAsyncResource'
 import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
-const PRIORIDAD_COLORES = { Alta: '#b91c1c', Media: '#92400e', Baja: '#15803d' }
 
 const ICON_INBOX = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -65,13 +65,16 @@ const ICON_TREND_UP = (
 )
 
 /** Trae todas las páginas de un listado paginado (el backend limita page_size a 100). */
-async function fetchAll(url, extraParams = {}) {
+async function fetchAll(url, extraParams = {}, signal) {
   const page_size = 100
   let page = 1
   let all = []
   let total = Infinity
   while (all.length < total) {
-    const r = await api.get(url, { params: { ...extraParams, page, page_size } })
+    const r = await api.get(url, {
+      params: { ...extraParams, page, page_size },
+      signal,
+    })
     const results = r.data.results || []
     total = r.data.total ?? results.length
     all = all.concat(results)
@@ -108,52 +111,46 @@ export default function DashboardROL2() {
   const navigate = useNavigate()
   const nombre = user?.nombre || user?.email || 'Usuario'
 
-  const [turnados,  setTurnados]  = useState([])
-  const [actividad, setActividad] = useState([])
-  const [cargando,  setCargando]  = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
-  // Se recalcula en cada cargar() (no solo al montar) — si no, las etiquetas
-  // relativas y los cálculos de "tiempo restante"/"hoy" se quedan congelados
-  // a la hora en que se abrió el dashboard, aunque los datos se refresquen.
-  const [ahora, setAhora] = useState(() => Date.now())
-  const autoRetriedRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
-
-  const cargar = () => {
-    Promise.all([
-      fetchAll('/turnados/mis-turnados/'),
-      api.get('/bitacora/', { params: { page: 1, page_size: 8 } }).then(r => r.data.results || []),
-    ])
-      .then(([turn, bit]) => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        setTurnados(turn); setActividad(bit); setAhora(Date.now())
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
-  const reintentar = () => { setCargando(true); cargar() }
-
-  useEffect(() => { cargar() }, [])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+  const cargarDashboard = useCallback(
+    async ({ signal }) => ({
+      turnados: await fetchAll('/turnados/mis-turnados/', {}, signal),
+      // Se recalcula con cada carga para mantener vigentes los tiempos relativos.
+      ahora: Date.now(),
+    }),
+    [],
+  )
+  const {
+    data: dashboard,
+    loading: cargando,
+    error: errorCarga,
+    reload: reintentar,
+  } = useAsyncResource(cargarDashboard, {
+    initialData: () => ({ turnados: [], ahora: Date.now() }),
+  })
+  const { turnados, ahora } = dashboard
 
   // En vivo: cualquier notificación ligada a un FUS (turnado nuevo, respuesta,
   // concluir, etc.) refresca el dashboard completo — mismo patrón que
   // DashboardROL1/ConsultarFUS/SolicitudesTurnadas/FUSComisionados.
   const notifCtx = useNotificaciones()
-  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  const ultimaNotif = notifCtx?.notifs?.[0]
+  const ultimaNotifId = ultimaNotif?.id
+  const ultimaNotifFolio = ultimaNotif?.fusFolio
   useEffect(() => {
-    const notif = notifCtx?.notifs?.[0]
-    if (!notif?.fusFolio) return
-    cargar()
-  }, [ultimaNotifId])
+    if (!ultimaNotifFolio) return
+    reintentar()
+  }, [reintentar, ultimaNotifFolio, ultimaNotifId])
+
+  // "FUS atendidos esta semana" y "Productividad del día" dependen de en qué
+  // día/semana cae `ahora` — sin esto, una sesión que se queda abierta y
+  // cruza medianoche (o el lunes) sigue mostrando los mensajes calculados
+  // con el día/semana viejos hasta que llegue una notificación. Se refresca
+  // solo (sin esperar un evento) cada minuto para que siempre reflejen la
+  // situación actual.
+  useEffect(() => {
+    const id = setInterval(reintentar, 60_000)
+    return () => clearInterval(id)
+  }, [reintentar])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
   const irAlFus = (folio) => navigate(`/rol2/solicitudes?folio=${encodeURIComponent(folio)}`)
@@ -223,7 +220,12 @@ export default function DashboardROL2() {
     const fc = new Date(t.idFus.fechaConclusion)
     return fc >= inicioSemanaAnt && fc < inicioSemana
   }).length
-  const notaSemana = totalSemanaActual > totalSemanaAnterior ? 'Mejor que la semana pasada'
+  // Con 0 y 0 la comparación "igual que la semana pasada" es técnicamente
+  // cierta pero engañosa — suena a que sí hubo actividad y se mantuvo, cuando
+  // en realidad no se ha atendido nada en ninguna de las dos semanas.
+  const haySemanaActividad = totalSemanaActual > 0 || totalSemanaAnterior > 0
+  const notaSemana = !haySemanaActividad ? 'Aún no hay FUS atendidos'
+    : totalSemanaActual > totalSemanaAnterior ? 'Mejor que la semana pasada'
     : totalSemanaActual < totalSemanaAnterior ? 'Menos que la semana pasada'
     : 'Igual que la semana pasada'
 
@@ -258,6 +260,11 @@ export default function DashboardROL2() {
   const pendientesVencenHoyOAntes = noConcluidos.filter(t => t.idFus?.fechaLimite && new Date(t.idFus.fechaLimite) < finHoy).length
   const totalHoy = concluidosHoy + pendientesVencenHoyOAntes
   const productividadPct = totalHoy > 0 ? Math.round((concluidosHoy / totalHoy) * 100) : 0
+  // Sin nada que atender hoy, 0% se lee como "vas mal" cuando en realidad no
+  // hay pendientes — "Sigue así" en ese caso también da a entender que ya se
+  // hizo algo hoy.
+  const notaProductividad = totalHoy === 0 ? 'Sin pendientes por hoy'
+    : productividadPct >= 50 ? 'Buen progreso' : 'Sigue así'
   const DONUT_R = 62, DONUT_CIRC = 2 * Math.PI * DONUT_R
   const donutOffset = DONUT_CIRC * (1 - productividadPct / 100)
 
@@ -389,7 +396,7 @@ export default function DashboardROL2() {
                     <Bar dataKey="value" name="Total" fill="#1F5647" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-                <div className="dash2-chart-foot">{ICON_TREND_UP} {notaSemana}</div>
+                <div className="dash2-chart-foot">{haySemanaActividad && ICON_TREND_UP} {notaSemana}</div>
               </div>
 
               <div className="dash2-card prod-card">
@@ -409,7 +416,7 @@ export default function DashboardROL2() {
                   <div className="donut-pct">{productividadPct}%</div>
                 </div>
                 <div className="prod-count">{concluidosHoy} de {totalHoy} <span>FUS atendidos</span></div>
-                <div className="prod-note">{ICON_TREND_UP} {productividadPct >= 50 ? 'Buen progreso' : 'Sigue así'}</div>
+                <div className="prod-note">{totalHoy > 0 && ICON_TREND_UP} {notaProductividad}</div>
               </div>
             </div>
           </div>

@@ -1,13 +1,36 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
+import EvidenciaItem from '../components/FUS/EvidenciaItem'
+import PrioridadPills from '../components/FUS/PrioridadPills'
 import api from '../api/api'
 import { useResizablePanel } from '../hooks/useResizablePanel'
-import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
+import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { formatearFechaHora } from '../utils/fechas'
+// Reusa el layout de lista+detalle (.st-*, .seccion, .sec-*, .dt-panel,
+// .drow, .fus-card...) tal cual SolicitudesTurnadas — este chunk se carga
+// aparte (lazy-loading por ruta) y no lo hereda solo, así que hay que
+// importarlo explícitamente. FUSComisionados.css va después: solo lo
+// específico del comisionado, y puede sobreescribir si hiciera falta.
+import './SolicitudesTurnadas.css'
 import './FUSComisionados.css'
+
+const PAGE_SIZE = 30
+
+function combinarPaginas(estadoAnterior, paginaNueva) {
+  if (!paginaNueva.append) return paginaNueva
+  const ids = new Set(estadoAnterior.items.map(item => item.id))
+  return {
+    ...paginaNueva,
+    items: [
+      ...estadoAnterior.items,
+      ...paginaNueva.items.filter(item => !ids.has(item.id)),
+    ],
+  }
+}
 
 /* ── Fila de detalle ── */
 function DRow({ label, value, tall }) {
@@ -19,65 +42,11 @@ function DRow({ label, value, tall }) {
   )
 }
 
-function esImagen(mime) { return mime && mime.startsWith('image/') }
-
-function EvidenciaItem({ ev }) {
-  const url = useEvidenciaUrl(ev.id)
-  const imagen = esImagen(ev.tipoMime)
-  return (
-    <a
-      href={url || undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`ev-item${url ? '' : ' ev-item-cargando'}`}
-      title={ev.nombreArchivo}
-      onClick={e => { if (!url) e.preventDefault() }}
-    >
-      {imagen && url ? (
-        <img src={url} alt={ev.nombreArchivo} className="ev-thumb" />
-      ) : (
-        <span className="ev-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-        </span>
-      )}
-      <span className="ev-nombre">{ev.nombreArchivo}</span>
-      {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
-    </a>
-  )
-}
-
 function EvidenciaList({ evidencias }) {
   if (!evidencias?.length) return (
     <div className="drow"><span className="drow-label">Evidencia</span><span className="drow-value">—</span></div>
   )
-  return <div className="ev-lista">{evidencias.map(ev => <EvidenciaItem key={ev.id} ev={ev} />)}</div>
-}
-
-const PRIORIDAD_NIVELES = [
-  { valor: 'Alta',  color: '#b91c1c' },
-  { valor: 'Media', color: '#92400e' },
-  { valor: 'Baja',  color: '#15803d' },
-]
-
-function PrioridadPills({ valor, criterios }) {
-  const listaCriterios = criterios ? criterios.split('|').map(c => c.trim()).filter(Boolean) : []
-  return (
-    <div>
-      <div className="dt-prioridad-pills">
-        {PRIORIDAD_NIVELES.map(p => (
-          <span key={p.valor} className={`dt-prioridad-pill${valor === p.valor ? ' dt-prioridad-pill-selected' : ''}`} style={{ '--c': p.color }}>
-            {p.valor}
-          </span>
-        ))}
-      </div>
-      {listaCriterios.length > 0 && (
-        <ul className="dt-criterios-lista">{listaCriterios.map((c, i) => <li key={i}>{c}</li>)}</ul>
-      )}
-    </div>
-  )
+  return <div className="ev-lista">{evidencias.map(ev => <EvidenciaItem key={ev.id} evidencia={ev} />)}</div>
 }
 
 /* ── Feed de Respuestas y seguimiento (comisionado) ──
@@ -86,7 +55,7 @@ function PrioridadPills({ valor, criterios }) {
    formulario para agregar, que sigue siendo exclusivo del comisionado.
    `refreshKey` remonta el feed para reflejar lo recién agregado, ya que el
    feed compartido administra su propio fetch internamente. */
-function SeguimientoComisionado({ fusId, estatusParticular }) {
+function SeguimientoComisionado({ fusId, folio, estatusParticular }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [tipo, setTipo]             = useState('avance')
   const [contenido, setContenido]   = useState('')
@@ -117,7 +86,7 @@ function SeguimientoComisionado({ fusId, estatusParticular }) {
 
   return (
     <>
-      <SeguimientoComisionadoFeed key={refreshKey} fusId={fusId} />
+      <SeguimientoComisionadoFeed key={refreshKey} fusId={fusId} folio={folio} />
 
       {puedeAgregar && (
         <div className="seccion">
@@ -154,9 +123,6 @@ function SeguimientoComisionado({ fusId, estatusParticular }) {
 
 /* ── Detalle de FUS comisionado ── */
 function DetalleFUSComisionado({ fus, onBack }) {
-  const fmt = d => d
-    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—'
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const nombreSolicitante = fus.idSolicitanteInterno?.nombre
 
@@ -181,7 +147,7 @@ function DetalleFUSComisionado({ fus, onBack }) {
         <div className="sec-subseccion">
           <span className="sec-sublabel">Datos generales</span>
           <div className="sec-grid-2">
-            <DRow label="Fecha y hora"        value={fmt(fus.fechaHora)} />
+            <DRow label="Fecha y hora"        value={formatearFechaHora(fus.fechaHora)} />
             <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
             <DRow label="Solicitante interno" value={nombreSolicitante} />
           </div>
@@ -217,6 +183,7 @@ function DetalleFUSComisionado({ fus, onBack }) {
 
       <SeguimientoComisionado
         fusId={fus.id}
+        folio={fus.folio}
         estatusParticular={fus.estatusParticular}
       />
     </div>
@@ -225,9 +192,6 @@ function DetalleFUSComisionado({ fus, onBack }) {
 
 /* ── Tarjeta de la lista ── */
 function FUSCard({ f, activo, onClick }) {
-  const fmt = d => d
-    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—'
   return (
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
@@ -240,7 +204,7 @@ function FUSCard({ f, activo, onClick }) {
           </span>
         </span>
       </div>
-      <p className="fus-meta"><b>Asignado:</b> {fmt(f.fechaAsignacion)}</p>
+      <p className="fus-meta"><b>Asignado:</b> {formatearFechaHora(f.fechaAsignacion)}</p>
       <p className="fus-meta"><b>Medio:</b> {f.idMedioRecepcion?.nombreMedio || '—'}</p>
       {f.descripcion && <p className="fus-desc">{f.descripcion.slice(0, 90)}…</p>}
     </div>
@@ -249,50 +213,67 @@ function FUSCard({ f, activo, onClick }) {
 
 /* ── Página principal ── */
 export default function FUSComisionados() {
-  const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
   const [seleccionado, setSeleccionado] = useState(null)
-  const [cargando,     setCargando]     = useState(true)
-  const [errorCarga,   setErrorCarga]   = useState(false)
-  const [pagina,       setPagina]       = useState(1)
-  const [totalItems,   setTotalItems]   = useState(0)
-  const PAGE_SIZE = 30
-  const autoRetriedRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
-
-  const cargar = (pag = 1, append = false) => {
-    setCargando(true)
-    const params = { page: pag, page_size: PAGE_SIZE }
+  const [solicitud, setSolicitud] = useState({
+    page: 1,
+    append: false,
+    version: 0,
+  })
+  const cargarPagina = useCallback(async ({ signal }) => {
+    const params = { page: solicitud.page, page_size: PAGE_SIZE }
     if (busqueda) params.search = busqueda
-    api.get('/fus/mis-comisionados/', { params })
-      .then(r => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        const items = r.data.results || []
-        setTotalItems(r.data.total || 0)
-        setLista(prev => append ? [...prev, ...items] : items)
-        setPagina(pag)
-        setSeleccionado(prev => {
-          if (!prev) return prev
-          const actualizado = items.find(f => f.id === prev.id)
-          return actualizado || prev
-        })
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(() => cargar(pag, append), 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
+    const response = await api.get('/fus/mis-comisionados/', {
+      params,
+      signal,
+    })
+    return {
+      items: response.data.results || [],
+      total: response.data.total || 0,
+      page: solicitud.page,
+      append: solicitud.append,
+    }
+  }, [busqueda, solicitud])
+  const {
+    data: resultado,
+    loading: cargando,
+    error: errorCarga,
+  } = useAsyncResource(cargarPagina, {
+    initialData: { items: [], total: 0, page: 1, append: false },
+    mergeData: combinarPaginas,
+  })
+  const lista = resultado.items
+  const totalItems = resultado.total
+  const pagina = resultado.page
 
-  useEffect(() => { cargar(1) }, [busqueda])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia la paginación al cambiar el filtro
+    setSolicitud(actual => ({
+      page: 1,
+      append: false,
+      version: actual.version + 1,
+    }))
+  }, [busqueda])
 
-  const cargarMas = () => cargar(pagina + 1, true)
+  useEffect(() => {
+    if (!seleccionado) return
+    const actualizado = lista.find(fus => fus.id === seleccionado.id)
+    if (actualizado && actualizado !== seleccionado) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el detalle con la página recién cargada
+      setSeleccionado(actualizado)
+    }
+  }, [lista, seleccionado])
+
+  const recargar = () => setSolicitud(actual => ({
+    page: 1,
+    append: false,
+    version: actual.version + 1,
+  }))
+  const cargarMas = () => setSolicitud(actual => ({
+    page: pagina + 1,
+    append: true,
+    version: actual.version + 1,
+  }))
 
   /* En vivo: cualquier notificación ligada a un FUS (asignación nueva,
      validación, rechazo, etc.) dispara un refresh silencioso — cubre tanto
@@ -303,7 +284,9 @@ export default function FUSComisionados() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif?.fusFolio) return
-    cargar(1)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
+    recargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ultimaNotifId identifica el evento que dispara la recarga
   }, [ultimaNotifId])
 
   const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
@@ -334,7 +317,7 @@ export default function FUSComisionados() {
             {errorCarga && lista.length > 0 && (
               <div className="banner-error-carga">
                 <span>No se pudo actualizar — mostrando la última información disponible.</span>
-                <button type="button" onClick={() => cargar(1)}>Reintentar</button>
+                <button type="button" onClick={recargar}>Reintentar</button>
               </div>
             )}
 
@@ -347,7 +330,7 @@ export default function FUSComisionados() {
                   </svg>
                   <p className="empty-state-title">No se pudo cargar</p>
                   <p className="empty-state-sub">Ocurrió un error al obtener tus FUS comisionados.</p>
-                  <button type="button" className="btn-reintentar" onClick={() => cargar(1)}>Reintentar</button>
+                  <button type="button" className="btn-reintentar" onClick={recargar}>Reintentar</button>
                 </div>
               )}
               {!cargando && !errorCarga && lista.length === 0 && (

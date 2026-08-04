@@ -803,3 +803,66 @@
   .donut-wrap svg { width: 130px; height: 130px; }
   .donut-pct { font-size: 22px; }
 }
+
+/* ══════════════════════════════════════
+   Celulares angostos (≤480px) — iPhone SE/mini, Android compactos.
+   Mismo criterio que Reportes.css: breakpoints propios en vez de quedarse
+   solo en 768px, para las tarjetas "liquid glass" (dash2, kpi2, venc,
+   proximo, prod) que usan tanto DashboardROL1 (vista Rol 1) como
+   DashboardROL2 y Reportes.
+══════════════════════════════════════ */
+@media (max-width: 480px) {
+  .dash2-wrap { padding: 1rem 0.85rem calc(150px + env(safe-area-inset-bottom, 0px)); }
+  .dash2-header h1 { font-size: 1.15rem; }
+  .dash2-header p { font-size: .78rem; }
+
+  .kpi2-card { flex-basis: 104px; padding: 11px; }
+  .kpi2-icon { width: 30px; height: 30px; margin-bottom: 9px; }
+  .kpi2-icon svg { width: 14px; height: 14px; }
+  .kpi2-label { font-size: 12px; }
+  .kpi2-sub { font-size: 10px; margin-bottom: 8px; }
+  .kpi2-value { font-size: 19px; }
+  .kpi2-link { top: 11px; right: 11px; }
+
+  .dash2-card { padding: 13px 14px; }
+  .dash2-card-title { font-size: 13.5px; margin-bottom: 12px; }
+  .dash2-pill { font-size: 10px; padding: 5px 10px; }
+  .dash2-chart-foot { font-size: 11px; margin-top: 10px; padding-top: 10px; }
+
+  .venc-item { gap: 8px; padding: 9px 0; }
+  .venc-icon { width: 24px; height: 24px; border-radius: 8px; }
+  .venc-icon svg { width: 12px; height: 12px; }
+  .venc-folio { font-size: 11px; }
+  .venc-fecha { font-size: 10px; }
+  .venc-badge { font-size: 9px; padding: 3px 8px; }
+
+  .proximo-top { margin-bottom: 12px; }
+  .proximo-folio { font-size: 15px; }
+  .proximo-badge { font-size: 10px; padding: 4px 10px; }
+  .proximo-grid { gap: 8px; margin-bottom: 14px; }
+  .proximo-l { font-size: 10px; }
+  .proximo-v { font-size: 12px; }
+  .proximo-btn { font-size: 12.5px; padding: 11px; }
+
+  .donut-wrap { width: 108px; height: 108px; }
+  .donut-wrap svg { width: 108px; height: 108px; }
+  .donut-pct { font-size: 18px; }
+  .prod-count { font-size: 12.5px; }
+  .prod-note { font-size: 11px; }
+}
+
+/* ══════════════════════════════════════
+   Celulares muy angostos (≤360px)
+══════════════════════════════════════ */
+@media (max-width: 360px) {
+  .kpi2-card { flex-basis: 92px; padding: 10px; }
+  .kpi2-value { font-size: 17px; }
+
+  /* Con folio + badge de prioridad ya no caben cómodo en una fila a este
+     ancho — se apilan para que "Prioridad alta" no se corte. */
+  .proximo-top { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+  .donut-wrap { width: 96px; height: 96px; }
+  .donut-wrap svg { width: 96px; height: 96px; }
+  .donut-pct { font-size: 16px; }
+}

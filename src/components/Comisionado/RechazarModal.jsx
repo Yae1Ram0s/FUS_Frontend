@@ -1,15 +1,20 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../../api/api'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 import './Comisionado.css'
 
 export default function RechazarModal({ fusId, onClose, onRechazado }) {
   const [motivo, setMotivo]     = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError]       = useState('')
+  const envioEnCursoRef         = useRef(false)
+  useModalBehavior(onClose, { closeEnabled: !enviando })
 
   const confirmar = async () => {
     if (!motivo.trim()) { setError('Debes escribir un motivo antes de rechazar.'); return }
+    if (envioEnCursoRef.current) return
+    envioEnCursoRef.current = true
     setError(''); setEnviando(true)
     try {
       const { data } = await api.post(`/fus/${fusId}/rechazar-solicitud/`, { motivo })
@@ -17,12 +22,13 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo rechazar la solicitud. Intenta nuevamente.')
     } finally {
+      envioEnCursoRef.current = false
       setEnviando(false)
     }
   }
 
   return createPortal(
-    <div className="com-overlay" onClick={() => !enviando && onClose()}>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label="Rechazar solicitud" onClick={() => !enviando && onClose()}>
       <div className="com-modal" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
           <h3>Rechazar solicitud</h3>

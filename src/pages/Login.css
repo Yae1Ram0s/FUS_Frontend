@@ -1,9 +1,14 @@
-/* ── Layout ── */
+/* ── Layout ──
+   Fondo verde institucional propio (no depende de html/body, que ahora son
+   blancos para el resto de la app) — así el Login mantiene su franja verde
+   en bordes sin cubrir (ej. safe-area-inset-top en iOS/Safari) sin afectar
+   ninguna otra pantalla. */
 .login-wrap {
   display: flex;
   height: 100vh;
   overflow: hidden;
   position: relative;
+  background: #1c4a3e;
 }
 
 /* ══════════════════════════════════════
@@ -235,23 +240,67 @@
   margin: 0;
 }
 
+.login-personal-message { display: none; }
+
 /* Subtítulo oculto en este diseño */
 .login-sub { display: none; }
 
 .login-form { width: 100%; }
 
-.lf-group { margin-bottom: 1.1rem; }
+/* margin-top da lugar a la etiqueta flotante (top: -20px, ver abajo): sin
+   esto, cuando el grupo va después de otro elemento (el chip de correo
+   bloqueado, un párrafo de instrucciones, u otro .lf-group) la etiqueta
+   quedaba encimada con lo de arriba en vez de flotar en un espacio propio. */
+.lf-group { margin-top: 1.6rem; margin-bottom: 1.1rem; position: relative; }
+.lf-group:first-child { margin-top: 0; }
 
+/* Etiqueta flotante: en reposo vive dentro del pill (como un placeholder),
+   y sube fuera de él al enfocar o al tener valor — el placeholder real
+   (formato: "usuario@anam.gob.mx", "000000"...) se mantiene oculto hasta
+   ese momento para no encimarse con ella (ver input::placeholder abajo). */
 .lf-group label {
-  display: block;
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  max-width: calc(100% - 44px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-thin);
   font-weight: 400;
   font-style: normal;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
+  color: #a0a0a0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  pointer-events: none;
+  transition: 0.18s ease all;
+}
+
+.lf-group:has(input:focus) label,
+.lf-group:has(input:not(:placeholder-shown)) label {
+  top: -20px;
+  left: 4px;
+  transform: translateY(0);
+  font-size: 0.78rem;
   color: #3a3a3a;
-  margin-bottom: 7px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.lf-group:has(input:focus) label {
+  color: #c9a227;
+}
+
+.lf-group input::placeholder {
+  color: transparent;
+  transition: color 150ms;
+}
+
+.lf-group input:focus::placeholder {
+  color: #a0a0a0;
 }
 
 .lf-group input {
@@ -289,6 +338,40 @@
   border-color: #c9a227;
   background: #f4f4f4;
   box-shadow: 0 0 0 3px rgba(201,162,39,0.15);
+}
+
+.lf-email-mobile-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-right: 20px;
+  border: 1.5px solid #dcdcdc;
+  border-radius: 9999px;
+  background: #f4f4f4;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 200ms, box-shadow 200ms, background 200ms;
+}
+
+.lf-email-mobile-wrap:focus-within {
+  border-color: #c9a227;
+  box-shadow: 0 0 0 3px rgba(201,162,39,0.15);
+}
+
+.lf-group .lf-email-mobile-wrap input {
+  min-width: 0;
+  padding-right: 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.lf-email-mobile-wrap span {
+  flex-shrink: 0;
+  font-family: var(--font-thin);
+  font-size: 0.92rem;
+  color: #235b4e;
+  letter-spacing: 0.02em;
 }
 
 .login-error {
@@ -570,6 +653,21 @@
     padding: 0 1.5rem env(safe-area-inset-bottom, 16px);
     overflow: hidden;
     min-height: 0;
+    background: #fbfcfc;
+    isolation: isolate;
+  }
+
+  .login-right::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    left: -8%;
+    right: -8%;
+    bottom: -3%;
+    height: 39%;
+    background: url('../assets/pleca.png') center top / cover no-repeat;
+    opacity: 0.105;
+    pointer-events: none;
   }
 
   /* ── Franja de branding ── */
@@ -591,6 +689,7 @@
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
+    z-index: 2;
   }
 
   /* Círculos decorativos en la franja */
@@ -645,11 +744,63 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 1.25rem 0 1.5rem;
+    padding: 1.25rem 0 4.5rem;
+    z-index: 1;
   }
 
-  .login-card-header { margin-bottom: 1rem; }
-  .login-welcome     { font-size: 1.75rem; }
+  .login-card-header {
+    margin-bottom: 1.6rem;
+    text-align: center;
+  }
+  .login-welcome {
+    font-size: clamp(2rem, 8vw, 2.65rem);
+    color: #073e33;
+    line-height: 1.08;
+  }
+  .login-personal-message {
+    display: block;
+    max-width: 330px;
+    margin: 0.8rem auto 0;
+    color: #5f6363;
+    font-family: var(--font-thin);
+    font-size: 0.98rem;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .lf-group label {
+    color: #0b4d40;
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+
+  .login-form > .lf-group:first-child {
+    margin-top: 2.15rem;
+  }
+
+  .login-form > .lf-group:first-child > label {
+    top: -1.65rem;
+    left: 4px;
+    transform: none;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .login-form > .lf-group:first-child input::placeholder {
+    color: #8e9291;
+  }
+
+  .lf-group input,
+  .lf-email-mobile-wrap {
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 7px 16px rgba(28,74,62,0.12);
+  }
+
+  .btn-entrar {
+    min-height: 50px;
+    box-shadow: 0 8px 18px rgba(35,91,78,0.25);
+  }
 
   /* Decorativo, no esencial — se oculta para ganar espacio vertical y evitar scroll */
   .ll-bottom-icons { display: none; }
@@ -659,9 +810,9 @@
   .login-right        { padding: 0 1.25rem env(safe-area-inset-bottom, 12px); }
   .login-mobile-brand { padding: 1.75rem 1.25rem 2.25rem; border-radius: 0 0 24px 24px; }
   .login-opts         { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .login-welcome      { font-size: 1.5rem; }
+  .login-welcome      { font-size: 2rem; }
   .btn-entrar         { font-size: 0.875rem; padding: 12px; }
-  .login-card         { padding: 1.25rem 0 1.5rem; }
+  .login-card         { padding: 1.25rem 0 4rem; }
 }
 
 @media (max-width: 360px) {
@@ -674,9 +825,9 @@
   }
   .login-mobile-logo  { height: 44px; }
   .login-mobile-sys   { font-size: 0.80rem; }
-  .login-welcome      { font-size: 1.3rem; }
+  .login-welcome      { font-size: 1.75rem; }
   .btn-entrar         { padding: 11px; }
-  .login-card         { padding: 1rem 0 1.25rem; }
+  .login-card         { padding: 1rem 0 3rem; }
 }
 
 /* ── Compactar en pantallas de poca altura para garantizar que todo el
@@ -688,7 +839,7 @@
   .login-mobile-sys   { font-size: 0.92rem; }
   .login-card         { padding: 0.75rem 0; }
   .login-card-header  { margin-bottom: 0.6rem; }
-  .lf-group           { margin-bottom: 0.65rem; }
+  .lf-group           { margin-top: 1.3rem; margin-bottom: 0.65rem; }
   .lf-step-info       { margin-bottom: 0.6rem; }
   .login-opts         { margin-bottom: 0.85rem; }
 }
@@ -699,6 +850,5 @@
   .login-mobile-sys   { font-size: 0.82rem; }
   .login-welcome      { font-size: 1.35rem; }
   .login-card-header  { margin-bottom: 0.4rem; }
-  .lf-group           { margin-bottom: 0.45rem; }
+  .lf-group           { margin-top: 1.1rem; margin-bottom: 0.45rem; }
 }
-

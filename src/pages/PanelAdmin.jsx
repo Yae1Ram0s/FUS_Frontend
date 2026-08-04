@@ -1,34 +1,103 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
+import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useCountUp } from '../hooks/useCountUp'
 import './PanelAdmin.css'
 
-const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular/Enlace Estratégico', COMISIONADO: 'Comisionado', EQUIPO_PARTICULAR: 'Equipo del Particular' }
-const ROL_COLORS = { ROL1: '#1F5647',    ROL2: '#691C32',                    COMISIONADO: '#9F2241',    EQUIPO_PARTICULAR: '#235b4e'               }
+// label corto (cabe en una línea, como "Total de FUS") + sub con el detalle
+// ("Rol 2", "Direcciones asignadas"...) — igual que las tarjetas de los
+// dashboards, en vez de un solo label largo que se envuelve en 2-3 líneas.
+const ROL_LABELS = { ROL1: 'Particular', ROL2: 'Titular', COMISIONADO: 'Comisionado', EQUIPO_PARTICULAR: 'Equipo particular' }
+const ROL_SUB    = { ROL1: 'Rol 1', ROL2: 'Enlace estratégico · Rol 2', COMISIONADO: 'Direcciones asignadas', EQUIPO_PARTICULAR: 'Asistentes de Rol 1' }
+// Un color e ícono kpi2- distinto por rol, igual que en los dashboards.
+const ROL_KPI_COLOR = { ROL1: 'blue', ROL2: 'amber', COMISIONADO: 'red', EQUIPO_PARTICULAR: 'green' }
+
+const ICON_STACK = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+  </svg>
+)
+const ICON_CHECK = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+)
+const ICON_X = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+  </svg>
+)
+const ICON_USER = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+const ICON_FLAG = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+  </svg>
+)
+const ICON_SHIELD = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+)
+const ICON_USERS = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+)
+const ROL_KPI_ICON = { ROL1: ICON_USER, ROL2: ICON_FLAG, COMISIONADO: ICON_SHIELD, EQUIPO_PARTICULAR: ICON_USERS }
+const ICON_CORNER = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+  </svg>
+)
+
+/* ── Tarjeta de KPI "liquid glass" seleccionable — mismo patrón que los
+   dashboards (Kpi2Card), aquí además marca con `activa` cuál filtro está
+   aplicado en este momento. ── */
+function Kpi2CardFiltro({ icon, label, sub, value, color, activa, onClick, index }) {
+  const count = useCountUp(value)
+  return (
+    <div
+      className={`adm-kpi-card${activa ? ' adm-kpi-card-activa' : ''}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+    >
+      <div className={`adm-kpi-glow adm-kpi-glow--${color}`} />
+      <div className={`adm-kpi-icon adm-kpi-icon--${color}`}>{icon}</div>
+      <span className="adm-kpi-link">{ICON_CORNER}</span>
+      <div className="adm-kpi-label">{label}</div>
+      <div className="adm-kpi-sub">{sub}</div>
+      <div className="adm-kpi-value">{count}</div>
+    </div>
+  )
+}
 
 export default function PanelAdmin() {
   const { user: yo } = useAuth()
 
-  const [correos,    setCorreos]    = useState([])
   const [unidades,   setUnidades]   = useState([])
-  const [cargando,   setCargando]   = useState(true)
   const [busqueda,   setBusqueda]   = useState('')
   const [filtroRol,  setFiltroRol]  = useState('')
+  const [filtroActivo, setFiltroActivo] = useState('')  // '' | '1' | '0' — igual que filtroRol, seleccionable desde las tarjetas de arriba
   const [modal,      setModal]      = useState(false)   // 'agregar' | 'editar' | false
   const [form,       setForm]       = useState({ email: '', nombre: '', rol: 'ROL1', unidadAdministrativa: '' })
   const [editando,   setEditando]   = useState(null)
   const [formEdit,   setFormEdit]   = useState({ nombre: '', email: '', rol: 'ROL1', unidadAdministrativa: '' })
   const [guardando,  setGuardando]  = useState(false)
   const [error,      setError]      = useState('')
-  const [errorCarga, setErrorCarga] = useState('')
+  const [errorOperacion, setErrorOperacion] = useState('')
   const [exito,      setExito]      = useState('')
-  const [reload,     setReload]     = useState(0)
   const [toggleandoId, setToggleandoId] = useState(null)
-
-  const cargar = () => setReload(n => n + 1)
 
   useEffect(() => {
     api.get('/catalogos/unidades-administrativas/')
@@ -36,17 +105,25 @@ export default function PanelAdmin() {
       .catch(() => {})
   }, [])
 
-  useEffect(() => {
-    setCargando(true)
-    setErrorCarga('')
+  const cargarCorreos = useCallback(async ({ signal }) => {
     const params = {}
-    if (busqueda)  params.search = busqueda
-    if (filtroRol) params.rol    = filtroRol
-    api.get('/auth/correos-autorizados/', { params })
-      .then(r => setCorreos(Array.isArray(r.data) ? r.data : []))
-      .catch(err => setErrorCarga(err.response?.data?.detail || 'No se pudo cargar la lista. Verifica tu sesión.'))
-      .finally(() => setCargando(false))
-  }, [busqueda, filtroRol, reload])
+    if (busqueda)     params.search = busqueda
+    if (filtroRol)    params.rol    = filtroRol
+    if (filtroActivo) params.activo = filtroActivo
+    const respuesta = await api.get('/auth/correos-autorizados/', { params, signal })
+    return Array.isArray(respuesta.data) ? respuesta.data : []
+  }, [busqueda, filtroRol, filtroActivo])
+
+  const {
+    data: correos,
+    error: errorConsulta,
+    loading: cargando,
+    reload: cargar,
+  } = useAsyncResource(cargarCorreos, { initialData: [] })
+  const errorCarga = errorOperacion || (
+    errorConsulta?.response?.data?.detail
+    || (errorConsulta ? 'No se pudo cargar la lista. Verifica tu sesión.' : '')
+  )
 
   const direccionesGenerales = unidades.filter(u => u.esUnidadDeNegocio)
   const aduanas              = unidades.filter(u => u.esUnidadAdministrativa)
@@ -78,16 +155,16 @@ export default function PanelAdmin() {
 
   const toggleActivo = async (c) => {
     if (c.email === yo?.email) {
-      setErrorCarga('No puedes desactivar tu propia cuenta.')
+      setErrorOperacion('No puedes desactivar tu propia cuenta.')
       return
     }
-    setErrorCarga('')
+    setErrorOperacion('')
     setToggleandoId(c.id)
     try {
       await api.patch(`/auth/correos-autorizados/${c.id}/`, { activo: c.activo ? 0 : 1 })
       cargar()
     } catch (err) {
-      setErrorCarga(err.response?.data?.detail || 'No se pudo actualizar el estado de la cuenta.')
+      setErrorOperacion(err.response?.data?.detail || 'No se pudo actualizar el estado de la cuenta.')
     } finally {
       setToggleandoId(null)
     }
@@ -137,27 +214,35 @@ export default function PanelAdmin() {
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="adm-stats">
-          <div className="adm-stat">
-            <span className="adm-stat-num">{correos.length}</span>
-            <span className="adm-stat-lbl">Total</span>
-          </div>
-          <div className="adm-stat adm-stat-green">
-            <span className="adm-stat-num">{activos}</span>
-            <span className="adm-stat-lbl">Activos</span>
-          </div>
-          <div className="adm-stat adm-stat-red">
-            <span className="adm-stat-num">{inactivos}</span>
-            <span className="adm-stat-lbl">Inactivos</span>
-          </div>
-          {Object.entries(ROL_LABELS).map(([k, v]) => (
-            <div key={k} className="adm-stat">
-              <span className="adm-stat-num" style={{ color: ROL_COLORS[k] }}>
-                {correos.filter(c => c.rol === k).length}
-              </span>
-              <span className="adm-stat-lbl">{v}</span>
-            </div>
+        {/* Métricas seleccionables: una fila compacta en escritorio y
+            carrusel horizontal en pantallas pequeñas. */}
+        <div className="adm-kpi-row">
+          <Kpi2CardFiltro
+            index={0} color="blue" icon={ICON_STACK}
+            label="Total" sub="Todos los usuarios" value={correos.length}
+            activa={!filtroRol && !filtroActivo}
+            onClick={() => { setFiltroRol(''); setFiltroActivo('') }}
+          />
+          <Kpi2CardFiltro
+            index={1} color="green" icon={ICON_CHECK}
+            label="Activos" sub="Cuentas habilitadas" value={activos}
+            activa={filtroActivo === '1'}
+            onClick={() => setFiltroActivo(actual => actual === '1' ? '' : '1')}
+          />
+          <Kpi2CardFiltro
+            index={2} color="red" icon={ICON_X}
+            label="Inactivos" sub="Cuentas deshabilitadas" value={inactivos}
+            activa={filtroActivo === '0'}
+            onClick={() => setFiltroActivo(actual => actual === '0' ? '' : '0')}
+          />
+          {Object.entries(ROL_LABELS).map(([k, v], i) => (
+            <Kpi2CardFiltro
+              key={k} index={3 + i} color={ROL_KPI_COLOR[k]} icon={ROL_KPI_ICON[k]}
+              label={v} sub={ROL_SUB[k]}
+              value={correos.filter(c => c.rol === k).length}
+              activa={filtroRol === k}
+              onClick={() => setFiltroRol(actual => actual === k ? '' : k)}
+            />
           ))}
         </div>
 

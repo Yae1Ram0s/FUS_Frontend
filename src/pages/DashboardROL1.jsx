@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
@@ -9,6 +9,7 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
+import { useAsyncResource } from '../hooks/useAsyncResource'
 import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
@@ -77,13 +78,16 @@ const ICON_INFO = (
 )
 
 /** Trae todas las páginas de un listado paginado (el backend limita page_size a 100). */
-async function fetchAll(url, extraParams = {}) {
+async function fetchAll(url, extraParams = {}, signal) {
   const page_size = 100
   let page = 1
   let all = []
   let total = Infinity
   while (all.length < total) {
-    const r = await api.get(url, { params: { ...extraParams, page, page_size } })
+    const r = await api.get(url, {
+      params: { ...extraParams, page, page_size },
+      signal,
+    })
     const results = r.data.results || []
     total = r.data.total ?? results.length
     all = all.concat(results)
@@ -254,42 +258,29 @@ export default function DashboardROL1() {
   const navigate = useNavigate()
   const nombre = user?.nombre || user?.email || 'Usuario'
 
-  const [fusData,   setFusData]   = useState([])
-  const [bitacora,  setBitacora]  = useState([])
-  const [cargando,  setCargando]  = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
-  // Se recalcula en cada cargar() (no solo al montar) — si no, las etiquetas
-  // relativas ("Hace 2 días") y los umbrales vencido/por vencer se quedan
-  // congelados a la hora en que se abrió el dashboard, aunque los datos se
-  // hayan refrescado en vivo.
-  const [ahora, setAhora] = useState(() => Date.now())
-  const autoRetriedRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
-
-  const cargar = () => {
-    Promise.all([
-      fetchAll('/fus/'),
-      api.get('/bitacora/', { params: { page: 1, page_size: 100 } }).then(r => r.data.results || []),
+  const cargarDashboard = useCallback(async ({ signal }) => {
+    const [fusData, bitacora] = await Promise.all([
+      fetchAll('/fus/', {}, signal),
+      api.get('/bitacora/', {
+        params: { page: 1, page_size: 100 },
+        signal,
+      }).then(response => response.data.results || []),
     ])
-      .then(([fus, bit]) => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        setFusData(fus); setBitacora(bit); setAhora(Date.now())
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
-  const reintentar = () => { setCargando(true); cargar() }
-
-  useEffect(() => { cargar() }, [])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+    return { fusData, bitacora, ahora: Date.now() }
+  }, [])
+  const {
+    data: dashboard,
+    loading: cargando,
+    error: errorCarga,
+    reload: reintentar,
+  } = useAsyncResource(cargarDashboard, {
+    initialData: () => ({
+      fusData: [],
+      bitacora: [],
+      ahora: Date.now(),
+    }),
+  })
+  const { fusData, bitacora, ahora } = dashboard
 
   // En vivo: cualquier notificación ligada a un FUS (turnar, atendido,
   // comisionar, concluir, rechazar, SLA por vencer, etc.) refresca el
@@ -297,12 +288,13 @@ export default function DashboardROL1() {
   // FUSComisionados. Sin esto, el dashboard se quedaba mostrando datos
   // desactualizados hasta que el usuario navegaba fuera y volvía a entrar.
   const notifCtx = useNotificaciones()
-  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  const ultimaNotif = notifCtx?.notifs?.[0]
+  const ultimaNotifId = ultimaNotif?.id
+  const ultimaNotifFolio = ultimaNotif?.fusFolio
   useEffect(() => {
-    const notif = notifCtx?.notifs?.[0]
-    if (!notif?.fusFolio) return
-    cargar()
-  }, [ultimaNotifId])
+    if (!ultimaNotifFolio) return
+    reintentar()
+  }, [reintentar, ultimaNotifFolio, ultimaNotifId])
 
   const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
   const irAConsultarPrioridad = (prioridad) => navigate(`/rol1/consultar-fus?modo=lista&prioridad=${encodeURIComponent(prioridad)}`)

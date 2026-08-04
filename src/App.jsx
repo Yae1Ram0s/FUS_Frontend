@@ -1,24 +1,26 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider }          from './context/AuthContext'
 import { NotificacionesProvider } from './context/NotificacionesContext'
 import { ToastProvider }          from './context/ToastContext'
 import PrivateRoute               from './components/PrivateRoute'
 import ErrorBoundary              from './components/ErrorBoundary'
-import NotFound                   from './pages/NotFound'
+import Spinner                    from './components/Spinner'
 
 import './context/Toast.css'
 
-import Login               from './pages/Login'
-import DashboardROL1       from './pages/DashboardROL1'
-import DashboardROL2       from './pages/DashboardROL2'
-import ConsultarFUS        from './pages/ConsultarFUS'
-import RegistrarFUS        from './pages/RegistrarFUS'
-import SolicitudesTurnadas from './pages/SolicitudesTurnadas'
-import Bitacora            from './pages/Bitacora'
-import PanelAdmin          from './pages/PanelAdmin'
-import CalendarioActividades from './pages/CalendarioActividades'
-import FUSComisionados     from './pages/FUSComisionados'
+const Login = lazy(() => import('./pages/Login'))
+const DashboardROL1 = lazy(() => import('./pages/DashboardROL1'))
+const DashboardROL2 = lazy(() => import('./pages/DashboardROL2'))
+const ConsultarFUS = lazy(() => import('./pages/ConsultarFUS'))
+const RegistrarFUS = lazy(() => import('./pages/RegistrarFUS'))
+const SolicitudesTurnadas = lazy(() => import('./pages/SolicitudesTurnadas'))
+const Bitacora = lazy(() => import('./pages/Bitacora'))
+const PanelAdmin = lazy(() => import('./pages/PanelAdmin'))
+const CalendarioActividades = lazy(() => import('./pages/CalendarioActividades'))
+const FUSComisionados = lazy(() => import('./pages/FUSComisionados'))
+const Reportes = lazy(() => import('./pages/Reportes'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 export default function App() {
   // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
@@ -43,7 +45,8 @@ export default function App() {
         <AuthProvider>
           <NotificacionesProvider>
             <ToastProvider>
-              <Routes>
+              <Suspense fallback={<Spinner label="Cargando módulo…" />}>
+                <Routes>
                 {/* Pública */}
                 <Route path="/login" element={<Login />} />
 
@@ -54,6 +57,7 @@ export default function App() {
                   <Route path="/rol1/bitacora"       element={<Bitacora />} />
                   <Route path="/rol1/dashboard"      element={<DashboardROL1 />} />
                   <Route path="/rol1/calendario"     element={<CalendarioActividades />} />
+                  <Route path="/rol1/reportes"       element={<Reportes />} />
                 </Route>
 
                 {/* ROL1 — administración de usuarios/accesos (rol 4 no tiene acceso) */}
@@ -79,7 +83,8 @@ export default function App() {
                 {/* Raíz → login */}
                 <Route path="/"  element={<Navigate to="/login" replace />} />
                 <Route path="*"  element={<NotFound />} />
-              </Routes>
+                </Routes>
+              </Suspense>
             </ToastProvider>
           </NotificacionesProvider>
         </AuthProvider>

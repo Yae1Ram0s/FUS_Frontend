@@ -32,8 +32,7 @@
 p,
 .fus-desc,
 .empty-state-p,
-.det-section p,
-.bglob-item-desc {
+.det-section p {
   font-family: var(--font-thin);
   font-weight: 400;
   font-style: normal;
@@ -159,24 +158,6 @@ textarea,
   font-style: normal;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-}
-
-/* Folio de búsqueda (contexto, no identificador) */
-.bglob-item-folio {
-  font-family: var(--font-thin);
-  font-weight: 400;
-  font-style: normal;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-}
-
-/* Hint ESC en buscador */
-.bglob-esc {
-  font-family: var(--font-thin);
-  font-weight: 400;
-  font-style: normal;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
 }
 
 /* Acciones de texto ligero */
@@ -409,6 +390,33 @@ h1, h2, h3 {
   letter-spacing: 0.01em;
 }
 
+/* Reportes — título de panel */
+.rep-panel-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Reportes — números grandes (KPI, donut, mini-indicadores).
+   Escopado con .rep-wrap: son clases compartidas con los dashboards,
+   que no deben cambiar de tipografía por este ajuste. */
+.rep-wrap .kpi2-value,
+.rep-wrap .dash-donut-multi-total-value,
+.rep-wrap .dash-legend-value,
+.rep-mini strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Reportes — encabezados de tabla */
+.rep-wrap .dash-table th {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.03em;
+}
+
 
 /* ──────────────────────────────────────────────────────────────
    ② ACCENT — NotoSans ExtraBold Italic  (USO RESTRINGIDO)
@@ -434,14 +442,13 @@ h1, h2, h3 {
   font-style: italic;
 }
 
-/* Buscador — texto de ayuda cuando no hay resultados o hay hint */
-.bglob-hint,
-.bglob-empty {
+/* Reportes — estados vacíos de paneles/tablas (mismo rol que empty-state-title).
+   Escopado con .rep-wrap: .dash-empty también la usan los dashboards. */
+.rep-wrap .dash-empty {
   font-family: var(--font-accent);
   font-weight: 800;
   font-style: italic;
 }
-
 
 /* ──────────────────────────────────────────────────────────────
    RESPONSIVO — ajuste de fuentes en pantallas pequeñas

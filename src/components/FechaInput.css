@@ -1,0 +1,102 @@
+/* ── Envoltorio de fecha con formato dd/mm/aaaa forzado ──
+   El <input> real ocupa todo el espacio y sigue siendo 100% funcional
+   (clic, teclado, selector nativo) pero con su propio texto invisible; el
+   <span> de encima muestra el mismo valor ya formateado en español. */
+.fecha-input-wrap {
+  /* Sin width fijo a propósito: por default se ajusta al tamaño natural del
+     input real (el mismo que tendría sin envoltorio) — donde hace falta que
+     ocupe todo el ancho de su fila (ej. RegistrarFUS), se le da flex:1 desde
+     el CSS de esa página, apuntando a esta misma clase. */
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+/* El input real se queda ABAJO (z-index más bajo): conserva su fondo/borde
+   propios de cada página (así el campo se sigue viendo igual que antes),
+   solo se le apaga el texto. El formateado va ENCIMA, en su propio z-index,
+   por eso no hace falta tocar el background — nunca compite visualmente
+   con el texto de arriba.
+   !important en color a propósito: cada página (RegistrarFUS, Bitácora,
+   Calendario...) ya tiene su propio "input[type=date] { color: ... }" con
+   más especificidad que una sola clase — sin forzarlo aquí, ese color gana
+   y el texto nativo se alcanza a ver por debajo del formateado, superpuesto. */
+.fecha-input-nativo {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.fecha-input-nativo::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
+/* Chrome/Edge exponen el texto interno del control por partes — cada una
+   necesita su propio color: transparent (el color normal no les alcanza). */
+.fecha-input-nativo::-webkit-datetime-edit,
+.fecha-input-nativo::-webkit-datetime-edit-fields-wrapper,
+.fecha-input-nativo::-webkit-datetime-edit-text,
+.fecha-input-nativo::-webkit-datetime-edit-day-field,
+.fecha-input-nativo::-webkit-datetime-edit-month-field,
+.fecha-input-nativo::-webkit-datetime-edit-year-field,
+.fecha-input-nativo::-webkit-datetime-edit-hour-field,
+.fecha-input-nativo::-webkit-datetime-edit-minute-field,
+.fecha-input-nativo::-webkit-datetime-edit-ampm-field {
+  color: transparent !important;
+}
+
+/* Chromium resalta en azul el "segmento" activo (día/mes/año/hora) mientras
+   se edita — es un highlight interno del control, no texto seleccionado
+   normal, pero responde a estas mismas reglas por segmento. */
+.fecha-input-nativo::-webkit-datetime-edit-day-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.fecha-input-nativo::-webkit-datetime-edit-month-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.fecha-input-nativo::-webkit-datetime-edit-year-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.fecha-input-nativo::-webkit-datetime-edit-hour-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.fecha-input-nativo::-webkit-datetime-edit-minute-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.fecha-input-nativo::-webkit-datetime-edit-ampm-field::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
+.fecha-input-visible {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  /* deja libre la esquina derecha donde el navegador dibuja el ícono de calendario */
+  padding-right: 30px;
+  font: inherit;
+  color: var(--fecha-input-color, #17281f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.fecha-input-placeholder {
+  opacity: 0.55;
+}

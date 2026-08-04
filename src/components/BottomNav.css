@@ -88,20 +88,7 @@
     border: 0;
   }
 
-  /* ── 5º ícono: Bitácora (abre popover) ── */
-  .bn-more-badge {
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #9F2241;
-    border: 2px solid rgba(255, 255, 255, 0.85);
-    box-shadow: 0 0 5px rgba(159, 34, 65, 0.55);
-  }
-
-  /* ── Popover de Bitácora — mismo patrón anclado que la campana de notificaciones,
+  /* ── Popover de Bitácora/Reportes/Usuarios — mismo patrón anclado que la campana de notificaciones,
      pero crece hacia arriba desde la esquina del ícono ── */
   .bn-popover {
     position: absolute;

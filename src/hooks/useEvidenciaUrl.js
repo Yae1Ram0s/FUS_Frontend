@@ -9,7 +9,11 @@ export function useEvidenciaUrl(evidenciaId) {
     if (!evidenciaId) return undefined
     let objectUrl
     let cancelado = false
-    api.get(`/evidencias/${evidenciaId}/descargar/`, { responseType: 'blob' })
+    const controller = new AbortController()
+    api.get(`/evidencias/${evidenciaId}/descargar/`, {
+      responseType: 'blob',
+      signal: controller.signal,
+    })
       .then(res => {
         if (cancelado) return
         objectUrl = URL.createObjectURL(res.data)
@@ -18,6 +22,7 @@ export function useEvidenciaUrl(evidenciaId) {
       .catch(() => {})
     return () => {
       cancelado = true
+      controller.abort()
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [evidenciaId])

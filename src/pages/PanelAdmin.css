@@ -2,21 +2,53 @@
    FONDO — pleca + base neomorphism
 ══════════════════════════════════════ */
 .adm-bg {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: #ffffff;
-  background-image: url('../assets/pleca.png');
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.86)),
+    url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
-  background-blend-mode: multiply;
+  background-blend-mode: normal, multiply;
+  isolation: isolate;
+}
+
+.adm-bg::before,
+.adm-bg::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.adm-bg::before {
+  top: -140px;
+  left: -100px;
+  width: 480px;
+  height: 480px;
+  background: rgba(31, 86, 71, 0.22);
+}
+
+.adm-bg::after {
+  right: -120px;
+  bottom: -160px;
+  width: 520px;
+  height: 520px;
+  background: rgba(201, 162, 39, 0.16);
 }
 
 /* ══════════════════════════════════════
    CONTENEDOR PRINCIPAL
 ══════════════════════════════════════ */
 .adm-wrap {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -74,55 +106,145 @@
 .adm-btn-add:hover { background: rgba(28, 70, 60, 0.95); }
 
 /* ══════════════════════════════════════
-   STATS — neomorphism cards
+   STATS — tarjetas kpi2-* (liquid glass, ver DashboardROL1.css),
+   seleccionables: cada una filtra la tabla de abajo.
+   Dos filas con su propio número de columnas (3 + 4) en vez de las 7 juntas
+   en el grid de 5 columnas que trae .kpi2-row por defecto — con 7 en 5
+   quedaban 2 tarjetas sueltas, sin llenar la fila, en la segunda línea.
 ══════════════════════════════════════ */
-.adm-stats {
-  display: flex;
+.adm-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
+  margin-bottom: 0;
 }
 
-.adm-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 14px 24px 14px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(195, 212, 207, 0.80);
-  border-top: 3px solid rgba(35, 91, 78, 0.45);
-  border-radius: 16px;
-  min-width: 88px;
-  gap: 5px;
+.adm-kpi-card {
+  position: relative;
+  min-width: 0;
+  min-height: 128px;
+  padding: 14px 16px;
+  overflow: hidden;
+  color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
   box-shadow:
-    5px  5px  14px rgba(35, 91, 78, 0.13),
-   -3px -3px  10px rgba(190, 208, 203, 0.45),
-    inset 0 1px 0   rgba(255, 255, 255, 0.90);
-  transform: translateZ(0);
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 12px 32px rgba(0, 0, 0, 0.06);
+  backdrop-filter: saturate(220%) blur(40px);
+  -webkit-backdrop-filter: saturate(220%) blur(40px);
+  cursor: pointer;
+  opacity: 0;
+  animation: admKpiIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease,
+    border-color 0.25s ease;
 }
-.adm-stat-num {
-  font-size: 1.85rem;
-  font-weight: 800;
-  color: #0a2018;
-  line-height: 1;
-  letter-spacing: -0.02em;
+
+@keyframes admKpiIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.adm-stat-lbl {
-  font-size: .60rem;
+
+.adm-kpi-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 4px 10px rgba(0, 0, 0, 0.05),
+    0 24px 48px rgba(0, 0, 0, 0.10);
+}
+
+.adm-kpi-card-activa {
+  border-color: rgba(35, 91, 78, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 0 0 2px rgba(35, 91, 78, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.adm-kpi-glow {
+  position: absolute;
+  top: -30px;
+  left: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.adm-kpi-card:hover .adm-kpi-glow { opacity: 0.55; }
+.adm-kpi-glow--blue  { background: #4da3e0; }
+.adm-kpi-glow--amber { background: #e0a83f; }
+.adm-kpi-glow--green { background: #5fae3f; }
+.adm-kpi-glow--red   { background: #e05f5f; }
+
+.adm-kpi-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.adm-kpi-card:hover .adm-kpi-icon { transform: scale(1.12) rotate(-4deg); }
+.adm-kpi-icon svg { width: 15px; height: 15px; }
+.adm-kpi-icon--blue  { color: #185fa5; background: linear-gradient(160deg, #eaf4fd, #d5e9fa); }
+.adm-kpi-icon--amber { color: #854f0b; background: linear-gradient(160deg, #fdf3e3, #faeacb); }
+.adm-kpi-icon--green { color: #3b6d11; background: linear-gradient(160deg, #eef7e4, #dcf0cb); }
+.adm-kpi-icon--red   { color: #a32d2d; background: linear-gradient(160deg, #fdecec, #fbd9d9); }
+
+.adm-kpi-link {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  color: #86868b;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.adm-kpi-card:hover .adm-kpi-link {
+  color: #1d1d1f;
+  transform: translate(2px, -2px);
+}
+
+.adm-kpi-label {
+  color: #1d1d1f;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.adm-kpi-sub {
+  margin-top: 2px;
+  margin-bottom: 7px;
+  color: #68686d;
+  font-size: 11px;
+}
+
+.adm-kpi-value {
+  color: #1d1d1f;
+  font-size: 26px;
   font-weight: 700;
-  color: #234d3a;
-  text-transform: uppercase;
-  letter-spacing: .10em;
-  white-space: normal;
-  text-align: center;
-  line-height: 1.25;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.3s ease;
 }
-.adm-stat-green .adm-stat-num { color: #15803d; }
-.adm-stat-red   .adm-stat-num { color: #b91c1c; }
-.adm-stat-green { border-top-color: rgba(22, 163, 74, 0.55); }
-.adm-stat-red   { border-top-color: rgba(185, 28, 28, 0.45); }
+
+.adm-kpi-card:hover .adm-kpi-value { transform: scale(1.05); }
+
+@media (max-width: 1300px) {
+  .adm-kpi-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 
 /* ══════════════════════════════════════
    MENSAJE DE ÉXITO
@@ -615,10 +737,28 @@
   .adm-filtros { flex-direction: column; padding: 12px; }
   .adm-search  { min-width: unset; width: 100%; }
   .adm-header  { padding: 12px 14px; }
-  .adm-stats   { gap: 8px; }
-  .adm-stat    { padding: 11px 16px 10px; min-width: 66px; }
-  .adm-stat-num { font-size: 1.45rem; }
   .adm-modal   { padding: 1.25rem; border-radius: 18px; }
+
+  .adm-kpi-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 0;
+    padding: 2px 0 5px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .adm-kpi-row::-webkit-scrollbar { display: none; }
+  .adm-kpi-card {
+    flex: 0 0 118px;
+    min-height: 150px;
+    padding: 13px;
+    border-radius: 18px;
+    scroll-snap-align: start;
+  }
+  .adm-kpi-value { font-size: 22px; }
+  .adm-kpi-link { top: 13px; right: 13px; }
 
   /* ── Tabla → tarjetas (solo mobile) ── */
   thead { display: none; }
@@ -764,15 +904,18 @@
   .adm-header { flex-wrap: wrap; gap: 8px; }
   .adm-btn-add { width: 100%; justify-content: center; padding: 10px; font-size: .82rem; }
   .adm-header-left h1 { font-size: .9rem; }
-  .adm-stats { flex-wrap: wrap; }
-  .adm-stat { flex: 1; min-width: 72px; padding: 9px 10px 8px; }
-  .adm-stat-num { font-size: 1.25rem; }
   .adm-modal { padding: 1rem; max-width: calc(100% - 1.5rem); }
   .adm-modal-title { font-size: .95rem; margin-bottom: 1rem; }
   .adm-modal-actions { flex-direction: column-reverse; }
+  .adm-kpi-card { flex-basis: 104px; min-height: 136px; padding: 11px; }
+  .adm-kpi-icon { width: 30px; height: 30px; margin-bottom: 9px; }
+  .adm-kpi-icon svg { width: 14px; height: 14px; }
+  .adm-kpi-label { font-size: 12px; }
+  .adm-kpi-sub { margin-bottom: 8px; font-size: 10px; }
+  .adm-kpi-value { font-size: 19px; }
+  .adm-kpi-link { top: 11px; right: 11px; }
 }
 
 @media (max-width: 360px) {
   .adm-wrap { padding: .5rem; padding-bottom: calc(.5rem + 90px + env(safe-area-inset-bottom, 0px)); }
-  .adm-stat-lbl { font-size: .62rem; }
 }

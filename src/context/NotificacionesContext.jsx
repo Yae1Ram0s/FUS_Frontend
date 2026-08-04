@@ -14,6 +14,10 @@ export function NotificacionesProvider({ children }) {
   const [turnadoKey,    setTurnadoKey]    = useState(0)   // sube cuando llega TURNADO nuevo (para ROL2)
   const wsRef           = useRef(null)
   const pollingId       = useRef(null)
+  const reconnectId     = useRef(null)
+  const reconnectIntentos = useRef(0)
+  const cargarController = useRef(null)
+  const cargarRequestId = useRef(0)
   const browserNotifRef = useRef(browserNotif)
   const userRef         = useRef(user)
 
@@ -23,6 +27,7 @@ export function NotificacionesProvider({ children }) {
   /* Mostrar prompt una vez por sesión si las notificaciones no están activas (solo HTTPS) */
   useEffect(() => {
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- oculta el prompt al cerrar sesión, antes de evaluar si hay que mostrarlo de nuevo
       setShowPrompt(false)
       return
     }
@@ -38,10 +43,31 @@ export function NotificacionesProvider({ children }) {
 
   const cargar = useCallback(() => {
     if (!user) return
-    api.get('/notificaciones/')
-      .then(r => setNotifs(Array.isArray(r.data) ? r.data : r.data.results ?? []))
+    cargarController.current?.abort()
+    const controller = new AbortController()
+    const requestId = ++cargarRequestId.current
+    cargarController.current = controller
+    api.get('/notificaciones/', { signal: controller.signal })
+      .then(r => {
+        if (requestId !== cargarRequestId.current || controller.signal.aborted) return
+        const recibidas = Array.isArray(r.data) ? r.data : r.data.results ?? []
+        setNotifs(prev => {
+          const porId = new Map()
+          for (const notif of [...recibidas, ...prev]) {
+            if (!porId.has(notif.id)) porId.set(notif.id, notif)
+          }
+          return [...porId.values()]
+        })
+      })
       .catch(() => {})
   }, [user])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- evita mostrar notificaciones del usuario anterior al cambiar/cerrar sesión
+    setNotifs([])
+    cargarRequestId.current += 1
+    cargarController.current?.abort()
+  }, [user?.id])
 
   /* Dispara notificación del navegador con clic que navega a la ruta correcta del rol */
   const _disparar = (notif) => {
@@ -66,7 +92,7 @@ export function NotificacionesProvider({ children }) {
         window.focus()
         window.location.href = dest
       }
-    } catch {}
+    } catch { /* permiso revocado a mitad de vuelo, sin notificación no pasa nada */ }
   }
 
   /* WebSocket + fallback polling */
@@ -76,20 +102,27 @@ export function NotificacionesProvider({ children }) {
     cargar()
 
     if (!accessToken) return
+    let disposed = false
+    let socket = null
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const wsUrl = `${proto}://${window.location.host}/ws/notificaciones/?token=${accessToken}`
 
     const connect = () => {
+      if (disposed) return
       try {
         const ws = new WebSocket(wsUrl)
+        socket = ws
         wsRef.current = ws
 
         ws.onopen = () => {
+          if (disposed) return
+          reconnectIntentos.current = 0
           if (pollingId.current) { clearInterval(pollingId.current); pollingId.current = null }
         }
 
         ws.onmessage = (e) => {
+          if (disposed) return
           try {
             const notif = JSON.parse(e.data)
             setNotifs(prev => {
@@ -99,18 +132,21 @@ export function NotificacionesProvider({ children }) {
               if (notif.tipo === 'TURNADO') setTurnadoKey(k => k + 1)
               return [notif, ...prev]
             })
-          } catch {}
+          } catch { /* mensaje WS mal formado, se ignora */ }
         }
 
         ws.onerror = () => {
+          if (disposed) return
           if (!pollingId.current) pollingId.current = setInterval(cargar, 30_000)
         }
 
         ws.onclose = (e) => {
-          wsRef.current = null
-          if (e.code !== 4001 && user) {
+          if (wsRef.current === ws) wsRef.current = null
+          if (!disposed && e.code !== 4001 && user) {
             if (!pollingId.current) pollingId.current = setInterval(cargar, 30_000)
-            setTimeout(connect, 5_000)
+            const delay = Math.min(1000 * (2 ** reconnectIntentos.current), 30_000)
+            reconnectIntentos.current += 1
+            reconnectId.current = setTimeout(connect, delay)
           }
         }
       } catch {
@@ -121,8 +157,17 @@ export function NotificacionesProvider({ children }) {
     connect()
 
     return () => {
-      if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
-      if (pollingId.current) clearInterval(pollingId.current)
+      disposed = true
+      if (socket) {
+        socket.onclose = null
+        socket.close()
+        if (wsRef.current === socket) wsRef.current = null
+      }
+      if (pollingId.current) { clearInterval(pollingId.current); pollingId.current = null }
+      if (reconnectId.current) { clearTimeout(reconnectId.current); reconnectId.current = null }
+      reconnectIntentos.current = 0
+      cargarRequestId.current += 1
+      cargarController.current?.abort()
     }
   }, [user, cargar, accessToken])
 
@@ -161,11 +206,16 @@ export function NotificacionesProvider({ children }) {
     setNotifs(ns => ns.map(n => ({ ...n, leida: true })))
   }
 
+  const limpiarTodas = () => {
+    api.delete('/notificaciones/limpiar/').catch(() => {})
+    setNotifs([])
+  }
+
   const noLeidas = notifs.filter(n => !n.leida).length
 
   return (
     <NotificacionesContext.Provider value={{
-      notifs, noLeidas, cargar, marcarLeida, marcarTodas,
+      notifs, noLeidas, cargar, marcarLeida, marcarTodas, limpiarTodas,
       browserNotif, showPrompt, turnadoKey,
       activarBrowserNotif, desactivarBrowserNotif, dismissPrompt,
     }}>
@@ -174,4 +224,5 @@ export function NotificacionesProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- Context + Provider + hook en un solo archivo, mismo patrón que AuthContext.jsx (ver esa justificación)
 export const useNotificaciones = () => useContext(NotificacionesContext)

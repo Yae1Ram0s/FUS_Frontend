@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -6,7 +6,9 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useResizablePanel } from '../hooks/useResizablePanel'
+import { useAsyncResource } from '../hooks/useAsyncResource'
 import FusFolioPicker from '../components/Calendario/FusFolioPicker'
+import FechaInput from '../components/FechaInput'
 import './CalendarioActividades.css'
 
 const TIPO_INFO = {
@@ -22,6 +24,15 @@ const DIAS_SEMANA_MIN  = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const HORAS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`)
 const ALTURA_HORA = 56
+const ALTURA_HORA_DIA = 60
+
+function combinarActividades(anteriores, nuevas) {
+  const ids = new Set(anteriores.map(actividad => actividad.id))
+  return [
+    ...anteriores,
+    ...nuevas.filter(actividad => !ids.has(actividad.id)),
+  ]
+}
 
 const toKeyMes   = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 const toISODate  = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -29,6 +40,14 @@ const isSameDay  = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth()
 const startOfWeek = d => { const r = new Date(d); r.setDate(r.getDate() - r.getDay()); r.setHours(0, 0, 0, 0); return r }
 const minutos    = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const sumarHora  = t => { const m = minutos(t) + 60; return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }
+
+const horaDesdeClick = (evento, alturaHora) => {
+  const rect = evento.currentTarget.getBoundingClientRect()
+  const y = Math.max(0, Math.min(evento.clientY - rect.top, alturaHora * 24 - 1))
+  const totalMinutos = Math.round((y / alturaHora) * 60 / 15) * 15
+  const acotado = Math.max(0, Math.min(totalMinutos, 23 * 60 + 45))
+  return `${String(Math.floor(acotado / 60)).padStart(2, '0')}:${String(acotado % 60).padStart(2, '0')}`
+}
 
 /* Matriz de 42 celdas (6 semanas x 7 días) que cubre el mes mostrado */
 function construirGrid(mesRef) {
@@ -232,18 +251,25 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           disabled={soloLectura}
         />
 
-        <input
-          className="cal-pill-input"
-          type="date"
-          value={form.fecha}
-          onChange={e => set('fecha', e.target.value)}
-          onFocus={enfocarCampo}
-          disabled={soloLectura}
-        />
+        <div className="cal-pill-clip">
+          <FechaInput
+            className="cal-pill-input"
+            wrapClassName="cal-pill-input-wrap"
+            type="date"
+            value={form.fecha}
+            onChange={e => set('fecha', e.target.value)}
+            onFocus={enfocarCampo}
+            disabled={soloLectura}
+          />
+        </div>
 
         <div className="cal-modal-row2">
-          <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
-          <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          <div className="cal-pill-clip">
+            <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          </div>
+          <div className="cal-pill-clip">
+            <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          </div>
         </div>
 
         <select className="cal-pill-input" value={form.tipo} onChange={e => set('tipo', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura}>
@@ -318,10 +344,7 @@ export default function CalendarioActividades() {
   const [vista, setVista]       = useState('mes') // 'mes' | 'semana' | 'dia'
   const [current, setCurrent]   = useState(() => new Date())
   const [miniCursor, setMiniCursor] = useState(() => new Date())
-  const [actividades, setActividades] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  const [cargando, setCargando]     = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
   const [modal, setModal]       = useState(null)
   const [toast, setToast]       = useState(null)
   const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
@@ -331,8 +354,6 @@ export default function CalendarioActividades() {
   const notifCtx = useNotificaciones()
   const { leftWidth, containerRef, startResize } = useResizablePanel('scs_calendario_panel_w')
   const mesesCargadosRef = useRef(new Set())
-  const autoRetriedRef   = useRef(false)
-  const retryTimeoutRef  = useRef(null)
   const toastTimeoutRef  = useRef(null)
   const diaScrollRef     = useRef(null)
   const semanaScrollRef  = useRef(null)
@@ -357,35 +378,29 @@ export default function CalendarioActividades() {
   }
   useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current) }, [])
 
-  const cargar = () => {
+  const cargarMeses = useCallback(async ({ signal }) => {
     const meses = mesesNecesarios(vista, current)
     const faltantes = meses.filter(m => !mesesCargadosRef.current.has(m))
-    if (faltantes.length === 0) { setCargando(false); return }
-    setCargando(true)
-    Promise.all(faltantes.map(m => api.get('/actividades/', { params: { mes: m } })))
-      .then(respuestas => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        faltantes.forEach(m => mesesCargadosRef.current.add(m))
-        const nuevas = respuestas.flatMap(r => r.data || [])
-        setActividades(prev => {
-          const ids = new Set(prev.map(a => a.id))
-          return [...prev, ...nuevas.filter(a => !ids.has(a.id))]
-        })
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
-
-  useEffect(() => { cargar() }, [vista, current])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+    if (faltantes.length === 0) return []
+    const respuestas = await Promise.all(
+      faltantes.map(mes => api.get('/actividades/', {
+        params: { mes },
+        signal,
+      })),
+    )
+    faltantes.forEach(mes => mesesCargadosRef.current.add(mes))
+    return respuestas.flatMap(response => response.data || [])
+  }, [current, vista])
+  const {
+    data: actividades,
+    loading: cargando,
+    error: errorCarga,
+    reload: cargar,
+    setData: setActividades,
+  } = useAsyncResource(cargarMeses, {
+    initialData: [],
+    mergeData: combinarActividades,
+  })
 
   const refrescar = () => {
     mesesCargadosRef.current = new Set()
@@ -400,6 +415,7 @@ export default function CalendarioActividades() {
     if (!notifCtx?.turnadoKey) return
     mesesCargadosRef.current = new Set()
     cargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cargar` se recrea cada render; solo debe dispararse al llegar un turnado nuevo
   }, [notifCtx?.turnadoKey])
 
   /* Al entrar a Día/Semana, arrancar el scroll cerca de horario hábil (~7 a. m.)
@@ -625,23 +641,29 @@ export default function CalendarioActividades() {
           {!mostrandoErrorTotal && !(cargando && !hayDatos) && vista === 'mes' && ultraCompacto && (
             <div className="cal-dia-panel">
               <div className="cal-dia-panel-header">
-                {DIAS_SEMANA_FULL[current.getDay()]} {current.getDate()} de {MESES[current.getMonth()]}
+                <span>{DIAS_SEMANA_FULL[current.getDay()]} {current.getDate()} de {MESES[current.getMonth()]}</span>
+                <button type="button" className="cal-dia-panel-agregar" onClick={() => abrirCrear(current)}>
+                  <span className="cal-btn-nueva-icon">+</span>
+                  Agregar actividad
+                </button>
               </div>
               {(actividadesPorDia[toISODate(current)] || []).length === 0 ? (
                 <p className="cal-dia-panel-vacio">Sin actividades este día.</p>
               ) : (
-                (actividadesPorDia[toISODate(current)] || []).map(ev => {
-                  const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
-                  return (
-                    <div key={ev.id} className="cal-dia-panel-item" onClick={() => abrirEditar(ev)}>
-                      <span className="cal-dia-panel-dot" style={{ background: info.color }} />
-                      <div className="cal-dia-panel-info">
-                        <span className="cal-dia-panel-titulo">{ev.titulo}</span>
-                        <span className="cal-dia-panel-hora">{ev.horaInicio} – {ev.horaFin}</span>
+                <div className="cal-dia-panel-list" tabIndex="0" aria-label="Actividades del día">
+                  {(actividadesPorDia[toISODate(current)] || []).map(ev => {
+                    const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                    return (
+                      <div key={ev.id} className="cal-dia-panel-item" onClick={() => abrirEditar(ev)}>
+                        <span className="cal-dia-panel-dot" style={{ background: info.color }} />
+                        <div className="cal-dia-panel-info">
+                          <span className="cal-dia-panel-titulo">{ev.titulo}</span>
+                          <span className="cal-dia-panel-hora">{ev.horaInicio} – {ev.horaFin}</span>
+                        </div>
                       </div>
-                    </div>
-                  )
-                })
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
@@ -651,7 +673,7 @@ export default function CalendarioActividades() {
               <div className="cal-semana-header">
                 <div className="cal-semana-gutter" />
                 {Array.from({ length: 7 }, (_, i) => { const d = new Date(startOfWeek(current)); d.setDate(d.getDate() + i); return d }).map((d, i) => (
-                  <div key={i} className="cal-semana-header-dia">
+                  <div key={i} className="cal-semana-header-dia" onClick={() => abrirDia(d)}>
                     <div className="cal-semana-header-wd">{DIAS_SEMANA[d.getDay()]}</div>
                     <div className={`cal-semana-header-num${isSameDay(d, hoy) ? ' cal-semana-header-num-hoy' : ''}`}>{d.getDate()}</div>
                   </div>
@@ -665,7 +687,7 @@ export default function CalendarioActividades() {
                   const key = toISODate(d)
                   const eventos = actividadesPorDia[key] || []
                   return (
-                    <div key={i} className="cal-semana-col" onClick={() => abrirDia(d)}>
+                    <div key={i} className="cal-semana-col" onClick={e => abrirCrear(d, horaDesdeClick(e, ALTURA_HORA))}>
                       {HORAS.map(h => <div key={h} className="cal-hora-slot" />)}
                       {eventos.map(ev => {
                         const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
@@ -695,12 +717,12 @@ export default function CalendarioActividades() {
                 <div className="cal-dia-horas">
                   {HORAS.map(h => <div key={h} className="cal-hora-label">{h}</div>)}
                 </div>
-                <div className="cal-dia-col" onClick={() => abrirCrear(current, '09:00')}>
+                <div className="cal-dia-col" onClick={e => abrirCrear(current, horaDesdeClick(e, ALTURA_HORA_DIA))}>
                   {HORAS.map(h => <div key={h} className="cal-hora-slot-dia" />)}
                   {(actividadesPorDia[toISODate(current)] || []).map(ev => {
                     const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
-                    const top = (minutos(ev.horaInicio) / 60) * ALTURA_HORA
-                    const alto = Math.max(((minutos(ev.horaFin) - minutos(ev.horaInicio)) / 60) * ALTURA_HORA, 22)
+                    const top = (minutos(ev.horaInicio) / 60) * ALTURA_HORA_DIA
+                    const alto = Math.max(((minutos(ev.horaFin) - minutos(ev.horaInicio)) / 60) * ALTURA_HORA_DIA, 22)
                     return (
                       <div
                         key={ev.id}
@@ -719,10 +741,6 @@ export default function CalendarioActividades() {
           )}
         </div>
       </div>
-
-      <button type="button" className="cal-fab" onClick={() => abrirCrear(current)} aria-label="Nueva actividad">
-        +
-      </button>
 
       {modal && (
         <ModalActividad

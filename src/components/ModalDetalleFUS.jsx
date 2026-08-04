@@ -1,28 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
+import { formatearFecha, formatearFechaHora } from '../utils/fechas'
 import Spinner from './Spinner'
+import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useModalBehavior } from '../hooks/useModalBehavior'
 import './ModalDetalleFUS.css'
 
-const fmtFecha = d => d
-  ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '—'
-
-const fmtFechaSolo = d => d
-  ? new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  : '—'
+const fmtFecha = formatearFechaHora
+const fmtFechaSolo = formatearFecha
 
 export default function ModalDetalleFUS({ folio, onClose }) {
-  const [detalle,  setDetalle]  = useState(null)
-  const [error,    setError]    = useState(false)
-  const [cargando, setCargando] = useState(true)
-
-  useEffect(() => {
-    api.get(`/fus/detalle-auditoria/${folio.split('/').map(encodeURIComponent).join('/')}/`)
-      .then(r => setDetalle(r.data))
-      .catch(() => setError(true))
-      .finally(() => setCargando(false))
-  }, [folio])
+  useModalBehavior(onClose)
+  const cargarDetalle = useCallback(
+    ({ signal }) => api
+      .get(`/fus/detalle-auditoria/${folio.split('/').map(encodeURIComponent).join('/')}/`, { signal })
+      .then(respuesta => respuesta.data),
+    [folio],
+  )
+  const {
+    data: detalle,
+    error,
+    loading: cargando,
+  } = useAsyncResource(cargarDetalle)
 
   // Bloquea el scroll del contenedor de la página mientras el modal está abierto.
   useEffect(() => {

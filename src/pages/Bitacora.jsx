@@ -5,7 +5,10 @@ import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import ModalDetalleFUS from '../components/ModalDetalleFUS'
 import ModalTimeline from '../components/ModalTimeline'
+import FechaInput from '../components/FechaInput'
 import { useAuth } from '../context/AuthContext'
+import { useAsyncResource } from '../hooks/useAsyncResource'
+import { descargar } from '../utils/descargarArchivo'
 import './Bitacora.css'
 
 const ESTATUS_FUS_OPCIONES = ['Registrado', 'Turnado', 'Atendido', 'Concluido', 'Vencido', 'PorVencer']
@@ -54,24 +57,20 @@ const ACCIONES_POR_ROL = {
 
 const PAGE_SIZE = 50
 
-function descargar(url, nombre, token) {
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => {
-      if (!r.ok) throw new Error(`Error ${r.status}`)
-      return r.blob()
-    })
-    .then(blob => {
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = nombre
-      a.click()
-      URL.revokeObjectURL(a.href)
-    })
-    .catch(e => alert(`No se pudo descargar el archivo. ${e.message}`))
+function combinarPaginasBitacora(estadoAnterior, paginaNueva) {
+  if (!paginaNueva.append) return paginaNueva
+  const existentes = new Set(estadoAnterior.items.map(item => item.id))
+  return {
+    ...paginaNueva,
+    items: [
+      ...estadoAnterior.items,
+      ...paginaNueva.items.filter(item => !existentes.has(item.id)),
+    ],
+  }
 }
 
 function urlPdfFus(folio) {
-  return `/api/fus/${folio.split('/').map(encodeURIComponent).join('/')}/pdf/`
+  return `/fus/${folio.split('/').map(encodeURIComponent).join('/')}/pdf/`
 }
 
 /* ── Modal: previsualizar el PDF individual de un FUS ── */
@@ -79,16 +78,16 @@ function ModalPreviewPDF({ folio, onClose }) {
   const [blobUrl, setBlobUrl] = useState(null)
   const [error,   setError]   = useState(false)
 
-  const { accessToken } = useAuth()
-
   useEffect(() => {
     let url = null
-    fetch(urlPdfFus(folio), { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then(r => { if (!r.ok) throw new Error(); return r.blob() })
-      .then(blob => { url = URL.createObjectURL(blob); setBlobUrl(url) })
-      .catch(() => setError(true))
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [folio, accessToken])
+    const controller = new AbortController()
+    // Vía `api` (no fetch directo): así un access token vencido se refresca
+    // solo antes de reintentar, en vez de fallar la vista previa.
+    api.get(urlPdfFus(folio), { responseType: 'blob', signal: controller.signal })
+      .then(({ data: blob }) => { url = URL.createObjectURL(blob); setBlobUrl(url) })
+      .catch(() => { if (!controller.signal.aborted) setError(true) })
+    return () => { controller.abort(); if (url) URL.revokeObjectURL(url) }
+  }, [folio])
 
   return createPortal(
     <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -127,18 +126,12 @@ function SkeletonList() {
 }
 
 export default function Bitacora() {
-  const { user, accessToken } = useAuth()
+  const { user } = useAuth()
   const rol       = user?.rol || 'ROL1'
   const esADM     = rol === 'ROL1'
   const acciones  = ACCIONES_POR_ROL[rol] || ACCIONES_POR_ROL.ROL1
 
   const [detalleFolio, setDetalleFolio] = useState(null)
-
-  const [registros, setRegistros] = useState([])
-  const [total,     setTotal]     = useState(0)
-  const [pagina,    setPagina]    = useState(1)
-  const [cargando,  setCargando]  = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
 
   const [fBusqueda,   setFBusqueda]   = useState('')
   const [fAccion,     setFAccion]     = useState('')
@@ -173,7 +166,8 @@ export default function Bitacora() {
 
   const [compacto, setCompacto] = useState(false)
   const bitaBgRef = useRef(null)
-  const ignoreNextScrollRef = useRef(false)
+  const abriendoFiltrosRef = useRef(false)
+  const desbloquearFiltrosTimerRef = useRef(null)
 
   const ordenarPor = (key) => {
     if (sortCol === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -184,22 +178,27 @@ export default function Bitacora() {
     const el = bitaBgRef.current
     if (!el) return
     const onScroll = () => {
-      if (ignoreNextScrollRef.current) {
-        ignoreNextScrollRef.current = false
+      const top = el.scrollTop
+      if (abriendoFiltrosRef.current) {
+        setCompacto(false)
         return
       }
-      const top = el.scrollTop
       setCompacto(top > 50)
     }
     el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      window.clearTimeout(desbloquearFiltrosTimerRef.current)
+    }
   }, [])
 
   const editarFiltros = () => {
-    if (bitaBgRef.current) {
-      ignoreNextScrollRef.current = true
-    }
+    abriendoFiltrosRef.current = true
     setCompacto(false)
+    window.clearTimeout(desbloquearFiltrosTimerRef.current)
+    desbloquearFiltrosTimerRef.current = window.setTimeout(() => {
+      abriendoFiltrosRef.current = false
+    }, 450)
   }
 
   useEffect(() => {
@@ -256,11 +255,11 @@ export default function Bitacora() {
     }
   }
 
-  const cargar = useCallback((pag = 1, append = false) => {
-    setCargando(true)
-    setErrorCarga(false)
+  const [solicitud, setSolicitud] = useState({ page: 1, append: false, version: 0 })
+
+  const cargarPagina = useCallback(async ({ signal }) => {
     const params = new URLSearchParams()
-    params.set('page', pag)
+    params.set('page', solicitud.page)
     params.set('page_size', PAGE_SIZE)
     if (fBusquedaDeb)         params.set('q',           fBusquedaDeb)
     if (fAccion)              params.set('accion',      fAccion)
@@ -270,16 +269,31 @@ export default function Bitacora() {
     if (fHasta)               params.set('fecha_hasta', fHasta)
     if (sortCol)              params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
 
-    api.get(`/bitacora/?${params.toString()}`)
-      .then(r => {
-        setTotal(r.data.total)
-        setPagina(pag)
-        setRegistros(prev => append ? [...prev, ...r.data.results] : r.data.results)
-      })
-      .catch(() => setErrorCarga(true))
-      .finally(() => setCargando(false))
-  }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
+    const respuesta = await api.get(`/bitacora/?${params.toString()}`, { signal })
+    return {
+      items: respuesta.data.results || [],
+      total: respuesta.data.total || 0,
+      page: solicitud.page,
+      append: solicitud.append,
+    }
+  }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir, solicitud])
 
+  const {
+    data: resultado,
+    error: errorCarga,
+    loading: cargando,
+  } = useAsyncResource(cargarPagina, {
+    initialData: { items: [], total: 0, page: 1, append: false },
+    mergeData: combinarPaginasBitacora,
+  })
+  const registros = resultado.items
+  const total = resultado.total
+  const pagina = resultado.page
+  const cargar = (pag = 1, append = false) => {
+    setSolicitud(actual => ({ page: pag, append, version: actual.version + 1 }))
+  }
+
+   
   useEffect(() => { cargar(1) }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
 
   const limpiar = () => {
@@ -295,10 +309,9 @@ export default function Bitacora() {
   // Solo columnas AGREGADAS (activadas) más allá del default — no las que el
   // usuario desactivó desde su estado por defecto (esas no generan chip).
   const columnasAgregadas = COLUMNAS_TOGGLEABLES.filter(c => colVisibles[c.key] && !COL_VISIBLES_DEFAULT[c.key])
-  const hayColumnasAgregadas = columnasAgregadas.length > 0
   const filtrosActivosChips = Boolean(fBusqueda || fAccion || fEstatusFus || fUnidades.length || fDesde || fHasta)
 
-  const fmt = d => d
+  const formatearFechaHoraBitacora = d => d
     ? new Date(d).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' })
     : '—'
 
@@ -409,7 +422,7 @@ export default function Bitacora() {
               disabled={exportando === 'excel'}
               onClick={() => {
                 setExportando('excel')
-                descargar(`/api/bitacora/exportar/excel/${exportParams()}`, 'bitacora.xlsx', accessToken)
+                descargar(`/bitacora/exportar/excel/${exportParams()}`, 'bitacora.xlsx')
                   .finally(() => setExportando(null))
               }}
               title="Exportar a Excel">
@@ -425,7 +438,7 @@ export default function Bitacora() {
               disabled={exportando === 'pdf'}
               onClick={() => {
                 setExportando('pdf')
-                descargar(`/api/bitacora/exportar/pdf/${exportParams()}`, 'bitacora.pdf', accessToken)
+                descargar(`/bitacora/exportar/pdf/${exportParams()}`, 'bitacora.pdf')
                   .finally(() => setExportando(null))
               }}
               title="Exportar a PDF">
@@ -518,12 +531,12 @@ export default function Bitacora() {
               <div className="bita-fechas">
                 <div className="bita-fecha-grupo">
                   <span className="bita-fecha-lbl">Desde</span>
-                  <input className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
+                  <FechaInput className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
                 </div>
                 <span className="bita-sep">–</span>
                 <div className="bita-fecha-grupo">
                   <span className="bita-fecha-lbl">Hasta</span>
-                  <input className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
+                  <FechaInput className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
                 </div>
               </div>
             )}
@@ -638,7 +651,7 @@ export default function Bitacora() {
               )}
               {registros.map(r => (
                 <tr key={r.id}>
-                  {colVisibles.fecha && <td className="bita-fecha" data-label="Fecha y hora (CDMX)">{fmt(r.fechaHora)}</td>}
+                  {colVisibles.fecha && <td className="bita-fecha" data-label="Fecha y hora (CDMX)">{formatearFechaHoraBitacora(r.fechaHora)}</td>}
                   {colVisibles.folio && (
                     <td className="bita-folio" data-label="Folio">
                       {r.fusFolio
@@ -650,7 +663,7 @@ export default function Bitacora() {
                             {r.fusFolio}
                           </a>
                         : '—'}
-                      <span className="bita-folio-fecha-mobile">{fmt(r.fechaHora)}</span>
+                      <span className="bita-folio-fecha-mobile">{formatearFechaHoraBitacora(r.fechaHora)}</span>
                       <span className="bita-mobile-badge">{ACCION_LABELS[r.accion] || r.accion}</span>
                     </td>
                   )}
@@ -702,7 +715,7 @@ export default function Bitacora() {
                           disabled={descargandoFolio === r.fusFolio}
                           onClick={() => {
                             setDescargandoFolio(r.fusFolio)
-                            descargar(urlPdfFus(r.fusFolio), `FUS_${r.fusFolio}.pdf`, accessToken)
+                            descargar(urlPdfFus(r.fusFolio), `FUS_${r.fusFolio}.pdf`)
                               .finally(() => setDescargandoFolio(null))
                           }}
                         >

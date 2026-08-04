@@ -3,7 +3,10 @@
   flex-direction: column;
   height: 100vh;
   height: 100dvh; /* viewport dinámico — evita que la barra de Safari/Chrome mueva header/bottom-nav al hacer scroll */
-  background: var(--bg);
+  /* Blanco, no el verde institucional: es lo único detrás de la franja de
+     safe-area-inset-top (notch/status bar) sobre el header — con --bg ahí
+     se veía una tira verde encima del header blanco. */
+  background: #ffffff;
 }
 
 .app-body {

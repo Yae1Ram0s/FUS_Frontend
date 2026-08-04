@@ -12,6 +12,7 @@ export function useMotivoRechazo(fus) {
   const [motivoRechazo, setMotivoRechazo] = useState(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia el motivo previo al cambiar de FUS/estatus, antes de decidir si hay que consultarlo
     if (!fus?.id || fus.estatusParticular !== 'Rechazado') { setMotivoRechazo(null); return }
     let alive = true
     api.get(`/fus/${fus.id}/seguimiento/`)

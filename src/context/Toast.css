@@ -1,6 +1,9 @@
+/* top, no bottom: se ancla debajo del header (.scs-header mide 56px +
+   safe-area-inset-top, position: sticky) para no taparlo — igual que
+   .notif-panel en móvil (ver NotificacionesBell.css, top: 58px). */
 .toast-container {
   position: fixed;
-  bottom: 1.5rem;
+  top: calc(56px + env(safe-area-inset-top, 0px) + 16px);
   right: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -82,7 +85,7 @@
 
 @media (max-width: 768px) {
   .toast-container {
-    bottom: 1.25rem;
+    top: calc(56px + env(safe-area-inset-top, 0px) + 12px);
     right: 1rem;
     left: 1rem;
   }
@@ -90,7 +93,7 @@
 }
 
 @media (max-width: 480px) {
-  .toast-container { bottom: 1rem; }
+  .toast-container { top: calc(56px + env(safe-area-inset-top, 0px) + 8px); }
   .toast {
     min-width: unset;
     max-width: 100%;

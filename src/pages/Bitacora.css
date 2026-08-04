@@ -252,7 +252,10 @@
 .bita-export-btn:disabled { opacity: .65; cursor: not-allowed; }
 
 /* ══════════════════════════════════════
-   FILTROS — panel sticky, tema institucional (tokens de index.css)
+   FILTROS — panel sticky, tarjeta clara/glass (mismo lenguaje que
+   .bita-header y .bita-table-wrap de esta página) en vez de la barra
+   sólida verde oscuro que tenía antes — acentos institucionales
+   (verde/dorado) se mantienen, solo cambia la superficie a clara.
 ══════════════════════════════════════ */
 .bita-filtros-sticky {
   position: sticky;
@@ -262,13 +265,16 @@
   flex-direction: column;
   gap: 10px;
   flex-shrink: 0;
-  background: rgba(35, 91, 78, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-base);
-  padding: 14px 18px;
-  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(195, 212, 207, 0.65);
+  border-radius: 20px;
+  padding: 18px 22px;
+  box-shadow:
+    8px  8px  22px rgba(35, 91, 78, 0.13),
+   -5px -5px  14px rgba(190, 208, 203, 0.75),
+    inset 0 1px 0   rgba(190, 208, 203, 0.80);
   transition: padding 200ms ease, background 200ms ease;
 }
 
@@ -288,7 +294,7 @@
 
 .bita-input {
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(35, 91, 78, 0.18);
   border-radius: 12px;
   padding: 9px 14px;
   color: var(--bg);
@@ -330,7 +336,7 @@
   position: absolute;
   top: 0; right: 0; bottom: 2px;
   width: 28px;
-  background: linear-gradient(to right, rgba(35, 91, 78, 0), rgba(35, 91, 78, 0.85));
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92));
   pointer-events: none;
 }
 .bita-pildoras-scroll {
@@ -340,21 +346,21 @@
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.45) transparent;
+  scrollbar-color: rgba(35, 91, 78, 0.35) transparent;
   padding-bottom: 8px;
 }
 .bita-pildoras-scroll::-webkit-scrollbar { height: 6px; }
-.bita-pildoras-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
-.bita-pildoras-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.45); border-radius: 999px; }
-.bita-pildoras-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.65); }
-.bita-pildoras-sep { width: 1px; align-self: stretch; background: rgba(255, 255, 255, 0.22); flex-shrink: 0; margin: 2px 0; }
+.bita-pildoras-scroll::-webkit-scrollbar-track { background: rgba(35, 91, 78, 0.06); border-radius: 999px; }
+.bita-pildoras-scroll::-webkit-scrollbar-thumb { background: rgba(35, 91, 78, 0.32); border-radius: 999px; }
+.bita-pildoras-scroll::-webkit-scrollbar-thumb:hover { background: rgba(35, 91, 78, 0.50); }
+.bita-pildoras-sep { width: 1px; align-self: stretch; background: rgba(35, 91, 78, 0.16); flex-shrink: 0; margin: 2px 0; }
 
 .bita-pildora {
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(35, 91, 78, 0.08);
+  border: 1px solid rgba(35, 91, 78, 0.20);
   border-radius: var(--radius-full);
-  color: var(--heading);
+  color: #1F5647;
   font-size: .78rem;
   font-weight: 700;
   padding: 7px 16px;
@@ -362,11 +368,14 @@
   white-space: nowrap;
   transition: background 150ms, color 150ms, border-color 150ms;
 }
-.bita-pildora:hover { background: rgba(255, 255, 255, 0.25); }
+.bita-pildora:hover { background: rgba(35, 91, 78, 0.14); }
 .bita-pildora.activa { background: var(--fg-secondary); color: var(--bg); border-color: var(--fg-secondary); }
 .bita-pildora.activa:hover { background: var(--fg-secondary); }
 
 .bita-unidad-pill-wrap { position: relative; flex-shrink: 0; }
+/* Popover claro/glass — mismo lenguaje que el resto del sistema (ver
+   .bn-popover en BottomNav.css y .rep-selector > div en Reportes.css)
+   en vez del recuadro sólido verde oscuro que tenía antes. */
 .bita-unidad-popover {
   z-index: 30;
   min-width: 220px;
@@ -375,34 +384,35 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--bg);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-base);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
   padding: 6px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 16px 40px rgba(10, 30, 20, 0.20), 0 4px 14px rgba(10, 30, 20, 0.12);
   white-space: normal;
 }
 .bita-unidad-opcion {
   background: transparent;
   border: none;
   text-align: left;
-  color: var(--body);
+  color: #1d1d1f;
   font-size: .82rem;
   font-weight: 600;
   padding: 7px 10px;
-  border-radius: var(--radius-default);
+  border-radius: 8px;
   cursor: pointer;
 }
-.bita-unidad-opcion:hover { background: rgba(255, 255, 255, 0.08); color: var(--heading); }
+.bita-unidad-opcion:hover { background: rgba(31, 86, 71, 0.08); color: #1F5647; }
+.bita-unidad-opcion.seleccionada { background: rgba(31, 86, 71, 0.10); color: #1F5647; }
 
 .bita-fechas { display: flex; align-items: center; gap: 6px; }
-.bita-sep { color: var(--body-subtle); font-size: .82rem; font-weight: 600; }
+.bita-sep { color: rgba(10, 30, 20, 0.45); font-size: .82rem; font-weight: 600; }
 
 .bita-fecha-grupo { display: flex; align-items: center; gap: 7px; }
 .bita-fecha-lbl {
-  font-size: .74rem;
+  font-size: .68rem;
   font-weight: 700;
-  color: var(--fg-secondary);
+  color: #344d46;
   text-transform: uppercase;
   letter-spacing: .04em;
   white-space: nowrap;
@@ -426,23 +436,23 @@
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  background: transparent;
-  border: 1px solid var(--border-default);
+  background: rgba(31, 86, 71, 0.08);
+  border: 1px solid rgba(31, 86, 71, 0.20);
   border-radius: var(--radius-full);
-  color: var(--fg-secondary);
+  color: #1F5647;
   font-size: .78rem;
   font-weight: 700;
   padding: 5px 14px;
   cursor: pointer;
   transition: all 150ms ease;
 }
-.bita-editar-filtros-btn:hover { border-color: var(--border-medium); background: rgba(255, 255, 255, 0.08); }
+.bita-editar-filtros-btn:hover { background: rgba(31, 86, 71, 0.16); }
 
-/* ── Fila 4: FILTROS ACTIVOS — dentro del panel verde ── */
+/* ── Fila 4: FILTROS ACTIVOS — dentro de la tarjeta clara ── */
 .bita-divider {
   border: none;
   height: 1px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(35, 91, 78, 0.12);
   margin: 0;
 }
 
@@ -453,9 +463,9 @@
   gap: 8px;
 }
 .chips-label {
-  font-size: .74rem;
+  font-size: .68rem;
   font-weight: 700;
-  color: var(--body-subtle);
+  color: #344d46;
   text-transform: uppercase;
   letter-spacing: .04em;
 }
@@ -463,9 +473,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--badge-brand-bg);
-  border: 1px solid var(--badge-brand-border);
-  color: var(--badge-brand-text);
+  background: rgba(31, 86, 71, 0.08);
+  border: 1px solid rgba(31, 86, 71, 0.22);
+  color: #1F5647;
   border-radius: var(--radius-full);
   padding: 4px 8px 4px 12px;
   font-size: .78rem;
@@ -486,19 +496,19 @@
   cursor: pointer;
   opacity: .75;
 }
-.bita-chip button:hover { opacity: 1; background: rgba(255, 255, 255, 0.18); }
+.bita-chip button:hover { opacity: 1; background: rgba(31, 86, 71, 0.16); }
 
 .bita-limpiar-todo {
   background: transparent;
   border: none;
-  color: var(--body);
+  color: #1F5647;
   font-size: .76rem;
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
   padding: 4px 6px;
 }
-.bita-limpiar-todo:hover { color: var(--heading); }
+.bita-limpiar-todo:hover { color: #163527; }
 
 /* ── Botón "Editar" inline (dentro de la fila de chips) — solo móvil ── */
 .bita-editar-filtros-btn-inline { display: none; }
@@ -919,7 +929,7 @@
     margin-left: auto;
     background: transparent;
     border: none;
-    color: var(--fg-secondary);
+    color: #1F5647;
     font-size: .78rem;
     font-weight: 700;
     cursor: pointer;
@@ -997,25 +1007,38 @@
     background: rgba(35, 91, 78, 0.14);
     justify-content: flex-start;
     align-items: center;
-    padding: 12px 46px 12px 14px !important;
+    flex-wrap: wrap;
+    padding: 12px 14px !important;
   }
   .bita-table td.bita-folio::before { display: none; }
-  .bita-folio-link { color: #235b4e; font-weight: 600; font-size: .82rem; border-bottom-color: rgba(35, 91, 78, 0.35); word-break: break-word; }
+  .bita-folio-link {
+    min-width: 0;
+    color: #235b4e;
+    font-weight: 600;
+    font-size: .82rem;
+    border-bottom-color: rgba(35, 91, 78, 0.35);
+    word-break: break-word;
+    text-align: left;
+  }
   .bita-folio-link:hover, .bita-folio-link:active { color: #16362d; border-bottom-color: #16362d; }
   .bita-folio-fecha-mobile { display: none; }
   .bita-mobile-badge {
     display: inline-flex;
     align-items: center;
-    position: absolute;
-    top: 8px;
-    right: 8px;
+    position: static;
+    flex: 0 1 auto;
+    max-width: 52%;
+    margin-left: auto;
     font-size: .62rem;
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 20px;
     background: rgba(35, 91, 78, 0.12);
     color: #235b4e;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+    text-align: right;
   }
 
   .bita-email-col { white-space: normal; word-break: break-word; }
@@ -1038,8 +1061,26 @@
   .bita-header-right { width: 100%; justify-content: flex-end; }
   .bita-export-btn span { display: none; }
   .bita-export-btn { padding: 7px 10px; }
+  .bita-table td.bita-folio {
+    align-items: flex-start;
+  }
+  .bita-folio-link {
+    flex: 1 1 135px;
+    min-width: 0;
+  }
+  .bita-mobile-badge {
+    flex: 0 1 auto;
+    max-width: min(58%, 190px);
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 360px) {
   .bita-wrap { padding: .5rem; padding-bottom: calc(.5rem + 90px + env(safe-area-inset-bottom, 0px)); }
+  .bita-mobile-badge {
+    flex: 0 1 auto;
+    max-width: 58%;
+    margin-left: auto;
+    text-align: right;
+  }
 }

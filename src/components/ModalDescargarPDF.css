@@ -1,0 +1,34 @@
+/* La base del modal (.modal-overlay/.modal-card/...) vive en styles/modal.css
+   (global) — aquí solo lo específico de este modal. */
+.modal-card-pdf { width: 460px; }
+
+.modal-pdf-sub {
+  font-size: 0.85rem;
+  color: rgba(26, 47, 40, 0.75);
+  margin: 0 0 6px;
+}
+
+.modal-pdf-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  background: rgba(255, 255, 255, 0.52);
+  color: #0d2218;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+}
+
+.modal-pdf-opcion:hover { background: rgba(255, 255, 255, 0.80); border-color: rgba(35, 91, 78, 0.40); }
+
+.modal-pdf-opcion-activa {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #235b4e;
+  box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.12);
+}
+
+.modal-pdf-opcion input[type="radio"] { accent-color: #235b4e; width: 16px; height: 16px; flex-shrink: 0; }

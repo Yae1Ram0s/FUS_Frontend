@@ -142,3 +142,15 @@
   flex-shrink: 0;
 }
 @keyframes btn-spinner-rotate { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-balls,
+  .spinner-balls::before,
+  .spinner-balls::after,
+  .spinner-ring-svg,
+  .spinner-ring-circle-1,
+  .spinner-ring-circle-2,
+  .btn-spinner {
+    animation-duration: 2.5s;
+  }
+}

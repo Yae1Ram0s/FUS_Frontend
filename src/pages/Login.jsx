@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import Spinner from '../components/Spinner'
+import { rutaInicioPorRol } from '../utils/rutas'
 import logosImg from '../assets/Logos_P_Hacienda_ANAM.png'
 import './Login.css'
 
@@ -10,7 +11,7 @@ const STEP_EMAIL    = 'email'
 const STEP_PASS     = 'pass'
 const STEP_OTP      = 'otp'
 const STEP_NEWPASS  = 'newpass'
-const STEP_RECOVERY = 'recovery'   // ingresa correo para recuperar
+const DOMINIO_INSTITUCIONAL = '@anam.gob.mx'
 
 export default function Login() {
   const [step,        setStep]        = useState(STEP_EMAIL)
@@ -27,21 +28,36 @@ export default function Login() {
   const [isRecovery,  setIsRecovery]  = useState(false)
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
+  const [esMovil,     setEsMovil]     = useState(() => window.matchMedia('(max-width: 768px)').matches)
 
   const { user, login, loginWithTokens } = useAuth()
   const navigate = useNavigate()
 
-  const rutaInicio = (rol) => {
-    if (rol === 'ROL2') return '/rol2/dashboard'
-    if (rol === 'COMISIONADO') return '/comisionado/calendario'
-    return '/rol1/dashboard'
-  }
+  useEffect(() => {
+    if (user) navigate(rutaInicioPorRol(user.rol), { replace: true })
+  }, [user, navigate])
 
   useEffect(() => {
-    if (user) navigate(rutaInicio(user.rol), { replace: true })
-  }, [user])
+    const media = window.matchMedia('(max-width: 768px)')
+    const actualizar = (evento) => setEsMovil(evento.matches)
+    media.addEventListener('change', actualizar)
+    return () => media.removeEventListener('change', actualizar)
+  }, [])
 
-  const redirect = (rol) => navigate(rutaInicio(rol))
+  // La franja de status bar (notch/Dynamic Island) en Safari/iOS no es parte
+  // del DOM — la pinta el navegador con el color de <meta name="theme-color">,
+  // así que el fondo verde de .login-wrap no le llega. Solo el Login la quiere
+  // verde (el resto de la app se dejó en blanco a propósito); se cambia el
+  // meta al montar y se restaura el valor original al desmontar.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (!meta) return undefined
+    const original = meta.getAttribute('content')
+    meta.setAttribute('content', '#1c4a3e')
+    return () => meta.setAttribute('content', original)
+  }, [])
+
+  const redirect = (rol) => navigate(rutaInicioPorRol(rol))
 
   const resetAll = () => {
     setError(''); setOtp(''); setNewPass(''); setConfirmPass('')
@@ -53,8 +69,17 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
+    // Se limpia una sola vez aquí y se reescribe el estado: los pasos
+    // siguientes (contraseña, olvidé mi contraseña, OTP, nueva contraseña)
+    // reusan `email` tal cual, sin volver a limpiarlo — sin esto, un espacio
+    // o mayúscula que el teclado de un celular agrega solo (autocompletado)
+    // sobrevivía a este paso y rompía la búsqueda en los pasos de después,
+    // que si comparan el correo exacto (a diferencia de éste, que ya llegó
+    // limpio a verificar-correo).
+    const limpio = email.trim().toLowerCase()
+    setEmail(limpio)
     try {
-      const { data } = await api.post('/auth/verificar-correo/', { email: email.trim().toLowerCase() })
+      const { data } = await api.post('/auth/verificar-correo/', { email: limpio })
       setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al verificar el correo.')
@@ -193,16 +218,44 @@ export default function Login() {
       <form className="login-form" onSubmit={handleEmail} noValidate>
         <div className="lf-group">
           <label htmlFor="login-email">Correo Institucional</label>
-          <input
-            id="login-email"
-            type="email"
-            placeholder="usuario@anam.gob.mx"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            autoFocus
-          />
+          {esMovil ? (
+            <div className="lf-email-mobile-wrap">
+              <input
+                id="login-email"
+                type="text"
+                inputMode="email"
+                placeholder="usuario@anam.gob.mx"
+                value={email.toLowerCase().endsWith(DOMINIO_INSTITUCIONAL)
+                  ? email.slice(0, -DOMINIO_INSTITUCIONAL.length)
+                  : email.split('@')[0]}
+                onChange={e => {
+                  const nombre = e.target.value.toLowerCase().split('@')[0].replace(/\s/g, '')
+                  setEmail(nombre ? `${nombre}${DOMINIO_INSTITUCIONAL}` : '')
+                }}
+                required
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                autoFocus
+              />
+              {email && <span aria-hidden="true">{DOMINIO_INSTITUCIONAL}</span>}
+            </div>
+          ) : (
+            <input
+              id="login-email"
+              type="email"
+              placeholder=" "
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              autoFocus
+            />
+          )}
         </div>
         {error && <p className="login-error" role="alert">{error}</p>}
         <button className="btn-entrar" type="submit" disabled={loading || !email.trim()}>
@@ -409,6 +462,11 @@ export default function Login() {
 
           <div className="login-card-header">
             <h2 className="login-welcome">{recoveryOk ? '¡Listo!' : titles[step]}</h2>
+            {!recoveryOk && (step === STEP_EMAIL || step === STEP_PASS) && (
+              <p className="login-personal-message">
+                Ingresa tus credenciales para continuar en tu espacio de trabajo.
+              </p>
+            )}
           </div>
 
           {renderStep()}

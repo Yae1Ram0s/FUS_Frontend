@@ -1,0 +1,64 @@
+.fac-divider {
+  border: none;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  margin: 0;
+}
+
+.fac-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.fac-chips-label {
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--body-subtle);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.fac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--badge-brand-bg);
+  border: 1px solid var(--badge-brand-border);
+  color: var(--badge-brand-text);
+  border-radius: var(--radius-full);
+  padding: 4px 8px 4px 12px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.fac-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: .9rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .75;
+}
+.fac-chip button:hover { opacity: 1; background: rgba(255, 255, 255, 0.18); }
+
+.fac-limpiar-todo {
+  background: transparent;
+  border: none;
+  color: var(--body);
+  font-size: .76rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.fac-limpiar-todo:hover { color: var(--heading); }

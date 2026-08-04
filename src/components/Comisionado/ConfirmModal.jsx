@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 import './Comisionado.css'
 
 /* Confirmación glass genérica reusada por Atendido y Concluir asunto — evita
@@ -7,19 +8,25 @@ import './Comisionado.css'
 export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = 'verde', onClose, onConfirmar }) {
   const [enviando, setEnviando] = useState(false)
   const [error, setError]       = useState('')
+  const envioEnCursoRef         = useRef(false)
+  useModalBehavior(onClose, { closeEnabled: !enviando })
 
   const confirmar = async () => {
+    if (envioEnCursoRef.current) return
+    envioEnCursoRef.current = true
     setError(''); setEnviando(true)
     try {
       await onConfirmar()
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo completar la acción. Intenta nuevamente.')
       setEnviando(false)
+    } finally {
+      envioEnCursoRef.current = false
     }
   }
 
   return createPortal(
-    <div className="com-overlay" onClick={() => !enviando && onClose()}>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label={titulo} onClick={() => !enviando && onClose()}>
       <div className="com-modal com-modal-confirm" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
           <h3>{titulo}</h3>

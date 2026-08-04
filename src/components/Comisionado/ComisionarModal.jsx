@@ -1,43 +1,38 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../../api/api'
+import { obtenerIniciales } from '../../utils/personas'
+import { useDebouncedSearch } from '../../hooks/useDebouncedSearch'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 import './Comisionado.css'
-
-const initials = (nombre, email) => (nombre || email || '?')
-  .split(' ')
-  .slice(0, 2)
-  .map(w => w[0])
-  .join('')
-  .toUpperCase()
 
 export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
   const [query, setQuery]           = useState('')
-  const [resultados, setResultados] = useState([])
-  const [cargando, setCargando]     = useState(true)
   const [seleccionado, setSeleccionado] = useState(null)
   const [enviando, setEnviando]     = useState(false)
   const [error, setError]           = useState('')
-  const debounceRef = useRef(null)
+  useModalBehavior(onClose, { closeEnabled: !enviando })
   const inputRef     = useRef(null)
+  const envioEnCursoRef = useRef(false)
 
-  const buscar = useCallback((q) => {
-    setCargando(true)
-    api.get(`/fus/${fusId}/comisionados-disponibles/`, { params: { q } })
-      .then(r => setResultados(Array.isArray(r.data) ? r.data : []))
-      .catch(() => setResultados([]))
-      .finally(() => setCargando(false))
+  const buscar = useCallback(async (q, { signal }) => {
+    const respuesta = await api.get(
+      `/fus/${fusId}/comisionados-disponibles/`,
+      { params: { q }, signal },
+    )
+    return Array.isArray(respuesta.data) ? respuesta.data : []
   }, [fusId])
 
-  useEffect(() => {
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => buscar(query), 300)
-    return () => clearTimeout(debounceRef.current)
-  }, [query, buscar])
+  const {
+    results: resultados,
+    loading: cargando,
+  } = useDebouncedSearch(query, buscar, { searchEmpty: true })
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
   const confirmar = async () => {
-    if (!seleccionado) return
+    if (!seleccionado || envioEnCursoRef.current) return
+    envioEnCursoRef.current = true
     setError(''); setEnviando(true)
     try {
       const { data } = await api.post(`/fus/${fusId}/comisionar/`, { comisionado_id: seleccionado.id })
@@ -45,12 +40,13 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
     } catch (err) {
       setError(err.response?.data?.detail || 'No se pudo asignar el comisionado. Intenta nuevamente.')
     } finally {
+      envioEnCursoRef.current = false
       setEnviando(false)
     }
   }
 
   return createPortal(
-    <div className="com-overlay" onClick={() => !enviando && onClose()}>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label="Comisionar solicitud" onClick={() => !enviando && onClose()}>
       <div className="com-modal" onClick={e => e.stopPropagation()}>
         <div className="com-modal-top">
           <h3>Comisionar solicitud</h3>
@@ -82,7 +78,7 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
               className={`com-item${seleccionado?.id === c.id ? ' com-item-sel' : ''}`}
               onClick={() => setSeleccionado(c)}
             >
-              <span className="com-avatar">{initials(c.nombre, c.email)}</span>
+              <span className="com-avatar">{obtenerIniciales(c.nombre, c.email)}</span>
               <div className="com-item-info">
                 <span className="com-item-nombre">{c.nombre || c.email}</span>
                 <span className="com-item-direccion">{c.direccion || 'Sin dirección asignada'}</span>

@@ -11,7 +11,7 @@
 
 .fusfp-placeholder { color: rgba(0, 0, 0, 0.38); font-size: 13.5px; }
 
-.fusfp-chip { display: flex; align-items: center; gap: 8px; width: 100%; }
+.fusfp-chip { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
 .fusfp-chip-dot {
   width: 7px;
   height: 7px;
@@ -26,6 +26,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 .fusfp-chip-x {
   margin-left: auto;

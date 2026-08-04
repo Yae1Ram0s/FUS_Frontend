@@ -1,40 +1,51 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
-import ModalDescargarPDF, { descargar } from '../components/ModalDescargarPDF'
+import ModalDescargarPDF from '../components/ModalDescargarPDF'
+import { descargar } from '../utils/descargarArchivo'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
 import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
+import EvidenciaItem from '../components/FUS/EvidenciaItem'
+import PrioridadPills from '../components/FUS/PrioridadPills'
+import FiltrosActivosChips from '../components/FiltrosActivosChips'
+import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useResizablePanel } from '../hooks/useResizablePanel'
-import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
+import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
+import { obtenerIniciales } from '../utils/personas'
+import { PRIORIDAD_NIVELES } from '../utils/prioridades'
+import {
+  formatearFechaHora,
+  formatearFechaISO as fmtFechaCorta,
+  formatearHora as fmtHora,
+} from '../utils/fechas'
 import './SolicitudesTurnadas.css'
 
-const initialesComisionado = (nombre, email) => (nombre || email || '?')
-  .split(' ')
-  .slice(0, 2)
-  .map(w => w[0])
-  .join('')
-  .toUpperCase()
+const PAGE_SIZE = 30
 
-const fmtHora = d => d
-  ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-  : ''
-
-const fmtFechaCorta = d => d
-  ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  : '—'
+function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
+  if (!paginaNueva.append) return paginaNueva
+  const existentes = new Set(estadoAnterior.items.map(item => item.id))
+  return {
+    ...paginaNueva,
+    items: [
+      ...estadoAnterior.items,
+      ...paginaNueva.items.filter(item => !existentes.has(item.id)),
+    ],
+  }
+}
 
 /* ── Sección Respuestas y Seguimiento ── */
-function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
+function Seguimientos({ turnadoId, folio, estatusFus, onRegistrado }) {
   // Fuente única de verdad: fus.estatusParticular (ya se refresca via
   // setFusData en cada acción). 'Pendiente_validacion' bloquea nuevas
   // respuestas mientras el Particular valida — si rechaza, vuelve a
@@ -44,7 +55,6 @@ function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
   const pendienteValidacion = estatusFus === 'Pendiente_validacion'
   const soloLectura = concluido || pendienteValidacion
   const { user } = useAuth()
-  const [lista,       setLista]       = useState([])
   const hoy = new Date().toISOString().split('T')[0]
   const [fecha,       setFecha]       = useState(hoy)
   const [actividad,   setActividad]   = useState('')
@@ -52,31 +62,36 @@ function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
   const [loading,     setLoading]     = useState(false)
   const [eliminandoId,setEliminandoId] = useState(null)
   const [error,       setError]       = useState('')
-  const [errorCarga,  setErrorCarga]  = useState(false)
-  const autoRetriedRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
+  const cargarSeguimientos = useCallback(
+    ({ signal }) => api
+      .get(`/turnados/${turnadoId}/seguimientos/`, { signal })
+      .then(respuesta => respuesta.data),
+    [turnadoId],
+  )
+  const {
+    data: lista,
+    error: errorCarga,
+    reload: cargar,
+  } = useAsyncResource(cargarSeguimientos, { initialData: [] })
 
-  const cargar = () =>
-    api.get(`/turnados/${turnadoId}/seguimientos/`)
-      .then(r => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        setLista(r.data)
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-
-  useEffect(() => { cargar() }, [turnadoId])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+  // En vivo: cualquier notificación de este FUS (ej. un rechazo del
+  // Particular, que se fusiona en este mismo listado) refresca el feed sin
+  // esperar a que se remonte el panel.
+  const notifCtx = useNotificaciones()
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    if (notifCtx?.notifs?.[0]?.fusFolio === folio) cargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
+  }, [ultimaNotifId, folio])
 
   const agregar = async () => {
-    if (!fecha || !actividad.trim()) { setError('Completa la fecha y la actividad.'); return }
+    // Una respuesta puede ir sin acción y una acción sin respuesta — solo se
+    // exige que haya al menos una de las dos (no se puede registrar un
+    // seguimiento completamente vacío).
+    if (!fecha || (!actividad.trim() && !accionTexto.trim())) {
+      setError('Completa la fecha y una respuesta o una acción.')
+      return
+    }
     setError(''); setLoading(true)
     try {
       const r = await api.post(`/turnados/${turnadoId}/seguimientos/`, {
@@ -171,7 +186,9 @@ function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
                     </button>
                   )}
                 </div>
-                <p className={s.esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>{s.descripcionActividad}</p>
+                {s.descripcionActividad && (
+                  <p className={s.esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>{s.descripcionActividad}</p>
+                )}
                 {s.accionTexto && (
                   <p className="seg-tl-accion">→ {s.accionTexto}</p>
                 )}
@@ -183,7 +200,7 @@ function Seguimientos({ turnadoId, estatusFus, onRegistrado }) {
         {!soloLectura && (
           <div className="seg-nueva">
             <div className="seg-nueva-inputs">
-              <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="seg-nueva-fecha" />
+              <FechaInput type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="seg-nueva-fecha" wrapClassName="seg-nueva-fecha-wrap" />
               <input type="text" placeholder="Describe la actividad…" value={actividad} onChange={e => setActividad(e.target.value)} />
               <input type="text" placeholder="Acción por emprender…" value={accionTexto} onChange={e => setAccionTexto(e.target.value)} />
             </div>
@@ -214,39 +231,6 @@ function DRow({ label, value, tall }) {
   )
 }
 
-function esImagen(mime) {
-  return mime && mime.startsWith('image/')
-}
-
-/* ── Ítem de evidencia individual (descarga autenticada) ── */
-function EvidenciaItem({ ev }) {
-  const url = useEvidenciaUrl(ev.id)
-  const imagen = esImagen(ev.tipoMime)
-  return (
-    <a
-      href={url || undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`ev-item${url ? '' : ' ev-item-cargando'}`}
-      title={ev.nombreArchivo}
-      onClick={e => { if (!url) e.preventDefault() }}
-    >
-      {imagen && url ? (
-        <img src={url} alt={ev.nombreArchivo} className="ev-thumb" />
-      ) : (
-        <span className="ev-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-        </span>
-      )}
-      <span className="ev-nombre">{ev.nombreArchivo}</span>
-      {ev.comentarios && <span className="ev-comentario">{ev.comentarios}</span>}
-    </a>
-  )
-}
-
 /* ── Lista de evidencias ── */
 function EvidenciaList({ evidencias }) {
   if (!evidencias?.length) return (
@@ -258,42 +242,12 @@ function EvidenciaList({ evidencias }) {
 
   return (
     <div className="ev-lista">
-      {evidencias.map(ev => <EvidenciaItem key={ev.id} ev={ev} />)}
+      {evidencias.map(ev => <EvidenciaItem key={ev.id} evidencia={ev} />)}
     </div>
   )
 }
 
 /* ── Prioridad — pills de solo lectura ── */
-const PRIORIDAD_NIVELES = [
-  { valor: 'Alta',  color: '#b91c1c' },
-  { valor: 'Media', color: '#92400e' },
-  { valor: 'Baja',  color: '#15803d' },
-]
-
-function PrioridadPills({ valor, criterios }) {
-  const listaCriterios = criterios ? criterios.split('|').map(c => c.trim()).filter(Boolean) : []
-  return (
-    <div>
-      <div className="dt-prioridad-pills">
-        {PRIORIDAD_NIVELES.map(p => (
-          <span
-            key={p.valor}
-            className={`dt-prioridad-pill${valor === p.valor ? ' dt-prioridad-pill-selected' : ''}`}
-            style={{ '--c': p.color }}
-          >
-            {p.valor}
-          </span>
-        ))}
-      </div>
-      {listaCriterios.length > 0 && (
-        <ul className="dt-criterios-lista">
-          {listaCriterios.map((c, i) => <li key={i}>{c}</li>)}
-        </ul>
-      )}
-    </div>
-  )
-}
-
 /* ── Chip "Prioridad" — el chip visible es un .filtro-chip normal; el
    catálogo Alta/Media/Baja lo abre un <select> nativo superpuesto e
    invisible, así en móvil se ve el picker propio del dispositivo (100%
@@ -320,16 +274,12 @@ function PrioridadFiltroChip({ valor, onChange }) {
 }
 
 /* ── Detalle del turnado (ROL2) ── */
-function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
-  const { user, accessToken } = useAuth()
+function DetalleTurnado({ turnado, onBack }) {
+  const { user } = useAuth()
   const [fusData,        setFusData]       = useState(turnado.idFus || {})
   const [modalComisionar, setModalComisionar] = useState(false)
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const toast = useToast()
-  const fmt = d => d
-    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—'
-
   const fus = fusData
 
   // puedeComisionar ya resuelve internamente, según el rol, tanto el
@@ -343,7 +293,7 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
   const descargarPdf = (conImagenes) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
     const query = conImagenes ? '?imagenes=1' : ''
-    return descargar(`/api/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`, accessToken)
+    return descargar(`/fus/${folioUrl}/pdf/${query}`, `FUS_${fus.folio.replace(/\//g, '_')}.pdf`)
       .finally(() => setMostrarModalPdf(false))
   }
 
@@ -364,7 +314,7 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          {fus.folio || 'Datos del FUS'}
+          <span className="dt-header-folio">{fus.folio || 'Datos del FUS'}</span>
           <span className="dt-header-acciones">
             {fus.folio && (
               <button
@@ -393,13 +343,13 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
         <div className="sec-subseccion">
           <span className="sec-sublabel">Datos generales</span>
           <div className="sec-grid-2">
-            <DRow label="Fecha y hora"        value={fmt(fus.fechaHora)} />
+            <DRow label="Fecha y hora"        value={formatearFechaHora(fus.fechaHora)} />
             <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
             <DRow label="Solicitante interno" value={nombreSolicitante} />
           </div>
           {fus.idComisionado && (
             <div className="dt-comisionado-chip">
-              <span className="dt-comisionado-avatar">{initialesComisionado(fus.idComisionado.nombre, fus.idComisionado.email)}</span>
+              <span className="dt-comisionado-avatar">{obtenerIniciales(fus.idComisionado.nombre, fus.idComisionado.email)}</span>
               <div className="dt-comisionado-info">
                 <span className="dt-comisionado-nombre">{fus.idComisionado.nombre || fus.idComisionado.email}</span>
                 <span className="dt-comisionado-direccion">{fus.direccionComisionado || 'Sin dirección asignada'}</span>
@@ -412,7 +362,27 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
           <div className="sec-subseccion sec-subseccion-externo">
             <span className="sec-sublabel sec-sublabel-externo">Límite de respuesta</span>
             <div className="sec-grid-2">
-              <DRow label="Fecha y hora" value={fmt(fus.fechaLimite)} />
+              <DRow label="Fecha y hora" value={formatearFechaHora(fus.fechaLimite)} />
+            </div>
+          </div>
+        )}
+
+        {/* Mensaje que ROL1 escribió al momento de turnar la solicitud. */}
+        {turnado.solicitudTexto && (
+          <div className="sec-subseccion">
+            <span className="sec-sublabel">Instrucciones del turnado</span>
+            <div className="sec-grid-2">
+              <DRow
+                label="Mensaje del Particular"
+                value={turnado.solicitudTexto}
+                tall
+              />
+              {turnado.idMedio?.nombreMedio && (
+                <DRow
+                  label="Medio de envío"
+                  value={turnado.idMedio.nombreMedio}
+                />
+              )}
             </div>
           </div>
         )}
@@ -453,9 +423,10 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
            Turnado — las respuestas ahora las da el comisionado, no el
            Titular directamente. ── */}
       {fus.idComisionado
-        ? <SeguimientoComisionadoFeed fusId={fus.id} />
+        ? <SeguimientoComisionadoFeed fusId={fus.id} folio={fus.folio} />
         : <Seguimientos
             turnadoId={turnado.id}
+            folio={fus.folio}
             estatusFus={fus.estatusParticular}
             onRegistrado={(estatusParticular) => {
               if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
@@ -494,9 +465,6 @@ function DetalleTurnado({ turnado, onBack, onVerHistorial }) {
 
 /* ── Tarjeta de la lista ── */
 function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
-  const fmt = d => d
-    ? new Date(d).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—'
   const fus = t.idFus || {}
   return (
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
@@ -514,7 +482,7 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
             <rect x="3" y="4" width="18" height="18" rx="2"/>
             <path d="M16 2v4M8 2v4M3 10h18"/>
           </svg>
-          {fmt(fus.fechaHora)}
+          {formatearFechaHora(fus.fechaHora)}
         </span>
         <span className="fus-meta-item">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -550,80 +518,87 @@ export default function SolicitudesTurnadas() {
   const { estatus: estatusROL2 } = useEstatus('TITULAR')
   const notifCtx = useNotificaciones()
 
-  const [lista,        setLista]        = useState([])
   const [busqueda,     setBusqueda]     = useState('')
-  const [filtro,       setFiltro]       = useState(() => searchParams.get('filtro') || '')
+  // Varios chips de estatus a la vez (mismo criterio que ConsultarFUS): lista
+  // combinada con OR en el backend, viaja en la URL como un string con comas.
+  const [filtro,       setFiltro]       = useState(() => (searchParams.get('filtro') || '').split(',').filter(Boolean))
   const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
   const [seleccionado, setSeleccionado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
-  const [cargando,     setCargando]     = useState(true)
-  const [errorCarga,   setErrorCarga]   = useState(false)
   const [highlightId,  setHighlightId]  = useState(null)
-  const [pagina,       setPagina]       = useState(1)
-  const [totalItems,   setTotalItems]   = useState(0)
-  const PAGE_SIZE = 30
   const reordenadoRef = useRef(false)
-  const autoRetriedRef = useRef(false)
-  const retryTimeoutRef = useRef(null)
+  const [solicitud, setSolicitud] = useState({ page: 1, append: false, version: 0 })
 
-  const cargar = (pag = 1, append = false) => {
-    if (reordenadoRef.current) { reordenadoRef.current = false; return }
-    setCargando(true)
-    const params = { page: pag, page_size: PAGE_SIZE }
-    if (!folioParam && filtro)          params.estatusTitular = filtro
+  const cargarPagina = useCallback(async ({ signal }) => {
+    const params = { page: solicitud.page, page_size: PAGE_SIZE }
+    if (!folioParam && filtro.length)    params.estatusTitular = filtro.join(',')
     if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
     if (!folioParam && busqueda)        params.search = busqueda
-    api.get('/turnados/mis-turnados/', { params })
-      .then(r => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        const items = r.data.results || []
-        setTotalItems(r.data.total || 0)
-        if (folioParam) {
-          const match = items.find(t => t.idFus?.folio === folioParam)
-          if (match) {
-            setLista([match, ...items.filter(t => t.id !== match.id)])
-            setFiltro('')
-            setPrioridadFiltro('')
-            setBusqueda('')
-            setSeleccionado(match)
-            setHighlightId(match.id)
-            reordenadoRef.current = true
-            setSearchParams({}, { replace: true })
-            return
-          }
-        }
-        setLista(prev => append ? [...prev, ...items] : items)
-        setPagina(pag)
-        // Si el turnado abierto en el detalle sigue en la respuesta, refresca
-        // su estatus in place (sin perder el panel abierto ni el scroll).
-        setSeleccionado(prev => {
-          if (!prev) return prev
-          const actualizado = items.find(t => t.id === prev.id)
-          return actualizado || prev
-        })
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(() => cargar(pag, append), 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
+    const respuesta = await api.get('/turnados/mis-turnados/', { params, signal })
+    const items = respuesta.data.results || []
+    const match = folioParam
+      ? items.find(turnado => turnado.idFus?.folio === folioParam)
+      : null
+    return {
+      items: match ? [match, ...items.filter(turnado => turnado.id !== match.id)] : items,
+      total: respuesta.data.total || 0,
+      page: solicitud.page,
+      append: solicitud.append,
+      match,
+    }
+  }, [busqueda, filtro, folioParam, prioridadFiltro, solicitud])
 
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+  const procesarCargaExitosa = useCallback(resultado => {
+    if (resultado.match) {
+      setFiltro([])
+      setPrioridadFiltro('')
+      setBusqueda('')
+      setSeleccionado(resultado.match)
+      setHighlightId(resultado.match.id)
+      reordenadoRef.current = true
+      setSearchParams({}, { replace: true })
+      return
+    }
+    setSeleccionado(anterior => {
+      if (!anterior) return anterior
+      return resultado.items.find(turnado => turnado.id === anterior.id) || anterior
+    })
+  }, [setSearchParams])
 
-  const cargarMas = () => cargar(pagina + 1, true)
+  const {
+    data: resultado,
+    error: errorCarga,
+    loading: cargando,
+    setData: setResultado,
+  } = useAsyncResource(cargarPagina, {
+    initialData: { items: [], total: 0, page: 1, append: false, match: null },
+    mergeData: combinarPaginasTurnadas,
+    onSuccess: procesarCargaExitosa,
+  })
 
-  useEffect(() => { setPagina(1); cargar(1) }, [filtro, prioridadFiltro, busqueda, folioParam])
+  const lista = resultado.items
+  const pagina = resultado.page
+  const totalItems = resultado.total
+  const recargar = () => setSolicitud(actual => ({ page: 1, append: false, version: actual.version + 1 }))
+  const cargarMas = () => setSolicitud(actual => ({ page: pagina + 1, append: true, version: actual.version + 1 }))
+
+  useEffect(() => {
+     
+    if (reordenadoRef.current) {
+      reordenadoRef.current = false
+      return
+    }
+     
+    recargar()
+     
+  }, [filtro, prioridadFiltro, busqueda, folioParam])
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
   useEffect(() => {
     if (!notifCtx?.turnadoKey) return
-    cargar(1)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
+    recargar()
+     
   }, [notifCtx?.turnadoKey])
 
   /* En vivo: si llega por WebSocket un aviso de SLA por vencer, el turnado
@@ -633,12 +608,17 @@ export default function SolicitudesTurnadas() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif || notif.tipo !== 'SLA_POR_VENCER') return
-    setLista(prev => {
-      const idx = prev.findIndex(t => t.idFus?.folio === notif.fusFolio)
+     
+    setResultado(prev => {
+      const idx = prev.items.findIndex(t => t.idFus?.folio === notif.fusFolio)
       if (idx === -1) return prev
-      const item = { ...prev[idx], idFus: { ...prev[idx].idFus, slaPorVencer: true } }
-      return [item, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+      const item = { ...prev.items[idx], idFus: { ...prev.items[idx].idFus, slaPorVencer: true } }
+      return {
+        ...prev,
+        items: [item, ...prev.items.slice(0, idx), ...prev.items.slice(idx + 1)],
+      }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
   }, [ultimaNotifId])
 
   /* En vivo: cualquier notificación ligada a un FUS (comisionar, atendido,
@@ -650,10 +630,37 @@ export default function SolicitudesTurnadas() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif?.fusFolio || notif.tipo === 'SLA_POR_VENCER' || notif.tipo === 'TURNADO') return
-    cargar(1)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
+    recargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cargar` se recrea cada render; `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs`
   }, [ultimaNotifId])
 
-  const toggleFiltro = f => setFiltro(prev => prev === f ? '' : f)
+  const toggleFiltro = f => setFiltro(prev => (
+    prev.includes(f) ? prev.filter(v => v !== f) : [...prev, f]
+  ))
+
+  const LABEL_ESTATUS_EXTRA = {
+    Pendiente_validacion: 'Pendiente de validación',
+    Rechazado: 'Rechazados',
+    Vencido: 'Vencido',
+    PorVencer: 'Por vencer',
+  }
+  const labelEstatusFiltro = clave => (
+    LABEL_ESTATUS_EXTRA[clave] || estatusROL2.find(e => e.clave === clave)?.nombre || clave
+  )
+
+  /* Resumen de "filtros activos" + Limpiar todo (búsqueda + estatus +
+     prioridad) — mismo diseño que ya usa Bitácora. */
+  const chipsActivos = [
+    ...(busqueda ? [{ key: 'busqueda', label: `Búsqueda: "${busqueda}"`, onQuitar: () => setBusqueda('') }] : []),
+    ...filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) })),
+    ...(prioridadFiltro ? [{ key: 'prioridad', label: `Prioridad: ${prioridadFiltro}`, onQuitar: () => setPrioridadFiltro('') }] : []),
+  ]
+  const limpiarTodosFiltros = () => {
+    setBusqueda('')
+    setFiltro([])
+    setPrioridadFiltro('')
+  }
 
   /* ── Resize panel izquierdo ── */
   const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
@@ -665,6 +672,7 @@ export default function SolicitudesTurnadas() {
       next.delete('prioridad')
       setSearchParams(next, { replace: true })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe ejecutarse una vez al montar, para limpiar los params iniciales de la URL
   }, [])
 
   useEffect(() => {
@@ -705,15 +713,15 @@ export default function SolicitudesTurnadas() {
 
             <div className="left-filtros">
               <button
-                className={`filtro-chip${filtro === '' ? ' filtro-chip-active' : ''}`}
-                onClick={() => setFiltro('')}
+                className={`filtro-chip${filtro.length === 0 ? ' filtro-chip-active' : ''}`}
+                onClick={() => setFiltro([])}
               >
                 Todos
               </button>
               {estatusROL2.map(e => (
                 <button
                   key={e.clave}
-                  className={`filtro-chip filtro-chip-${e.clave.toLowerCase().replace('_', '-')}${filtro === e.clave ? ' filtro-chip-active' : ''}`}
+                  className={`filtro-chip filtro-chip-${e.clave.toLowerCase().replace('_', '-')}${filtro.includes(e.clave) ? ' filtro-chip-active' : ''}`}
                   onClick={() => toggleFiltro(e.clave)}
                 >
                   {e.nombre}
@@ -723,25 +731,25 @@ export default function SolicitudesTurnadas() {
                   Turnado.estatusTitular (por eso no vienen en estatusROL2 = TITULAR) —
                   MisTurnadosView los reconoce igual vía el mismo parámetro `estatusTitular`. */}
               <button
-                className={`filtro-chip filtro-chip-pendiente-validacion${filtro === 'Pendiente_validacion' ? ' filtro-chip-active' : ''}`}
+                className={`filtro-chip filtro-chip-pendiente-validacion${filtro.includes('Pendiente_validacion') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Pendiente_validacion')}
               >
                 Pendiente de validación
               </button>
               <button
-                className={`filtro-chip filtro-chip-rechazado${filtro === 'Rechazado' ? ' filtro-chip-active' : ''}`}
+                className={`filtro-chip filtro-chip-rechazado${filtro.includes('Rechazado') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Rechazado')}
               >
                 Rechazados
               </button>
               <button
-                className={`filtro-chip filtro-chip-vencido${filtro === 'Vencido' ? ' filtro-chip-active' : ''}`}
+                className={`filtro-chip filtro-chip-vencido${filtro.includes('Vencido') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Vencido')}
               >
                 Vencido
               </button>
               <button
-                className={`filtro-chip filtro-chip-porvencer${filtro === 'PorVencer' ? ' filtro-chip-active' : ''}`}
+                className={`filtro-chip filtro-chip-porvencer${filtro.includes('PorVencer') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('PorVencer')}
               >
                 Por vencer
@@ -749,10 +757,12 @@ export default function SolicitudesTurnadas() {
               <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} />
             </div>
 
+            <FiltrosActivosChips chips={chipsActivos} onLimpiarTodo={limpiarTodosFiltros} />
+
             {errorCarga && lista.length > 0 && (
               <div className="banner-error-carga">
                 <span>No se pudo actualizar — mostrando la última información disponible.</span>
-                <button type="button" onClick={() => cargar(1)}>Reintentar</button>
+                <button type="button" onClick={recargar}>Reintentar</button>
               </div>
             )}
 
@@ -765,7 +775,7 @@ export default function SolicitudesTurnadas() {
                   </svg>
                   <p className="empty-state-title">No se pudo cargar</p>
                   <p className="empty-state-sub">Ocurrió un error al obtener tus solicitudes turnadas.</p>
-                  <button type="button" className="btn-reintentar" onClick={() => cargar(1)}>Reintentar</button>
+                  <button type="button" className="btn-reintentar" onClick={recargar}>Reintentar</button>
                 </div>
               )}
               {!cargando && !errorCarga && lista.length === 0 && (
@@ -774,7 +784,7 @@ export default function SolicitudesTurnadas() {
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                   </svg>
                   <p className="empty-state-title">Sin asignaciones</p>
-                  <p className="empty-state-sub">{busqueda || filtro ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
+                  <p className="empty-state-sub">{busqueda || filtro.length > 0 ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
                 </div>
               )}
               {lista.map(t => (
@@ -811,7 +821,6 @@ export default function SolicitudesTurnadas() {
                 key={`${seleccionado.id}_${seleccionado.estatusTitular}_${seleccionado.idFus?.estatusParticular}`}
                 turnado={seleccionado}
                 onBack={() => { setSeleccionado(null); setPanelAbierto(true) }}
-                onVerHistorial={setModalTimelineFolio}
               />
             : (
               <div className="st-hint-select">

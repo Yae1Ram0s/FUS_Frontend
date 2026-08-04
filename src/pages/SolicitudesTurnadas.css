@@ -730,7 +730,20 @@
 .sec-acc   { color: #ffffff; }
 
 /* ── Comisionado: acciones en el header, chip de asignación, footer ── */
-.dt-header-acciones { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.dt-header-folio {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-header-acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
 
 .btn-comisionar {
   background: transparent;
@@ -1133,6 +1146,10 @@
 }
 
 .seg-nueva-fecha { flex: 0 0 140px !important; }
+/* FechaInput envuelve el <input type="date"> en un <span> — el flex de
+   arriba ya no le llega directo al ser hijo del span, no del flex de
+   .seg-nueva-inputs; se lo pasa a su envoltorio. */
+.seg-nueva-fecha-wrap { flex: 0 0 140px !important; }
 
 .seg-nueva input::placeholder { color: rgba(30, 80, 65, 0.45); }
 .seg-nueva input:hover { border-color: rgba(35, 91, 78, 0.40); background: rgba(255,255,255,0.92); }
@@ -1535,7 +1552,7 @@
   .sec-grid-2, .sec-grid-3 { grid-template-columns: 1fr; }
 
   .seg-nueva-inputs { flex-wrap: wrap; }
-  .seg-nueva input, .seg-nueva-fecha { flex: 1 1 100% !important; }
+  .seg-nueva input, .seg-nueva-fecha, .seg-nueva-fecha-wrap { flex: 1 1 100% !important; }
 
   .accion-nueva       { flex-wrap: wrap; }
   .accion-nueva input { min-width: 0; flex: 1 1 100%; }
@@ -1577,7 +1594,38 @@
   .stat-icon-wrap { width: 36px; height: 36px; border-radius: 9px; }
 
   .seccion      { border-radius: 14px; }
-  .sec-header   { padding: 10px 16px; }
+  .sec-header {
+    min-width: 0;
+    min-height: 52px;
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  .sec-header > svg {
+    display: none;
+  }
+  .sec-header .dt-header-folio {
+    flex: 1 1 auto;
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+  }
+  .sec-header .dt-header-acciones {
+    gap: 6px;
+  }
+  .sec-header .dt-header-acciones .btn-descargar-fus {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+  }
+  .sec-header .dt-header-acciones .btn-comisionar {
+    min-height: 30px;
+    max-width: 92px;
+    padding: 5px 9px;
+    overflow: hidden;
+    font-size: 0.65rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .sec-body     { padding: 12px 16px; }
   .sec-subseccion { padding: 12px 16px; }
 

@@ -3,6 +3,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import NotifBrowserPrompt from './NotifBrowserPrompt'
+import BorradorFUSPrompt from './BorradorFUSPrompt'
 import './AppLayout.css'
 
 export default function AppLayout({ children, mainClass = '' }) {
@@ -26,6 +27,7 @@ export default function AppLayout({ children, mainClass = '' }) {
       </div>
       <BottomNav />
       <NotifBrowserPrompt />
+      <BorradorFUSPrompt />
     </div>
   )
 }

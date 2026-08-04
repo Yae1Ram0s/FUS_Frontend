@@ -1,14 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect } from 'react'
 import api from '../../api/api'
+import { useAsyncResource } from '../../hooks/useAsyncResource'
+import { useNotificaciones } from '../../context/NotificacionesContext'
+import { formatearFecha, formatearHora } from '../../utils/fechas'
 import Spinner from '../Spinner'
-
-const fmtHora = d => d
-  ? new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-  : ''
-
-const fmtFecha = d => d
-  ? new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  : ''
 
 const TIPO_SEGUIMIENTO_INFO = {
   accion_por_emprender: { label: 'Acción',  clase: 'fc-tag-azul' },
@@ -23,34 +18,30 @@ const TIPO_SEGUIMIENTO_INFO = {
    globales en el bundle único) que usa FUSComisionados.jsx para el
    comisionado, que sigue siendo el único que puede agregar. Se muestra en
    el detalle de FUS en cuanto hay un comisionado asignado. */
-export default function SeguimientoComisionadoFeed({ fusId }) {
-  const [lista, setLista]           = useState([])
-  const [cargando, setCargando]     = useState(true)
-  const [errorCarga, setErrorCarga] = useState(false)
-  const autoRetriedRef  = useRef(false)
-  const retryTimeoutRef = useRef(null)
+export default function SeguimientoComisionadoFeed({ fusId, folio }) {
+  const cargarSeguimiento = useCallback(
+    ({ signal }) => api
+      .get(`/fus/${fusId}/seguimiento/`, { signal })
+      .then(response => (
+        Array.isArray(response.data) ? response.data : []
+      )),
+    [fusId],
+  )
+  const {
+    data: lista,
+    loading: cargando,
+    error: errorCarga,
+    reload: cargar,
+  } = useAsyncResource(cargarSeguimiento, { initialData: [] })
 
-  const cargar = () => {
-    setCargando(true)
-    return api.get(`/fus/${fusId}/seguimiento/`)
-      .then(r => {
-        setErrorCarga(false)
-        autoRetriedRef.current = false
-        if (retryTimeoutRef.current) { clearTimeout(retryTimeoutRef.current); retryTimeoutRef.current = null }
-        setLista(Array.isArray(r.data) ? r.data : [])
-      })
-      .catch(() => {
-        setErrorCarga(true)
-        if (!autoRetriedRef.current) {
-          autoRetriedRef.current = true
-          retryTimeoutRef.current = setTimeout(cargar, 5000)
-        }
-      })
-      .finally(() => setCargando(false))
-  }
-
-  useEffect(() => { cargar() }, [fusId])
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current) }, [])
+  // En vivo: cualquier notificación de este FUS (nueva respuesta, atendido,
+  // rechazo...) refresca el feed sin esperar a que se remonte el panel.
+  const notifCtx = useNotificaciones()
+  const ultimaNotifId = notifCtx?.notifs?.[0]?.id
+  useEffect(() => {
+    if (notifCtx?.notifs?.[0]?.fusFolio === folio) cargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
+  }, [ultimaNotifId, folio])
 
   return (
     <div className="seccion">
@@ -89,7 +80,8 @@ export default function SeguimientoComisionadoFeed({ fusId }) {
                   <div className="seg-tl-meta">
                     <span className={`fc-tag ${info.clase}`}>{info.label}</span>
                     <span className="seg-tl-fecha">
-                      {s.idAutor?.nombre ? `${s.idAutor.nombre} · ` : ''}{fmtFecha(s.fechaRegistro)} · {fmtHora(s.fechaRegistro)}
+                      {s.idAutor?.nombre ? `${s.idAutor.nombre} · ` : ''}
+                      {formatearFecha(s.fechaRegistro, '')} · {formatearHora(s.fechaRegistro)}
                     </span>
                   </div>
                   <p className="seg-tl-actividad">{s.contenido}</p>
