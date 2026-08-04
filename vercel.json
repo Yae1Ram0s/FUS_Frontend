@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://scs-backend-fm6o.onrender.com/api/:path*"
+    },
+    {
+      "source": "/media/:path*",
+      "destination": "https://scs-backend-fm6o.onrender.com/media/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

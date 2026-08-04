@@ -106,7 +106,10 @@ export function NotificacionesProvider({ children }) {
     let socket = null
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const wsUrl = `${proto}://${window.location.host}/ws/notificaciones/?token=${accessToken}`
+    const wsBase = (import.meta.env.VITE_WS_URL || '').replace(/\/$/, '')
+    const wsUrl = wsBase
+      ? `${wsBase}/ws/notificaciones/?token=${accessToken}`
+      : `${proto}://${window.location.host}/ws/notificaciones/?token=${accessToken}`
 
     const connect = () => {
       if (disposed) return
