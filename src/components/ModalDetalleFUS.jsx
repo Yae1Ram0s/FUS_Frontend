@@ -52,16 +52,6 @@ export default function ModalDetalleFUS({ folio, onClose }) {
           {detalle && (
             <>
               <div className="mdet-row">
-                <span className="mdet-label">Estatus</span>
-                <span className="mdet-value">
-                  <span className="mdet-badges">
-                    <span className="mdet-badge">{detalle.estatusParticular || '—'}</span>
-                    {detalle.estatusTitular && <span className="mdet-badge">{detalle.estatusTitular}</span>}
-                  </span>
-                </span>
-              </div>
-
-              <div className="mdet-row">
                 <span className="mdet-label">Solicitante</span>
                 <span className="mdet-value mdet-solicitante">
                   <strong>{detalle.idSolicitanteInterno?.nombre || '—'}</strong>
