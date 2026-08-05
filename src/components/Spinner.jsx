@@ -5,7 +5,7 @@ import './Spinner.css'
    overlay=false: se muestra en el flujo normal, en el lugar de un texto "Cargando…" (bolitas).
    dots=true (solo con overlay=true): usa las bolitas en vez de los anillos+logo,
    para pantalla completa pero con el loader "liviano" (ej. tras registrar un FUS). */
-export default function Spinner({ label, overlay = true, dots = false }) {
+export default function Spinner({ label, overlay = true, dots = false, fill = false }) {
   const uid = useId()
   const grad1 = `spinner-grad-1-${uid}`
   const grad2 = `spinner-grad-2-${uid}`
@@ -40,7 +40,7 @@ export default function Spinner({ label, overlay = true, dots = false }) {
   }
 
   return (
-    <div className="spinner-inline" role="status" aria-live="polite" aria-label={label || 'Cargando'}>
+    <div className={`spinner-inline${fill ? ' spinner-inline-fill' : ''}`} role="status" aria-live="polite" aria-label={label || 'Cargando'}>
       <div className="spinner-balls" />
       {label && <span className="spinner-label">{label}</span>}
     </div>

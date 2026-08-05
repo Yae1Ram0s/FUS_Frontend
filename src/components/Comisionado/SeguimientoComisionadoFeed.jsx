@@ -60,7 +60,7 @@ export default function SeguimientoComisionadoFeed({ fusId, folio }) {
         )}
 
         <div className="seg-timeline">
-          {cargando && lista.length === 0 && <Spinner overlay={false} />}
+          {cargando && lista.length === 0 && <Spinner overlay={false} fill />}
           {!cargando && errorCarga && lista.length === 0 ? (
             <div className="seg-error">
               <p className="seg-error-msg">No se pudo cargar el historial.</p>

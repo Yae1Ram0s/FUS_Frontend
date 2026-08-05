@@ -46,7 +46,7 @@ export default function ModalDetalleFUS({ folio, onClose }) {
         </div>
 
         <div className="mdet-body">
-          {cargando && <Spinner overlay={false} label="Cargando detalle…" />}
+          {cargando && <Spinner overlay={false} fill label="Cargando detalle…" />}
           {error && <p className="modal-error">No se pudo cargar el detalle del FUS.</p>}
 
           {detalle && (

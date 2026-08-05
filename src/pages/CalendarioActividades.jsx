@@ -591,7 +591,7 @@ export default function CalendarioActividades() {
             </div>
           </div>
 
-          {cargando && !hayDatos && <Spinner overlay={false} label="Cargando calendario…" />}
+          {cargando && !hayDatos && <Spinner overlay={false} fill label="Cargando calendario…" />}
 
           {mostrandoErrorTotal && (
             <div className="cal-error-state">

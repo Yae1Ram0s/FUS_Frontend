@@ -112,7 +112,7 @@ export function RespuestasSeguimientoSection({ turnados, cargando }) {
     }))
   ).sort((a, b) => new Date(a.fechaRegistro) - new Date(b.fechaRegistro))
 
-  if (cargando) return <ContenedorRespuestas><Spinner overlay={false} /></ContenedorRespuestas>
+  if (cargando) return <ContenedorRespuestas><Spinner overlay={false} fill /></ContenedorRespuestas>
   if (!turnados.length) return null
 
   return (

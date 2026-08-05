@@ -372,7 +372,7 @@ export default function RegistrarFUS() {
 
         <div className={`reg-form-card${limpiado ? ' reg-form-card-limpiado' : ''}`}>
           {avisoBorrador && <p className="reg-aviso-borrador" role="status">{avisoBorrador}</p>}
-          {cargandoFus && <Spinner overlay={false} />}
+          {cargandoFus && <Spinner overlay={false} fill />}
           {!cargandoFus && !exito && <form className="reg-form" onSubmit={handleSubmit} noValidate>
 
             <fieldset className="reg-fieldset">

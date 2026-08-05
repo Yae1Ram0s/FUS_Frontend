@@ -69,6 +69,15 @@
   padding: 20px 0;
 }
 
+.spinner-inline-fill {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-height: 180px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .spinner-label {
   font-size: 0.82rem;
   font-weight: 700;

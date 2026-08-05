@@ -269,7 +269,7 @@ export default function DashboardROL2() {
   const donutOffset = DONUT_CIRC * (1 - productividadPct / 100)
 
   if (cargando && turnados.length === 0) {
-    return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
+    return <AppLayout><div className="dash-bg"><Spinner overlay={false} fill label="Cargando dashboard…" /></div></AppLayout>
   }
 
   if (errorCarga && turnados.length === 0) {

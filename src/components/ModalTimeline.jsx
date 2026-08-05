@@ -79,7 +79,7 @@ export default function ModalTimeline({ folio, onClose }) {
         </div>
 
         <div className="mtl-body">
-          {cargando && <Spinner overlay={false} label="Cargando historial…" />}
+          {cargando && <Spinner overlay={false} fill label="Cargando historial…" />}
           {error && <p className="modal-error">No se pudo cargar el historial del FUS.</p>}
 
           {!cargando && !error && (

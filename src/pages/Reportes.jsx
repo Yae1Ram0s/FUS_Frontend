@@ -529,7 +529,7 @@ export default function Reportes() {
               )}
                 </section>
 
-                {loading && !data && <Spinner overlay={false} label="Calculando indicadores…" />}
+                {loading && !data && <Spinner overlay={false} fill label="Calculando indicadores…" />}
 
                 {data && (
                   <>

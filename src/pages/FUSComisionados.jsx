@@ -322,7 +322,7 @@ export default function FUSComisionados() {
             )}
 
             <div className="left-lista">
-              {cargando && lista.length === 0 && <Spinner overlay={false} label="Cargando FUS comisionados…" />}
+              {cargando && lista.length === 0 && <Spinner overlay={false} fill label="Cargando FUS comisionados…" />}
               {!cargando && errorCarga && lista.length === 0 && (
                 <div className="empty-state empty-state-error">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">

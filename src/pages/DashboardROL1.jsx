@@ -477,7 +477,7 @@ export default function DashboardROL1() {
     }))
 
   if (cargando && fusData.length === 0) {
-    return <AppLayout><div className="dash-bg"><Spinner overlay={false} label="Cargando dashboard…" /></div></AppLayout>
+    return <AppLayout><div className="dash-bg"><Spinner overlay={false} fill label="Cargando dashboard…" /></div></AppLayout>
   }
 
   if (errorCarga && fusData.length === 0) {
