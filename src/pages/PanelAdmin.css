@@ -390,14 +390,17 @@
 .adm-card-headtext { display: contents; }
 
 .adm-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+  height: 200px;
+  vertical-align: middle;
   text-align: center;
   padding: 3rem;
   color: rgba(10, 30, 20, 0.32);
   font-size: .85rem;
+}
+
+.adm-loading .spinner-inline {
+  width: 100%;
+  padding: 0;
 }
 
 /* ══════════════════════════════════════
