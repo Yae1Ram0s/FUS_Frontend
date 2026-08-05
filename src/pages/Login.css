@@ -590,6 +590,24 @@
   transition: none;
 }
 
+/* En recuperación las etiquetas de nueva contraseña permanecen fijas.
+   Se elimina el salto/animación al enfocar o comenzar a escribir. */
+.login-form-recovery .lf-group label,
+.login-form-recovery .lf-group:has(input:focus) label,
+.login-form-recovery .lf-group:has(input:not(:placeholder-shown)) label {
+  top: -20px;
+  left: 4px;
+  transform: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: none;
+}
+
+.login-form-recovery .lf-group:has(input:focus) label {
+  color: #3a3a3a;
+}
+
 /* ── Links secundarios ── */
 .lf-actions-row {
   display: flex;

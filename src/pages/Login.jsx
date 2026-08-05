@@ -412,7 +412,7 @@ export default function Login() {
     )
 
     if (step === STEP_NEWPASS) return (
-      <form className="login-form" onSubmit={handleNewPass} noValidate>
+      <form className={`login-form${isRecovery ? ' login-form-recovery' : ''}`} onSubmit={handleNewPass} noValidate>
         <p className="lf-step-info">
           {isRecovery ? 'Elige tu nueva contraseña.' : 'Elige una contraseña segura para activar tu cuenta.'}
         </p>
