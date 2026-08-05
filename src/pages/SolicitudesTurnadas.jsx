@@ -531,6 +531,7 @@ export default function SolicitudesTurnadas() {
 
   const cargarPagina = useCallback(async ({ signal }) => {
     const params = { page: solicitud.page, page_size: PAGE_SIZE }
+    if (folioParam)                           params.folio = folioParam
     if (!folioParam && filtro.length)    params.estatusTitular = filtro.join(',')
     if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
     if (!folioParam && busqueda)        params.search = busqueda

@@ -727,6 +727,26 @@
 .proximo-card { background: linear-gradient(160deg, rgba(253, 241, 240, 0.85), rgba(251, 230, 228, 0.75)); }
 .proximo-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .proximo-folio { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.proximo-folio-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.proximo-folio-link:hover {
+  color: #1f6756;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.proximo-folio-link:focus-visible {
+  outline: 2px solid #c9a15b;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 .proximo-badge {
   display: inline-flex; align-items: center; gap: 5px;
   background: #ffffff; color: #a32d2d; font-size: 11.5px; font-weight: 700;

@@ -353,7 +353,14 @@ export default function DashboardROL2() {
                 ) : (
                   <>
                     <div className="proximo-top">
-                      <span className="proximo-folio">{proximoFus.idFus?.folio}</span>
+                      <button
+                        type="button"
+                        className="proximo-folio proximo-folio-link"
+                        onClick={() => irAlFus(proximoFus.idFus?.folio)}
+                        aria-label={`Ver detalle de ${proximoFus.idFus?.folio}`}
+                      >
+                        {proximoFus.idFus?.folio}
+                      </button>
                       {proximoFus.idFus?.prioridad === 'Alta' && (
                         <span className="proximo-badge">{ICON_FLAG} Prioridad alta</span>
                       )}
