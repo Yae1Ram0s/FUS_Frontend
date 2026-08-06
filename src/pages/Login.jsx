@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import Spinner from '../components/Spinner'
 import { rutaInicioPorRol } from '../utils/rutas'
+import useInstallPrompt from '../hooks/useInstallPrompt'
 import logosImg from '../assets/Logos_P_Hacienda_ANAM.png'
 import './Login.css'
 
@@ -36,6 +37,7 @@ export default function Login() {
 
   const { user, login, loginWithTokens } = useAuth()
   const navigate = useNavigate()
+  const { instalado, puedeInstalar, esIOS, instalar } = useInstallPrompt()
 
   useEffect(() => {
     if (user) navigate(rutaInicioPorRol(user.rol), { replace: true })
@@ -549,6 +551,24 @@ export default function Login() {
               </svg>
             </div>
           </div>
+
+          {!instalado && (puedeInstalar || esIOS) && (
+            puedeInstalar ? (
+              <button type="button" className="ll-install-hint" onClick={instalar}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+                </svg>
+                Agrega esta app a tu pantalla de inicio
+              </button>
+            ) : (
+              <p className="ll-install-hint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+                </svg>
+                Agrégala desde Compartir → «Agregar a inicio»
+              </p>
+            )
+          )}
         </div>
       </div>
     </div>
