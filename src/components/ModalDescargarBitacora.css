@@ -1,0 +1,33 @@
+/* La base glass (.com-overlay/.com-modal/...) vive en Comisionado/Comisionado.css
+   (mismo diseño que ComisionarModal/ModalDescargarPDF) — aquí solo lo
+   específico de este modal. */
+.modal-bita-formatos {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-bita-formato {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  background: rgba(255, 255, 255, 0.35);
+  color: #1a2f28;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+}
+.modal-bita-formato:hover:not(:disabled) { background: rgba(255, 255, 255, 0.6); }
+.modal-bita-formato:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-bita-formato-activo {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #235b4e;
+  color: #235b4e;
+  box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.12);
+}

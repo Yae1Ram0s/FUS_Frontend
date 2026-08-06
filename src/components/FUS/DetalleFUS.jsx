@@ -7,7 +7,7 @@ import AccionesValidacion from '../Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../Comisionado/SeguimientoComisionadoFeed'
 import PrioridadPills from './PrioridadPills'
 import { CampoDetalle as Row, ListaEvidencias as EvidenciaList } from './DetalleCampos'
-import { RespuestasSeguimientoSection, TurnadoChip } from './SeguimientoTurnado'
+import PersonasYRespuestasCard from './PersonasYRespuestasCard'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useNotificaciones } from '../../context/NotificacionesContext'
@@ -45,9 +45,12 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
   const { turnados, cargando: turnadosCargando } = useTurnadosFUS(fus.id, fus.folio)
 
-  const descargarPdf = conImagenes => {
+  const descargarPdf = (conImagenes, turnadoId) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
-    const query = conImagenes ? '?imagenes=1' : ''
+    const params = new URLSearchParams()
+    if (conImagenes) params.set('imagenes', '1')
+    if (turnadoId) params.set('turnado_id', turnadoId)
+    const query = params.toString() ? `?${params.toString()}` : ''
     return descargar(
       `/fus/${folioUrl}/pdf/${query}`,
       `FUS_${fus.folio.replace(/\//g, '_')}.pdf`,
@@ -91,7 +94,13 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
           </div>
         </div>
 
-        {mostrarModalPdf && <ModalDescargarPDF onCancelar={() => setMostrarModalPdf(false)} onConfirmar={descargarPdf} />}
+        {mostrarModalPdf && (
+          <ModalDescargarPDF
+            onCancelar={() => setMostrarModalPdf(false)}
+            onConfirmar={descargarPdf}
+            turnados={turnados}
+          />
+        )}
 
         <div className="det-section">
           <span className="det-section-legend">Datos generales</span>
@@ -109,8 +118,9 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
               </div>
             </div>
           )}
-          {fus.tieneTurnado && turnados.map(turnado => <TurnadoChip key={turnado.id} turnado={turnado} />)}
         </div>
+
+        {tieneActividad && <PersonasYRespuestasCard turnados={turnados} cargando={turnadosCargando} />}
 
         {fus.fechaLimite && (
           <div className="det-section">
@@ -149,7 +159,6 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
         </div>
       </div>
 
-      {tieneActividad && <RespuestasSeguimientoSection turnados={turnados} cargando={turnadosCargando} />}
       {fus.idComisionado && !fus.tieneTurnado && <SeguimientoComisionadoFeed fusId={fus.id} folio={fus.folio} />}
       <AccionesValidacion user={user} fus={fus} setFusData={setFusData} tieneFacultad={puedeGestionarComisionados(user)} />
       {modalComisionar && (

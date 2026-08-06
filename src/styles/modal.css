@@ -57,8 +57,6 @@
   z-index: 1;
 }
 
-.modal-card-pdf { width: 460px; }
-
 .modal-header {
   display: flex;
   align-items: center;

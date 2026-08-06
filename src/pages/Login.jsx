@@ -552,7 +552,7 @@ export default function Login() {
             </div>
           </div>
 
-          {!instalado && (puedeInstalar || esIOS) && (
+          {!instalado && (
             puedeInstalar ? (
               <button type="button" className="ll-install-hint" onClick={instalar}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -565,7 +565,12 @@ export default function Login() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
                 </svg>
-                Agrégala desde Compartir → «Agregar a inicio»
+                {esIOS
+                  ? 'Agrégala desde Compartir → «Agregar a inicio»'
+                  : esMovil
+                    ? 'Agrégala desde el menú ⋮ de tu navegador → «Agregar a pantalla de inicio»'
+                    : 'Instálala desde el ícono ⊕ de la barra de direcciones, o el menú ⋮ → «Instalar aplicación»'
+                }
               </p>
             )
           )}

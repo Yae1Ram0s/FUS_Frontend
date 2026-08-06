@@ -1,34 +1,51 @@
-/* La base del modal (.modal-overlay/.modal-card/...) vive en styles/modal.css
-   (global) — aquí solo lo específico de este modal. */
-.modal-card-pdf { width: 460px; }
-
-.modal-pdf-sub {
-  font-size: 0.85rem;
-  color: rgba(26, 47, 40, 0.75);
-  margin: 0 0 6px;
-}
-
-.modal-pdf-opcion {
+/* La base glass (.com-overlay/.com-modal/...) vive en Comisionado/Comisionado.css
+   (mismo diseño que ComisionarModal) — aquí solo lo específico de este modal. */
+.modal-pdf-check {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(35, 91, 78, 0.22);
-  background: rgba(255, 255, 255, 0.52);
-  color: #0d2218;
-  font-size: 0.9rem;
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  background: rgba(255, 255, 255, 0.45);
+  color: #1a2f28;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease-in-out;
 }
 
-.modal-pdf-opcion:hover { background: rgba(255, 255, 255, 0.80); border-color: rgba(35, 91, 78, 0.40); }
-
-.modal-pdf-opcion-activa {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #235b4e;
-  box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.12);
+.modal-pdf-check input[type="checkbox"] {
+  accent-color: #235b4e;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
-.modal-pdf-opcion input[type="radio"] { accent-color: #235b4e; width: 16px; height: 16px; flex-shrink: 0; }
+.modal-pdf-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(26, 47, 40, 0.60);
+}
+
+.modal-pdf-select select {
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #1a2f28;
+  outline: none;
+  cursor: pointer;
+}
+.modal-pdf-select select:focus { border-color: rgba(35, 91, 78, 0.5); background: rgba(255, 255, 255, 0.92); }
+.modal-pdf-select select:disabled { opacity: 0.6; cursor: not-allowed; }

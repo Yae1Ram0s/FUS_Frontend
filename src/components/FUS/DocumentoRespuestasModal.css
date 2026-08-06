@@ -1,0 +1,30 @@
+/* Mismo sistema visual glassmorphism que ComisionarModal (.com-*, definido
+   en components/Comisionado/Comisionado.css) — este modal es más ancho
+   porque su contenido (respuestas agrupadas por fecha) necesita más espacio
+   horizontal que una lista de búsqueda de comisionados.
+   Se carga como chunk aparte, después de Comisionado.css — sin el override
+   móvil de abajo, en pantallas chicas el ancho fijo le ganaría por orden de
+   carga a la regla responsiva de .com-modal (misma especificidad, ambas
+   clases en el mismo elemento) y el modal se saldría de la pantalla. */
+.com-modal-respuestas { width: 640px; }
+
+@media (max-width: 640px) {
+  .com-modal-respuestas { width: calc(100% - 2rem); max-width: 640px; }
+}
+
+.drm-lista {
+  max-height: calc(var(--app-vh, 100vh) * 0.62);
+  overflow-y: auto;
+}
+
+.drm-grupo + .drm-grupo { margin-top: 18px; }
+
+.drm-grupo-fecha {
+  display: block;
+  font-size: 0.70rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #235b4e;
+  margin-bottom: 10px;
+}

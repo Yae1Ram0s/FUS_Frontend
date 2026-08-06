@@ -1,48 +1,59 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBehavior } from '../hooks/useModalBehavior'
+import './Comisionado/Comisionado.css'
 import './ModalDescargarPDF.css'
 
-/* ── Modal: elegir con/sin imágenes al descargar el PDF ── */
-export default function ModalDescargarPDF({ onCancelar, onConfirmar }) {
+/* ── Modal: incluir o no imágenes de evidencia, y de quién(es) las
+   respuestas, al descargar el PDF. `turnados` es opcional — con 1 o 0
+   personas no tiene sentido elegir, así que el selector ni se muestra. */
+export default function ModalDescargarPDF({ onCancelar, onConfirmar, turnados = [] }) {
   const [conImagenes, setConImagenes] = useState(true)
+  const [turnadoId, setTurnadoId] = useState('')
   const [cargando, setCargando] = useState(false)
   useModalBehavior(onCancelar, { closeEnabled: !cargando })
 
   const confirmar = () => {
     setCargando(true)
-    Promise.resolve(onConfirmar(conImagenes)).finally(() => setCargando(false))
+    Promise.resolve(onConfirmar(conImagenes, turnadoId)).finally(() => setCargando(false))
   }
 
   return createPortal(
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card modal-card-pdf">
-        <div className="modal-header">
-          <h3 className="modal-title">Descargar solicitud en PDF</h3>
-          <button className="modal-close" onClick={onCancelar} aria-label="Cerrar" disabled={cargando}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label="Descargar solicitud en PDF" onClick={() => !cargando && onCancelar()}>
+      <div className="com-modal com-modal-confirm" onClick={e => e.stopPropagation()}>
+        <div className="com-modal-top">
+          <h3>Descargar solicitud en PDF</h3>
+          <button type="button" className="com-modal-x" onClick={onCancelar} disabled={cargando} aria-label="Cerrar">✕</button>
         </div>
 
-        <div className="modal-body">
-          <p className="modal-pdf-sub">Elige si deseas incluir las imágenes de evidencia adjuntas.</p>
+        <label className="modal-pdf-check">
+          <input
+            type="checkbox"
+            checked={conImagenes}
+            onChange={e => setConImagenes(e.target.checked)}
+            disabled={cargando}
+          />
+          Incluir imágenes de evidencia adjuntas
+        </label>
 
-          <label className={`modal-pdf-opcion${conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
-            <input type="radio" name="pdf-imagenes" checked={conImagenes} onChange={() => setConImagenes(true)} disabled={cargando} />
-            <span>Descargar con imágenes de evidencia</span>
+        {turnados.length > 1 && (
+          <label className="modal-pdf-select">
+            Respuestas a incluir
+            <select value={turnadoId} onChange={e => setTurnadoId(e.target.value)} disabled={cargando}>
+              <option value="">Todas (todas las personas)</option>
+              {turnados.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.idDestinatario?.nombre || t.idDestinatario?.email || 'Sin nombre'}
+                </option>
+              ))}
+            </select>
           </label>
-          <label className={`modal-pdf-opcion${!conImagenes ? ' modal-pdf-opcion-activa' : ''}`}>
-            <input type="radio" name="pdf-imagenes" checked={!conImagenes} onChange={() => setConImagenes(false)} disabled={cargando} />
-            <span>Descargar sin imágenes</span>
-          </label>
-        </div>
+        )}
 
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onCancelar} disabled={cargando}>Cancelar</button>
-          <button className="btn-turnar" onClick={confirmar} disabled={cargando}>
-            {cargando ? <span className="btn-spinner" /> : null}
+        <div className="com-confirm-acciones">
+          <button type="button" className="com-btn-ghost" onClick={onCancelar} disabled={cargando}>Cancelar</button>
+          <button type="button" className="com-btn-verde" onClick={confirmar} disabled={cargando}>
+            {cargando && <span className="btn-spinner" />}
             {cargando ? 'Generando…' : 'Descargar'}
           </button>
         </div>

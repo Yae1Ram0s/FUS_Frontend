@@ -993,27 +993,9 @@
 .dt-comisionado-nombre { font-size: 0.85rem; font-weight: 700; color: #1a2f28; }
 .dt-comisionado-direccion { font-size: 0.75rem; color: rgba(0, 0, 0, 0.5); }
 
-/* ── Chip "Turnado a" — mismo patrón que .dt-comisionado-chip, en verde
-   institucional, clickeable (abre popover con los datos del destinatario). ── */
-.dt-turnado-chip-wrap { position: relative; margin-top: 10px; }
-
-.dt-turnado-chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(35, 91, 78, 0.06);
-  border: 1px solid rgba(35, 91, 78, 0.18);
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: background 150ms ease;
-}
-.dt-turnado-chip:hover { background: rgba(35, 91, 78, 0.10); }
-.dt-turnado-chip:active { background: rgba(35, 91, 78, 0.14); }
-
+/* ── Fila de persona (dentro de la tarjeta "Personas y respuestas") — avatar
+   + nombre/área reutilizados por PersonaFila (PersonasYRespuestasCard) y por
+   el chip de comisionado directo (.dt-comisionado-chip) de arriba. ── */
 .dt-turnado-avatar {
   width: 34px;
   height: 34px;
@@ -1031,28 +1013,6 @@
 .dt-turnado-nombre { font-size: 0.85rem; font-weight: 700; color: #1a2f28; }
 .dt-turnado-direccion { font-size: 0.75rem; color: rgba(0, 0, 0, 0.5); }
 .dt-turnado-chevron { flex-shrink: 0; color: rgba(35, 91, 78, 0.55); }
-
-.dt-turnado-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 40;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  background: #ffffff;
-  border: 1px solid rgba(195, 212, 207, 0.55);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(10, 30, 20, 0.18), 0 4px 14px rgba(10, 30, 20, 0.10);
-  transform-origin: top left;
-  animation: dt-turnado-pop-in 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes dt-turnado-pop-in {
-  from { opacity: 0; transform: scale(0.35); }
-  to   { opacity: 1; transform: scale(1); }
-}
 
 .dt-turnado-pop-estatus { align-self: flex-start; }
 
@@ -1086,6 +1046,110 @@
   line-height: 1.5;
   white-space: normal;
   word-break: break-word;
+}
+
+/* ── "Personas y respuestas" (PersonasYRespuestasCard) ── un .det-section
+   más, integrado al mismo panel de "Detalle de la solicitud" — mismo
+   tratamiento plano que Datos generales/Límite de respuesta (sin tarjeta,
+   sombra ni borde propios), no una tarjeta aparte anidada dentro. */
+.pyr-legend-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pyr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(35, 91, 78, 0.10);
+  color: #1a4338;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.pyr-intro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(26, 47, 40, 0.70);
+  line-height: 1.5;
+}
+
+.pyr-btn-respuestas {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(35, 91, 78, 0.90);
+  color: #ffffff;
+  border: 1px solid rgba(35, 91, 78, 0.70);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 200ms ease-in-out;
+}
+.pyr-btn-respuestas:hover  { background: rgba(28, 70, 60, 0.96); box-shadow: 0 4px 16px rgba(35,91,78,0.40); }
+.pyr-btn-respuestas:active { background: rgba(22, 65, 55, 1); }
+
+.pyr-lista { display: flex; flex-direction: column; }
+
+.pyr-fila { border-top: 1px solid rgba(195, 212, 207, 0.45); }
+.pyr-fila:first-child { border-top: none; }
+
+/* Fila de persona: el toggle (avatar+nombre+chevron, expande el detalle) y
+   el botón "Ver respuestas" (abre el modal solo de esta persona) son dos
+   botones independientes uno junto al otro — no puede ser un único <button>
+   envolvente porque un botón no puede contener a otro. */
+.pyr-fila-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 2px;
+}
+
+.pyr-fila-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.pyr-chevron-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.pyr-chevron { flex-shrink: 0; color: rgba(35, 91, 78, 0.55); transition: transform 150ms ease; }
+.pyr-chevron-abierto { transform: rotate(180deg); }
+
+.pyr-expand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 14px 46px;
+  animation: pyr-expand-in 160ms ease;
+}
+@keyframes pyr-expand-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .dt-actions {
@@ -1751,14 +1815,6 @@
   .modal-row-inline { flex-wrap: wrap; }
   .modal-row-inline select { flex: 1; min-width: 0; }
 
-  /* Popover del chip "Turnado a" — en móvil sigue anclado justo debajo del
-     chip, mismo ancho que el chip (heredado de width:100%); solo se limita
-     el alto para que no se salga de la pantalla. */
-  .dt-turnado-popover {
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-
   .std-grid, .std-grid-2x2 { grid-template-columns: 1fr; gap: 0.75rem; }
   .stat-number { font-size: 1.9rem; }
   .std-greeting { padding: 18px 20px; gap: 14px; }
@@ -1861,6 +1917,17 @@
   .act-estatus-pill { font-size: .68rem; padding: 2px 8px; }
 
   /* .btn-turnar: responsivo global en styles/modal.css */
+
+  /* "Personas y respuestas" — el título/badge/botón ya envuelven por
+     flex-wrap, pero el botón quedaba muy pegado al badge; con gap uniforme
+     se ve ordenado tanto en una fila como partido en dos. */
+  .pyr-legend-row { row-gap: 8px; }
+  .pyr-btn-respuestas { padding: 5px 12px; }
+
+  /* Dos columnas ya no caben con comodidad — cargo/área y fecha de
+     asignación se apilan como el resto de campos del expandible. */
+  .dt-turnado-pop-grid { grid-template-columns: 1fr; gap: 8px; }
+  .pyr-expand { padding-left: 42px; }
 }
 
 @media (max-width: 480px) {
@@ -1876,10 +1943,29 @@
   /* Tabla de destinatarios en modal */
   .dest-table th,
   .dest-table td  { padding: 7px 8px; font-size: .74rem; }
+
+  /* Personas y respuestas, más compacto todavía */
+  .pyr-badge { font-size: 9.5px; padding: 2px 8px; }
+  .pyr-btn-respuestas { font-size: .70rem; padding: 4px 10px; }
+  .pyr-intro { font-size: .80rem; }
+  .pyr-fila-cabecera { padding: 8px 0; gap: 8px; }
+  .dt-turnado-avatar { width: 30px; height: 30px; font-size: 11px; }
+  .dt-turnado-nombre { font-size: .80rem; }
+  .dt-turnado-direccion { font-size: .70rem; }
+  .pyr-expand { padding-left: 38px; }
 }
 
 @media (max-width: 360px) {
   .ev-item-name { max-width: 110px; font-size: .70rem; }
   .dest-table th,
   .dest-table td  { padding: 5px 6px; font-size: .68rem; }
+
+  /* Nombre/área + botón "Ver respuestas" + chevron ya no caben en una sola
+     fila — el toggle y el chevron se quedan juntos arriba (order 1/2) y el
+     botón cae a su propia línea completa debajo (order 3). El `order`
+     reordena solo lo visual, no el tab/DOM — no afecta el layout normal. */
+  .pyr-fila-cabecera { flex-wrap: wrap; }
+  .pyr-fila-toggle { order: 1; }
+  .pyr-chevron-btn { order: 2; }
+  .pyr-btn-respuestas { order: 3; width: 100%; justify-content: center; margin-left: 0; }
 }

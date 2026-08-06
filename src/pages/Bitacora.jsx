@@ -5,6 +5,7 @@ import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import ModalDetalleFUS from '../components/ModalDetalleFUS'
 import ModalTimeline from '../components/ModalTimeline'
+import ModalDescargarBitacora from '../components/ModalDescargarBitacora'
 import FechaInput from '../components/FechaInput'
 import Badge from '../components/Badge'
 import { useAuth } from '../context/AuthContext'
@@ -15,19 +16,12 @@ import './Bitacora.css'
 // Mismo conjunto de valores crudos que FUS.estatusParticular_id puede tener
 // en la práctica, más Vencido/PorVencer (calculados a partir de fechaLimite,
 // no un estatus guardado — el backend ya sabe resolverlos como caso especial).
-// Cada rol solo ve los estatus que él mismo puede producir (según qué vista/
-// permiso dispara cada transición en el backend):
-//   - Registrado/Turnado: exclusivos de ROL1 (registra y turna el FUS).
-//   - En_seguimiento/Pendiente_validacion: los puede causar ROL1 o ROL2
-//     (comisionar y "dar por atendido" están abiertos a ambos).
-//   - Atendido: exclusivo de ROL2 (primera respuesta propia) o del
-//     Comisionado (primera respuesta suya) — ROL1 nunca lo causa directo.
-//   - Concluido: ROL1 (aprueba el asunto comisionado) o ROL2 (concluye su
-//     propio turnado sin comisionar).
-//   - Rechazado: exclusivo de ROL1 (rechaza la validación final).
+// Cada rol ve los estatus relevantes a su parte del flujo — para ROL1 (y su
+// Equipo del Particular), "que se dio una respuesta" se llama "Atendido" en
+// vez de "En seguimiento".
 const ESTATUS_POR_ROL = {
-  ROL1:             ['Registrado', 'Turnado', 'En_seguimiento', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
-  EQUIPO_PARTICULAR: ['Registrado', 'Turnado', 'En_seguimiento', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+  ROL1:             ['Registrado', 'Turnado', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+  EQUIPO_PARTICULAR: ['Registrado', 'Turnado', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
   ROL2:             ['Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
   COMISIONADO:      ['En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
 }
@@ -144,7 +138,8 @@ export default function Bitacora() {
   const [colVisibles, setColVisibles] = useState(COL_VISIBLES_DEFAULT)
   const [previewFolio, setPreviewFolio] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
-  const [exportando, setExportando] = useState(null)
+  const [exportando, setExportando] = useState(false)
+  const [modalDescargarAbierto, setModalDescargarAbierto] = useState(false)
   const [descargandoFolio, setDescargandoFolio] = useState(null)
   const [sortCol, setSortCol] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
@@ -416,37 +411,17 @@ export default function Bitacora() {
               {total.toLocaleString()} registros
               {cargando && registros.length > 0 && <span className="btn-spinner bita-total-spinner" />}
             </span>
-            <button className="bita-export-btn bita-export-excel"
-              disabled={exportando === 'excel'}
-              onClick={() => {
-                setExportando('excel')
-                descargar(`/bitacora/exportar/excel/${exportParams()}`, 'bitacora.xlsx')
-                  .finally(() => setExportando(null))
-              }}
-              title="Exportar a Excel">
-              {exportando === 'excel'
+            <button className="bita-export-btn bita-export-descargar"
+              disabled={exportando}
+              onClick={() => setModalDescargarAbierto(true)}
+              title="Descargar bitácora">
+              {exportando
                 ? <span className="btn-spinner" />
-                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    <line x1="9" y1="15" x2="15" y2="15"/>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>}
-              {exportando === 'excel' ? 'Generando…' : 'Excel'}
-            </button>
-            <button className="bita-export-btn bita-export-pdf"
-              disabled={exportando === 'pdf'}
-              onClick={() => {
-                setExportando('pdf')
-                descargar(`/bitacora/exportar/pdf/${exportParams()}`, 'bitacora.pdf')
-                  .finally(() => setExportando(null))
-              }}
-              title="Exportar a PDF">
-              {exportando === 'pdf'
-                ? <span className="btn-spinner" />
-                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
-                  </svg>}
-              {exportando === 'pdf' ? 'Generando…' : 'PDF'}
+              {exportando ? 'Generando…' : 'Descargar'}
             </button>
           </div>
         </div>
@@ -742,6 +717,17 @@ export default function Bitacora() {
       )}
       {modalTimelineFolio && (
         <ModalTimeline folio={modalTimelineFolio} onClose={() => setModalTimelineFolio(null)} />
+      )}
+      {modalDescargarAbierto && (
+        <ModalDescargarBitacora
+          onCancelar={() => setModalDescargarAbierto(false)}
+          onConfirmar={formato => {
+            setExportando(true)
+            const archivo = formato === 'pdf' ? 'bitacora.pdf' : 'bitacora.xlsx'
+            return descargar(`/bitacora/exportar/${formato}/${exportParams()}`, archivo)
+              .finally(() => { setExportando(false); setModalDescargarAbierto(false) })
+          }}
+        />
       )}
     </AppLayout>
   )
