@@ -6,13 +6,36 @@ import Spinner from '../components/Spinner'
 import ModalDetalleFUS from '../components/ModalDetalleFUS'
 import ModalTimeline from '../components/ModalTimeline'
 import FechaInput from '../components/FechaInput'
+import Badge from '../components/Badge'
 import { useAuth } from '../context/AuthContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { descargar } from '../utils/descargarArchivo'
 import './Bitacora.css'
 
-const ESTATUS_FUS_OPCIONES = ['Registrado', 'Turnado', 'Atendido', 'Concluido', 'Vencido', 'PorVencer']
-const ESTATUS_FUS_LABELS = { PorVencer: 'Por vencer' }
+// Mismo conjunto de valores crudos que FUS.estatusParticular_id puede tener
+// en la práctica, más Vencido/PorVencer (calculados a partir de fechaLimite,
+// no un estatus guardado — el backend ya sabe resolverlos como caso especial).
+// Cada rol solo ve los estatus que él mismo puede producir (según qué vista/
+// permiso dispara cada transición en el backend):
+//   - Registrado/Turnado: exclusivos de ROL1 (registra y turna el FUS).
+//   - En_seguimiento/Pendiente_validacion: los puede causar ROL1 o ROL2
+//     (comisionar y "dar por atendido" están abiertos a ambos).
+//   - Atendido: exclusivo de ROL2 (primera respuesta propia) o del
+//     Comisionado (primera respuesta suya) — ROL1 nunca lo causa directo.
+//   - Concluido: ROL1 (aprueba el asunto comisionado) o ROL2 (concluye su
+//     propio turnado sin comisionar).
+//   - Rechazado: exclusivo de ROL1 (rechaza la validación final).
+const ESTATUS_POR_ROL = {
+  ROL1:             ['Registrado', 'Turnado', 'En_seguimiento', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+  EQUIPO_PARTICULAR: ['Registrado', 'Turnado', 'En_seguimiento', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+  ROL2:             ['Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+  COMISIONADO:      ['En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
+}
+const ESTATUS_FUS_LABELS = {
+  En_seguimiento: 'En seguimiento',
+  Pendiente_validacion: 'Pendiente de validación',
+  PorVencer: 'Por vencer',
+}
 
 const COLUMNAS_TOGGLEABLES = [
   { key: 'fecha',                 label: 'Fecha y hora (CDMX)' },
@@ -25,34 +48,7 @@ const COLUMNAS_TOGGLEABLES = [
 
 const COL_VISIBLES_DEFAULT = {
   folio: true, fecha: true, nombre: true, usuario: true, unidadAdministrativa: false,
-  accion: true, cambioEstatus: false, observaciones: false,
-}
-
-const ACCION_LABELS = {
-  REGISTRO_FUS:       'Registro FUS',
-  TURNAR_FUS:         'Turnar FUS',
-  ASIGNACION_ESTADO:  'Cambio de estado',
-  REGISTRO_RESPUESTA: 'Registro respuesta',
-  REGISTRO_ACCION:    'Registro acción',
-  CONCLUSION_FUS:     'Conclusión FUS',
-  INICIO_SESION:      'Inicio sesión',
-  CIERRE_SESION:      'Cierre sesión',
-  RESTABLECER_CONTRASENA: 'Restablecer contraseña',
-  ELIMINACION:        'Eliminación',
-  ASIGNACION_COMISIONADO:   'Asignación a comisionado',
-  SEGUIMIENTO_COMISIONADO:  'Seguimiento de comisionado',
-  FINALIZACION_SEGUIMIENTO: 'Finalización de seguimiento',
-  ATENCION_FUS:       'Atención de FUS (comisionado)',
-  APROBACION_FUS:     'Aprobación de FUS',
-  RECHAZO_FUS:        'Rechazo de FUS',
-  REAPERTURA_FUS:     'Reapertura de FUS',
-}
-
-const ACCIONES_POR_ROL = {
-  ROL1: ['REGISTRO_FUS','TURNAR_FUS','ASIGNACION_ESTADO','REGISTRO_RESPUESTA',
-         'REGISTRO_ACCION','CONCLUSION_FUS','ELIMINACION',
-         'ASIGNACION_COMISIONADO','ATENCION_FUS','APROBACION_FUS','RECHAZO_FUS','REAPERTURA_FUS'],
-  ROL2: ['CONCLUSION_FUS','REGISTRO_RESPUESTA','REGISTRO_ACCION'],
+  estatus: true, cambioEstatus: false, observaciones: false,
 }
 
 const PAGE_SIZE = 50
@@ -129,12 +125,11 @@ export default function Bitacora() {
   const { user } = useAuth()
   const rol       = user?.rol || 'ROL1'
   const esADM     = rol === 'ROL1'
-  const acciones  = ACCIONES_POR_ROL[rol] || ACCIONES_POR_ROL.ROL1
+  const estatusOpciones = ESTATUS_POR_ROL[rol] || ESTATUS_POR_ROL.ROL1
 
   const [detalleFolio, setDetalleFolio] = useState(null)
 
   const [fBusqueda,   setFBusqueda]   = useState('')
-  const [fAccion,     setFAccion]     = useState('')
   const [fEstatusFus, setFEstatusFus] = useState('')
   const [fDesde,      setFDesde]      = useState('')
   const [fHasta,      setFHasta]      = useState('')
@@ -262,7 +257,6 @@ export default function Bitacora() {
     params.set('page', solicitud.page)
     params.set('page_size', PAGE_SIZE)
     if (fBusquedaDeb)         params.set('q',           fBusquedaDeb)
-    if (fAccion)              params.set('accion',      fAccion)
     if (fEstatusFus)          params.set('estatus_fus', fEstatusFus)
     fUnidades.forEach(id => params.append('unidadAdministrativa', id))
     if (fDesde)               params.set('fecha_desde', fDesde)
@@ -276,7 +270,7 @@ export default function Bitacora() {
       page: solicitud.page,
       append: solicitud.append,
     }
-  }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir, solicitud])
+  }, [fBusquedaDeb, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir, solicitud])
 
   const {
     data: resultado,
@@ -293,11 +287,11 @@ export default function Bitacora() {
     setSolicitud(actual => ({ page: pag, append, version: actual.version + 1 }))
   }
 
-   
-  useEffect(() => { cargar(1) }, [fBusquedaDeb, fAccion, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
+
+  useEffect(() => { cargar(1) }, [fBusquedaDeb, fEstatusFus, fUnidades, fDesde, fHasta, sortCol, sortDir])
 
   const limpiar = () => {
-    setFBusqueda(''); setFAccion('')
+    setFBusqueda('')
     setFEstatusFus(''); setFDesde(''); setFHasta('')
     setPresetFecha(null)
     setColVisibles(COL_VISIBLES_DEFAULT)
@@ -309,11 +303,16 @@ export default function Bitacora() {
   // Solo columnas AGREGADAS (activadas) más allá del default — no las que el
   // usuario desactivó desde su estado por defecto (esas no generan chip).
   const columnasAgregadas = COLUMNAS_TOGGLEABLES.filter(c => colVisibles[c.key] && !COL_VISIBLES_DEFAULT[c.key])
-  const filtrosActivosChips = Boolean(fBusqueda || fAccion || fEstatusFus || fUnidades.length || fDesde || fHasta)
+  const filtrosActivosChips = Boolean(fBusqueda || fEstatusFus || fUnidades.length || fDesde || fHasta)
 
   const formatearFechaHoraBitacora = d => d
     ? new Date(d).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' })
     : '—'
+
+  // No todo evento de bitácora es un cambio de estatus (ej. una respuesta
+  // registrada o una eliminación): en esos casos no hay estadoNuevo/Anterior
+  // y el registro simplemente no lleva badge de estatus.
+  const estatusDeRegistro = r => r.estadoNuevo || r.estadoAnterior || null
 
   const fmtFechaCorta = s => {
     const [y, m, d] = s.split('-')
@@ -358,7 +357,7 @@ export default function Bitacora() {
     if (esADM && colVisibles.nombre)  cols.push('nombre')
     if (esADM && colVisibles.usuario) cols.push('usuario')
     if (esADM && colVisibles.unidadAdministrativa) cols.push('unidadAdministrativa')
-    if (colVisibles.accion)           cols.push('accion')
+    if (colVisibles.estatus)          cols.push('estatus')
     if (colVisibles.cambioEstatus)  { cols.push('estado_ant'); cols.push('estado_nuevo') }
     if (colVisibles.observaciones)    cols.push('observaciones')
     return cols
@@ -367,7 +366,6 @@ export default function Bitacora() {
   const exportParams = () => {
     const p = new URLSearchParams()
     if (fBusqueda)            p.set('q',           fBusqueda)
-    if (fAccion)              p.set('accion',      fAccion)
     if (fEstatusFus)          p.set('estatus_fus', fEstatusFus)
     fUnidades.forEach(id => p.append('unidadAdministrativa', id))
     if (fDesde)               p.set('fecha_desde', fDesde)
@@ -381,7 +379,7 @@ export default function Bitacora() {
     colVisibles.fecha, colVisibles.folio,
     esADM && colVisibles.nombre, esADM && colVisibles.usuario,
     esADM && colVisibles.unidadAdministrativa,
-    colVisibles.accion, colVisibles.cambioEstatus, colVisibles.observaciones,
+    colVisibles.estatus, colVisibles.cambioEstatus, colVisibles.observaciones,
   ].filter(Boolean).length
   const COLS = 1 + cantColumnasUI
 
@@ -541,17 +539,11 @@ export default function Bitacora() {
               </div>
             )}
 
-            {/* Fila 3: selects Acción + Estatus */}
+            {/* Fila 3: select Estatus */}
             <div className="bita-fila-selects">
-              <select className="bita-input" value={fAccion} onChange={e => setFAccion(e.target.value)}>
-                <option value="">Todas las acciones</option>
-                {acciones.map(a => (
-                  <option key={a} value={a}>{ACCION_LABELS[a] || a}</option>
-                ))}
-              </select>
               <select className="bita-input" value={fEstatusFus} onChange={e => setFEstatusFus(e.target.value)}>
-                <option value="">Estatus actual del FUS</option>
-                {ESTATUS_FUS_OPCIONES.map(e => (
+                <option value="">Todos los estatus</option>
+                {estatusOpciones.map(e => (
                   <option key={e} value={e}>{ESTATUS_FUS_LABELS[e] || e}</option>
                 ))}
               </select>
@@ -567,12 +559,6 @@ export default function Bitacora() {
                 <span className="bita-chip">
                   Búsqueda: "{fBusqueda}"
                   <button type="button" onClick={() => setFBusqueda('')} aria-label="Quitar filtro de búsqueda">×</button>
-                </span>
-              )}
-              {fAccion && (
-                <span className="bita-chip">
-                  Acción: {ACCION_LABELS[fAccion] || fAccion}
-                  <button type="button" onClick={() => setFAccion('')} aria-label="Quitar filtro de acción">×</button>
                 </span>
               )}
               {fUnidades.length > 0 && unidadSeleccionadas.map(u => (
@@ -628,7 +614,7 @@ export default function Bitacora() {
                 {esADM && colVisibles.nombre                && th('nombre', 'Responsable', false)}
                 {esADM && colVisibles.usuario               && th('usuario', 'Correo del responsable', false)}
                 {esADM && colVisibles.unidadAdministrativa  && th('unidadAdministrativa', 'Unidad administrativa', false)}
-                {colVisibles.accion  && th('accion', 'Acción')}
+                {colVisibles.estatus && th('estatus', 'Estatus')}
                 {colVisibles.cambioEstatus  && th('cambioEstatus', 'Cambio de estatus', false)}
                 {colVisibles.observaciones  && th('observaciones', 'Observaciones')}
                 <th>Acciones</th>
@@ -664,7 +650,11 @@ export default function Bitacora() {
                           </a>
                         : '—'}
                       <span className="bita-folio-fecha-mobile">{formatearFechaHoraBitacora(r.fechaHora)}</span>
-                      <span className="bita-mobile-badge">{ACCION_LABELS[r.accion] || r.accion}</span>
+                      {estatusDeRegistro(r) && (
+                        <span className="bita-mobile-badge">
+                          {ESTATUS_FUS_LABELS[estatusDeRegistro(r)] || estatusDeRegistro(r)}
+                        </span>
+                      )}
                     </td>
                   )}
                   {esADM && colVisibles.nombre  && <td className="bita-usuario" data-label="Responsable">{r.nombre || '—'}</td>}
@@ -672,11 +662,9 @@ export default function Bitacora() {
                   {esADM && colVisibles.unidadAdministrativa && (
                     <td data-label="Unidad administrativa">{r.unidadAdministrativa || '—'}</td>
                   )}
-                  {colVisibles.accion && (
-                    <td data-label="Acción">
-                      <span className={`bita-accion bita-accion-${r.accion}`}>
-                        {ACCION_LABELS[r.accion] || r.accion}
-                      </span>
+                  {colVisibles.estatus && (
+                    <td data-label="Estatus">
+                      {estatusDeRegistro(r) ? <Badge estatus={estatusDeRegistro(r)} theme="light" /> : '—'}
                     </td>
                   )}
                   {colVisibles.cambioEstatus && (

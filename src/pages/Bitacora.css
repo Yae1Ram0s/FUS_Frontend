@@ -642,7 +642,6 @@
 .bita-folio-link:hover  { color: #16362d; border-bottom-color: #16362d; }
 .bita-folio-link:active { opacity: 0.75; }
 .bita-obs    { max-width: 200px; color: rgba(10, 30, 20, 0.55); }
-.bita-accion { font-weight: 700; white-space: nowrap; }
 
 /* ── Columna PDF ── */
 .bita-col-pdf { text-align: center; width: 42px; padding: 4px 6px !important; }
@@ -741,22 +740,6 @@
   border-radius: 12px;
   background: #ffffff;
 }
-
-/* ══════════════════════════════════════
-   COLORES DE ACCIONES — Paleta Institucional ANAM
-   #235B4E #10312B #1F5647 #24725D #258466  (verdes)
-   #DDC9A3 #BC955C                           (dorados)
-   #9F2241 #691C32 #AF1B46 #82163A           (carmines)
-══════════════════════════════════════ */
-.bita-accion-REGISTRO_FUS       { color: #258466; }
-.bita-accion-TURNAR_FUS         { color: #BC955C; }
-.bita-accion-ASIGNACION_ESTADO  { color: #24725D; }
-.bita-accion-REGISTRO_RESPUESTA { color: #1F5647; }
-.bita-accion-REGISTRO_ACCION    { color: #235B4E; }
-.bita-accion-CONCLUSION_FUS     { color: #10312B; }
-.bita-accion-INICIO_SESION      { color: rgba(37, 132, 102, 0.50); }
-.bita-accion-CIERRE_SESION      { color: rgba(37, 132, 102, 0.38); }
-.bita-accion-ELIMINACION        { color: #9F2241; }
 
 /* ══════════════════════════════════════
    VACÍO / CARGANDO
