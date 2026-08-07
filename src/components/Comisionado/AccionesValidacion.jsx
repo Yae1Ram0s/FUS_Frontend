@@ -91,10 +91,12 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
     return <p className="com-nota-discreta">Pendiente de validación por el Particular.</p>
   }
 
-  // 'Atendido' + turnado a Rol 2: solo Rol 2 confirma "Atendido" (pasa a
-  // 'Pendiente_validacion', ver bloque de validación arriba) — Rol 1 nunca
-  // ve este botón.
-  if (estatus === 'Atendido' && tieneFacultad && !esParticular(user)) {
+  // 'Atendido' sin turnado directo (FUS comisionado de frente por Rol 1):
+  // solo el flujo de Comisionado usa este botón FUS-completo — con turnado
+  // directo, cada persona confirma "Atendido" por su cuenta desde su propia
+  // fila en Personas y respuestas (PersonasYRespuestasCard), no aquí, para
+  // no confundir el estatus de UNA persona con el de todo el FUS.
+  if (estatus === 'Atendido' && !fus.tieneTurnado && tieneFacultad && !esParticular(user)) {
     return (
       <div className="dt-actions">
         <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>

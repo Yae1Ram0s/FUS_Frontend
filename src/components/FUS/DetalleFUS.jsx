@@ -43,7 +43,16 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
   const puedesEditar = fus.estatusParticular === 'Registrado'
   const tieneActividad = fus.estatusParticular !== 'Registrado'
   const tieneExterno = fus.nombreExterno || fus.telefonoExterno || fus.correoExterno
-  const { turnados, cargando: turnadosCargando } = useTurnadosFUS(fus.id, fus.folio)
+  const { turnados, cargando: turnadosCargando, recargar: recargarTurnados } = useTurnadosFUS(fus.id, fus.folio)
+
+  // Tras marcar atendido / concluir / rechazar la parte de una persona
+  // (PersonasYRespuestasCard), el propio actor no recibe notificación (esa
+  // le llega a la otra parte) — se actualiza fusData/turnados de una vez con
+  // lo que ya regresó el endpoint, sin esperar a un WS que nunca le toca.
+  const alCambiarTurnado = (estatusParticular) => {
+    if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
+    recargarTurnados()
+  }
 
   const descargarPdf = (conImagenes, turnadoId) => {
     const folioUrl = fus.folio.split('/').map(encodeURIComponent).join('/')
@@ -120,7 +129,14 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
           )}
         </div>
 
-        {tieneActividad && <PersonasYRespuestasCard turnados={turnados} cargando={turnadosCargando} />}
+        {tieneActividad && (
+          <PersonasYRespuestasCard
+            turnados={turnados}
+            cargando={turnadosCargando}
+            user={user}
+            onCambio={alCambiarTurnado}
+          />
+        )}
 
         {fus.fechaLimite && (
           <div className="det-section">

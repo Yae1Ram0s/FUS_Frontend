@@ -27,17 +27,7 @@
 
 .app-main-scroll { overflow-y: auto; }
 
-/* Overlay para cerrar sidebar en móvil */
-.sidebar-overlay {
-  display: none;
-}
-
 @media (max-width: 768px) {
-  /* Sidebar reemplazado por bottom nav — ocultar overlay */
-  .sidebar-overlay {
-    display: none !important;
-  }
-
   .app-body {
     overflow: hidden;
     height: calc(100vh - 56px);

@@ -2,8 +2,10 @@ import { useState } from 'react'
 import Spinner from '../Spinner'
 import DocumentoRespuestasModal from './DocumentoRespuestasModal'
 import { obtenerIniciales } from '../../utils/personas'
+import { esParticular } from '../../utils/permisos'
+import Badge from '../Badge'
 
-export default function PersonasYRespuestasCard({ turnados, cargando }) {
+export default function PersonasYRespuestasCard({ turnados, cargando, user, onCambio }) {
   if (cargando) {
     return (
       <div className="det-section">
@@ -31,13 +33,15 @@ export default function PersonasYRespuestasCard({ turnados, cargando }) {
       </p>
 
       <div className="pyr-lista">
-        {turnados.map(turnado => <PersonaFila key={turnado.id} turnado={turnado} />)}
+        {turnados.map(turnado => (
+          <PersonaFila key={turnado.id} turnado={turnado} user={user} onCambio={onCambio} />
+        ))}
       </div>
     </div>
   )
 }
 
-function PersonaFila({ turnado }) {
+function PersonaFila({ turnado, user, onCambio }) {
   const [expandido, setExpandido] = useState(false)
   const [modalAbierto, setModalAbierto] = useState(false)
   const destinatario = turnado.idDestinatario || {}
@@ -47,6 +51,18 @@ function PersonaFila({ turnado }) {
         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
       })
     : '—'
+
+  // Badge de la fila: "Recibido" (sin responder aún) no se muestra — no hay
+  // nada que comunicar todavía. "En_seguimiento" (ya respondió, falta que
+  // confirme "Atendido") se etiqueta directo como "Atendido" para no meter
+  // un estatus intermedio que solo confunde en esta vista resumida; el
+  // estatus real (turnado.estatusTitular) sigue intacto para el resto de la
+  // lógica (qué botones mostrar, etc.), esto es puramente de exhibición.
+  const estatusVisible = turnado.estatusTitular === 'Recibido'
+    ? null
+    : turnado.estatusTitular === 'En_seguimiento'
+      ? 'Atendido'
+      : turnado.estatusTitular
 
   // Solo las respuestas de ESTE turnado — a diferencia del resumen de la
   // tarjeta (que combina todos), el modal por persona muestra nada más lo
@@ -73,6 +89,8 @@ function PersonaFila({ turnado }) {
             <span className="dt-turnado-direccion">{destinatario.area || 'Sin área asignada'}</span>
           </div>
         </button>
+
+        {estatusVisible && <Badge estatus={estatusVisible} theme="light" />}
 
         <button type="button" className="pyr-btn-respuestas" onClick={() => setModalAbierto(true)}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -122,6 +140,11 @@ function PersonaFila({ turnado }) {
           mensajeVacio={`${nombre} aún no tiene respuestas registradas.`}
           respuestas={respuestas}
           onClose={() => setModalAbierto(false)}
+          turnado={esParticular(user) ? turnado : null}
+          onValidado={(estatusParticular) => {
+            onCambio?.(estatusParticular)
+            setModalAbierto(false)
+          }}
         />
       )}
     </div>

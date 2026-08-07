@@ -12,7 +12,6 @@ import api from '../api/api'
 import { useToast } from '../context/ToastContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useEstatus } from '../hooks/useEstatus'
-import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import './ConsultarFUS.css'
@@ -247,8 +246,6 @@ export default function ConsultarFUS() {
     return () => window.removeEventListener('scs:consultar', handleConsultar)
   }, [])
 
-  const { leftWidth, containerRef, startResize } = useResizablePanel('cfus-left-width')
-
   return (
     <AppLayout>
       {/* Fuera de .cfus-inner/.cfus-left a propósito: tienen backdrop-filter,
@@ -259,10 +256,10 @@ export default function ConsultarFUS() {
           aún sin resolver) — mismo loader que se ve justo antes de navegar
           aquí, para que no se sienta un corte. */}
       {cargando && folioParam && recienRegistrado && <Spinner overlay dots label="Cargando la solicitud registrada…" />}
-      <div className={`cfus-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
+      <div className={`cfus-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`}>
 
         {/* ── Panel izquierdo ── */}
-        <div className={`cfus-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={leftWidth != null ? { width: panelAbierto ? leftWidth : 44 } : undefined}>
+        <div className={`cfus-left${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
             {panelAbierto && (
               <div className="panel-header-left">
@@ -376,13 +373,6 @@ export default function ConsultarFUS() {
             </div>
           </div>
         </div>
-
-        {/* ── Handle de resize ── */}
-        {panelAbierto && (
-          <div className="resize-handle" onMouseDown={startResize} onTouchStart={startResize}>
-            <span className="resize-dots" />
-          </div>
-        )}
 
         {/* ── Panel derecho ── */}
         <div className="cfus-right">

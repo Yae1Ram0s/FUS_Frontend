@@ -6,7 +6,6 @@ import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoCom
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import api from '../api/api'
-import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { formatearFechaHora } from '../utils/fechas'
@@ -290,13 +289,12 @@ export default function FUSComisionados() {
   }, [ultimaNotifId])
 
   const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
-  const { leftWidth, containerRef, startResize } = useResizablePanel('fc-left-width')
 
   return (
     <AppLayout>
-      <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
+      <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`}>
 
-        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={{ width: panelAbierto ? leftWidth : 44 }}>
+        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
             {panelAbierto && <h3 className="panel-title">FUS Comisionados</h3>}
             <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
@@ -355,12 +353,6 @@ export default function FUSComisionados() {
             </div>
           </div>
         </div>
-
-        {panelAbierto && (
-          <div className="resize-handle" onMouseDown={startResize} onTouchStart={startResize}>
-            <span className="resize-dots" />
-          </div>
-        )}
 
         <div className="st-right">
           {seleccionado

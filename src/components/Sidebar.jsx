@@ -130,7 +130,7 @@ const NAV_COMISIONADO = [
   },
 ]
 
-export default function Sidebar({ isOpen, onClose, onToggle }) {
+export default function Sidebar() {
   const { user } = useAuth()
   const [perfilAbierto, setPerfilAbierto] = useState(false)
   const [perfilCerrando, setPerfilCerrando] = useState(false)
@@ -172,31 +172,10 @@ export default function Sidebar({ isOpen, onClose, onToggle }) {
     } else {
       navigate(item.path)
     }
-    onClose?.()
   }
 
   return (
-    <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`}>
-
-      {/* Botón colapsar / expandir — solo desktop */}
-      <div className="sidebar-toggle-row">
-        <button
-          className="sidebar-toggle-btn"
-          onClick={onToggle}
-          aria-label={isOpen ? 'Colapsar menú' : 'Expandir menú'}
-          title={isOpen ? 'Colapsar menú' : 'Expandir menú'}
-        >
-          {isOpen ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          )}
-        </button>
-      </div>
+    <aside className="sidebar">
 
       {/* Usuario */}
       <button

@@ -6,6 +6,7 @@ import Spinner from './Spinner'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useModalBehavior } from '../hooks/useModalBehavior'
+import './Comisionado/Comisionado.css'
 import './ModalTimeline.css'
 
 const fmtFecha = formatearFechaHora
@@ -15,6 +16,7 @@ const TIPO_INFO = {
   turnado:     { titulo: 'Turnado',     color: '#1F5647' },
   comisionado: { titulo: 'Comisionado', color: '#9F2241' },
   respuesta:   { titulo: 'Respuesta',   color: 'var(--fg-success)' },
+  atendido:    { titulo: 'Atendido',    color: '#b45309' },
   concluido:   { titulo: 'Concluido',   color: 'var(--fg-success)' },
   rechazo:     { titulo: 'Rechazado',   color: '#b23030' },
 }
@@ -54,15 +56,11 @@ export default function ModalTimeline({ folio, onClose }) {
   const hayContenido = eventos.length > 0
 
   return createPortal(
-    <div className="modal-overlay mtl-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card mtl-modal">
-        <div className="modal-header">
-          <h3 className="modal-title">Historial — FUS {folio}</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Cerrar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label={`Historial — FUS ${folio}`} onClick={onClose}>
+      <div className="com-modal mtl-modal" onClick={e => e.stopPropagation()}>
+        <div className="com-modal-top">
+          <h3>Historial — FUS {folio}</h3>
+          <button type="button" className="com-modal-x" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
         <div className="mtl-leyenda">

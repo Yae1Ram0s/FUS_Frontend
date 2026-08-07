@@ -16,7 +16,6 @@ import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
-import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -42,6 +41,20 @@ function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
       ...paginaNueva.items.filter(item => !existentes.has(item.id)),
     ],
   }
+}
+
+/* Marcadores de auditoría de MarcarTurnadoAtendidoView/ConcluirPersonaTurnadoView/
+   RechazarPersonaTurnadoView (mismo modelo Seguimiento que las respuestas
+   reales) — se distinguen por el texto para no mostrarlos con la etiqueta
+   genérica "Respuesta". Mismo criterio que DocumentoRespuestasModal.jsx y
+   FUSTrazabilidadView en el backend. */
+function tipoTagSeguimiento(s) {
+  if (s.esRechazo) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
+  const texto = s.descripcionActividad || ''
+  if (texto.startsWith('Rechazado por el Particular:')) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
+  if (texto === 'Concluido por el Particular.') return { label: 'Concluido', clase: 'fc-tag-verde' }
+  if (texto.startsWith('Atendido:')) return { label: 'Atendido', clase: 'fc-tag-azul' }
+  return { label: 'Respuesta', clase: 'fc-tag-verde' }
 }
 
 /* ── Sección Respuestas y Seguimiento ── */
@@ -167,8 +180,8 @@ function Seguimientos({ turnadoId, folio, estatusFus, onRegistrado }) {
               </div>
               <div className="seg-tl-content">
                 <div className="seg-tl-meta">
-                  <span className={`fc-tag ${s.esRechazo ? 'fc-tag-rojo' : 'fc-tag-verde'}`}>
-                    {s.esRechazo ? 'Rechazo' : 'Respuesta'}
+                  <span className={`fc-tag ${tipoTagSeguimiento(s).clase}`}>
+                    {tipoTagSeguimiento(s).label}
                   </span>
                   <span className="seg-tl-fecha">
                     {!s.esRechazo && user?.nombre ? `${user.nombre} · ` : ''}
@@ -274,13 +287,16 @@ function PrioridadFiltroChip({ valor, onChange }) {
 }
 
 /* ── Detalle del turnado (ROL2) ── */
-function DetalleTurnado({ turnado, onBack }) {
+function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
   const { user } = useAuth()
-  const [fusData,        setFusData]       = useState(turnado.idFus || {})
+  const [fusData,        setFusData]       = useState(turnadoInicial.idFus || {})
+  const [turnadoData,    setTurnadoData]    = useState(turnadoInicial)
   const [modalComisionar, setModalComisionar] = useState(false)
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
+  const [marcandoAtendido, setMarcandoAtendido] = useState(false)
   const toast = useToast()
   const fus = fusData
+  const turnado = turnadoData
 
   // puedeComisionar ya resuelve internamente, según el rol, tanto el
   // estatus del FUS (Registrado/Turnado) como — para ROL2 — que ESTE
@@ -428,11 +444,43 @@ function DetalleTurnado({ turnado, onBack }) {
             turnadoId={turnado.id}
             folio={fus.folio}
             estatusFus={fus.estatusParticular}
-            onRegistrado={(estatusParticular) => {
+            onRegistrado={(estatusParticular, estatusTitular) => {
               if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
+              if (estatusTitular) setTurnadoData(t => ({ ...t, estatusTitular }))
             }}
           />
       }
+
+      {/* Confirma que ya se respondió lo suficiente — habilita a Rol 1 para
+          rechazar/concluir la parte de este Titular específico desde su
+          modal de respuestas en Consultar FUS (no afecta a otras personas
+          turnadas del mismo FUS). Solo aplica al flujo directo (sin
+          comisionado); ese caso lo sigue cubriendo AccionesValidacion. */}
+      {!fus.idComisionado && turnado.estatusTitular === 'En_seguimiento' && (
+        <div className="dt-actions">
+          <button
+            type="button"
+            className="com-btn-verde"
+            disabled={marcandoAtendido}
+            onClick={async () => {
+              setMarcandoAtendido(true)
+              try {
+                const { data } = await api.post(`/turnados/${turnado.id}/atendido/`)
+                setTurnadoData(t => ({ ...t, estatusTitular: data.estatusTitular }))
+                if (data.estatusParticular) setFusData(f => ({ ...f, estatusParticular: data.estatusParticular }))
+                toast.success('Tu parte se marcó como atendida.')
+              } catch (err) {
+                toast.error(err.response?.data?.detail || 'No se pudo marcar como atendida.')
+              } finally {
+                setMarcandoAtendido(false)
+              }
+            }}
+          >
+            {marcandoAtendido && <span className="btn-spinner" />}
+            {marcandoAtendido ? 'Guardando…' : 'Atendido'}
+          </button>
+        </div>
+      )}
 
       <AccionesValidacion
         user={user}
@@ -681,14 +729,12 @@ export default function SolicitudesTurnadas() {
     window.addEventListener('scs:consultar', handleConsultar)
     return () => window.removeEventListener('scs:consultar', handleConsultar)
   }, [])
-  const { leftWidth, containerRef, startResize } = useResizablePanel('st-left-width')
-
   return (
     <AppLayout>
-      <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`} ref={containerRef}>
+      <div className={`st-inner${seleccionado ? ' has-detail' : ''}${panelAbierto && !seleccionado ? ' lista-mode' : ''}`}>
 
         {/* ── Panel izquierdo ── */}
-        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`} style={leftWidth != null ? { width: panelAbierto ? leftWidth : 44 } : undefined}>
+        <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
             {panelAbierto && <h3 className="panel-title">Solicitudes turnadas</h3>}
             <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
@@ -808,12 +854,6 @@ export default function SolicitudesTurnadas() {
           </div>
         </div>
 
-        {/* ── Handle de resize ── */}
-        {panelAbierto && (
-          <div className="resize-handle" onMouseDown={startResize} onTouchStart={startResize}>
-            <span className="resize-dots" />
-          </div>
-        )}
 
         {/* ── Panel derecho ── */}
         <div className="st-right">

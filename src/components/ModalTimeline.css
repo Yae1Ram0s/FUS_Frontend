@@ -1,27 +1,23 @@
-/* El centrado (position:fixed + transform) y el alto seguro (--app-vh) ya los
-   da .modal-card compartido (ConsultarFUS.css) — acá solo el look propio. */
-.mtl-modal.modal-card {
-  width: 380px;
-  max-width: calc(100vw - 32px);
+/* Mismo diseño glass que ComisionarModal (.com-*, definido en
+   Comisionado/Comisionado.css) — el ancho/alto propios de esta pantalla
+   (más alargada, para la línea de tiempo) van aparte. */
+.mtl-modal.com-modal {
+  width: 420px;
   max-height: 85vh;
   max-height: calc(var(--app-vh, 100vh) * 0.85);
-  z-index: 9999;
-  background: #ffffff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
-.mtl-modal .modal-title { font-weight: 600; text-align: left; }
-.mtl-modal .modal-header { background: var(--bg); flex-shrink: 0; }
+.mtl-modal .com-modal-top { padding: 18px 22px 14px; flex-shrink: 0; }
 
 /* ── Leyenda de colores ── */
 .mtl-leyenda {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  padding: 10px 24px;
-  border-bottom: 1px solid #edf2f7;
+  padding: 0 22px 14px;
   flex-shrink: 0;
-  background: #ffffff;
 }
 .mtl-leyenda-item {
   display: inline-flex;
@@ -29,7 +25,7 @@
   gap: 5px;
   font-size: .68rem;
   font-weight: 600;
-  color: #718096;
+  color: rgba(26, 47, 40, 0.65);
 }
 .mtl-leyenda-dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex-shrink: 0; }
 
@@ -37,14 +33,13 @@
 .mtl-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 18px 24px 24px;
+  padding: 4px 22px 22px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  background: #ffffff;
 }
 
-.mtl-empty { font-size: .85rem; color: #a0aec0; margin: 0; }
+.mtl-empty { font-size: .85rem; color: rgba(26, 47, 40, 0.45); margin: 0; }
 
 /* ── Línea de tiempo ── */
 .mtl-timeline { list-style: none; margin: 0; padding: 0; }
@@ -63,14 +58,14 @@
   height: 12px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.65);
   margin-top: 2px;
 }
 .mtl-linea {
   width: 1.5px;
   flex: 1;
   min-height: 22px;
-  background: #e2e8f0;
+  background: rgba(35, 91, 78, 0.18);
   margin: 2px 0;
 }
 
@@ -80,9 +75,9 @@
   padding: 10px 14px;
   margin-bottom: 14px;
   border-radius: var(--radius-base);
-  border: 1px solid #edf2f7;
-  border-left: 3px solid var(--tipo-color, #edf2f7);
-  background: #f9fafb;
+  border: 1px solid rgba(35, 91, 78, 0.14);
+  border-left: 3px solid var(--tipo-color, rgba(35, 91, 78, 0.14));
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .mtl-card-top {
@@ -91,13 +86,13 @@
   justify-content: space-between;
   gap: 10px;
 }
-.mtl-card-titulo { font-size: .82rem; font-weight: 700; color: #2d3748; }
-.mtl-card-fecha  { font-size: .70rem; color: #a0aec0; white-space: nowrap; flex-shrink: 0; }
+.mtl-card-titulo { font-size: .82rem; font-weight: 700; color: #1a2f28; }
+.mtl-card-fecha  { font-size: .70rem; color: rgba(26, 47, 40, 0.50); white-space: nowrap; flex-shrink: 0; }
 
 .mtl-card-detalle {
   margin: 4px 0 0;
   font-size: .82rem;
-  color: #4a5568;
+  color: rgba(26, 47, 40, 0.80);
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -106,7 +101,7 @@
   margin-top: 4px;
   font-size: .74rem;
   font-weight: 600;
-  color: #718096;
+  color: rgba(26, 47, 40, 0.60);
 }
 
 /* ── Punto "en vivo" — estado actual del FUS/turnado ── */
@@ -128,20 +123,17 @@
 }
 
 @media (max-width: 768px) {
-  .mtl-overlay { z-index: 9999; }
-  .mtl-modal.modal-card {
+  .mtl-modal.com-modal {
     width: 92vw;
     max-width: 92vw;
     max-height: 82vh;
     max-height: calc(100svh - 80px);
     max-height: calc(var(--app-vh, 100vh) * 0.82);
-    z-index: 9999;
-    border-radius: 18px;
   }
-  .mtl-modal .modal-header { padding: 14px 16px; }
-  .mtl-modal .modal-title { font-size: .96rem; }
+  .mtl-modal .com-modal-top { padding: 14px 16px 10px; }
+  .mtl-modal .com-modal-top h3 { font-size: .96rem; }
 
-  .mtl-leyenda { padding: 8px 16px; gap: 5px 10px; }
+  .mtl-leyenda { padding: 0 16px 10px; gap: 5px 10px; }
   .mtl-leyenda-item { font-size: .64rem; }
 
   .mtl-body { padding: 14px 16px 18px; }

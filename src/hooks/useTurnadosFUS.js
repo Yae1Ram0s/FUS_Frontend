@@ -30,5 +30,5 @@ export function useTurnadosFUS(fusId, folio) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
   }, [ultimaNotifId, folio])
 
-  return { turnados, cargando }
+  return { turnados, cargando, recargar: cargar }
 }

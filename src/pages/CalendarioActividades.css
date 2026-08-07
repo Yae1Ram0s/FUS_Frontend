@@ -37,6 +37,10 @@
 }
 .cal-sidebar.panel-cerrado { transition: width 220ms 100ms cubic-bezier(0.4, 0, 0.2, 1); }
 
+/* Ancho fijo — ya no se puede angostar/ensanchar arrastrando (antes tenía
+   un resize-handle). */
+.cal-sidebar.panel-cerrado { width: 44px; }
+
 /* Colapsado: el overlap sobre el sidebar solo tiene sentido con el panel
    abierto (290px) — con el margen negativo aplicado a la pestaña angosta de
    44px, queda casi tapada detrás del sidebar y parece que se cierra del
@@ -690,8 +694,6 @@ input[type="time"].cal-pill-input {
   }
   .cal-sidebar.panel-cerrado { display: none; }
   .cal-sidebar-content { padding: 12px; }
-
-  .resize-handle { display: none; }
 
   /* En móvil el FAB crea la actividad; el botón del sidebar ya no hace falta */
   .cal-btn-nueva-sidebar { display: none; }

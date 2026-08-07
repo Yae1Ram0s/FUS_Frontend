@@ -3,6 +3,9 @@
 /* Sombra clara:   rgba(255,255,255,0.08)       */
 /* Borde sutil:    rgba(255,255,255,0.12)        */
 
+/* Ancho fijo en desktop — sin colapso a icon-strip (antes se podía angostar
+   con un botón dentro del propio sidebar; se quitó para que el menú
+   principal se quede siempre fijo/visible, sin necesidad de reabrirlo). */
 .sidebar {
   width: 256px;
   flex-shrink: 0;
@@ -14,75 +17,12 @@
   overflow: hidden;
   position: relative;
   z-index: 100;
-  transition: width 300ms ease;
 }
 
-/* ── Desktop: icon-strip cuando no está expandido ── */
-@media (min-width: 769px) {
-  .sidebar:not(.sidebar-open) {
-    width: 64px;
-  }
-
-  .sidebar:not(.sidebar-open) .sidebar-user-info,
-  .sidebar:not(.sidebar-open) .sidebar-item-label,
-  .sidebar:not(.sidebar-open) .sidebar-section-label {
-    opacity: 0;
-    max-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    transition: opacity 200ms ease, max-width 200ms ease;
-  }
-
-  .sidebar:not(.sidebar-open) .sidebar-nav     { align-items: center; }
-  .sidebar:not(.sidebar-open) .sidebar-item    { justify-content: center; padding: 11px; }
-  .sidebar:not(.sidebar-open) .sidebar-user    { justify-content: center; padding: 18px 8px; gap: 0; }
-  .sidebar:not(.sidebar-open) .sidebar-toggle-row { justify-content: center; }
-
-  /* Sin borde izquierdo en modo icono — evita que el ícono se desplace del centro */
-  .sidebar:not(.sidebar-open) .sidebar-item-active { border-left: none; }
-}
-
-/* ── Botón toggle ── */
-.sidebar-toggle-row {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 10px 4px;
-  flex-shrink: 0;
-}
-
-.sidebar-toggle-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #235b4e;
-  color: rgba(255, 255, 255, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 3px 3px 7px rgba(0,0,0,0.32), -2px -2px 5px rgba(255,255,255,0.07);
-  transition: all 200ms ease-in-out;
-  flex-shrink: 0;
-}
-.sidebar-toggle-btn:hover  {
-  color: #fff;
-  box-shadow: 5px 5px 10px rgba(0,0,0,0.35), -3px -3px 7px rgba(255,255,255,0.08);
-}
-.sidebar-toggle-btn:active {
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.30), inset -2px -2px 5px rgba(255,255,255,0.06);
-}
-
-@media (max-width: 768px) {
-  .sidebar-toggle-row { display: none; }
-}
-
-/* ── Tablet (769-1024px): icon-strip por defecto ── */
+/* ── Tablet (769-1024px): un poco más angosto, siempre expandido ── */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .sidebar:not(.sidebar-open) { width: 60px; }
   .sidebar-nav { padding: 12px 8px 8px; }
   .sidebar-item { padding: 10px; }
-  .sidebar-toggle-row { padding: 8px 8px 4px; }
 }
 
 /* ── Móvil: oculto — bottom nav reemplaza la navegación ── */

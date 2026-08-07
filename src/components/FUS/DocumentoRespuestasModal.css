@@ -28,3 +28,12 @@
   color: #235b4e;
   margin-bottom: 10px;
 }
+
+/* Separa el listado de respuestas de las acciones de validación (Rechazar/
+   Concluir), que solo aparecen para el Particular cuando esta persona ya
+   marcó su turnado como Atendido. */
+.drm-validar-divider {
+  height: 1px;
+  background: rgba(35, 91, 78, 0.15);
+  margin: 2px 0 4px;
+}

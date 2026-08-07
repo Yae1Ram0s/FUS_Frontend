@@ -14,7 +14,7 @@
   display: flex;
   height: 100%;
   overflow: hidden;
-  background-color: rgba(79, 119, 109, 0.8);
+  background-color: rgba(79, 119, 109, 0.9);
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -22,46 +22,22 @@
   background-blend-mode: multiply;
 }
 
-/* ── Modo dashboard: ocultar panel izquierdo y handle (PC y móvil) ──
+/* ── Modo dashboard: ocultar panel izquierdo (PC y móvil) ──
    :not(.panel-cerrado) es necesario porque colapsar el panel (botón toggle)
    también le quita "lista-mode" al contenedor — sin esta excepción, la
    pestaña colapsada quedaba con display:none en vez de reducirse a 44px. */
-.cfus-inner:not(.lista-mode):not(.has-detail) .cfus-left:not(.panel-cerrado),
-.cfus-inner:not(.lista-mode):not(.has-detail) .resize-handle {
+.cfus-inner:not(.lista-mode):not(.has-detail) .cfus-left:not(.panel-cerrado) {
   display: none;
 }
 
-/* ── Handle de resize ── */
-.resize-handle {
-  width: 6px;
-  flex-shrink: 0;
-  cursor: col-resize;
-  background: transparent;
-  position: relative;
-  z-index: 10;
-  transition: background 150ms;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.resize-handle:hover  { background: rgba(35,91,78,0.08); }
-.resize-handle:active { background: rgba(35,91,78,0.15); }
-
-.resize-dots {
-  width: 3px;
-  height: 24px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.25);
-  pointer-events: none;
-}
-
-/* ── Panel izquierdo — glassmorphism verde translúcido ── */
+/* ── Panel izquierdo — glassmorphism verde translúcido — ancho fijo, ya no
+   se puede angostar/ensanchar arrastrando (antes tenía un resize-handle). ── */
 .cfus-left {
-  width: 340px;
+  width: 530px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background-color: rgba(79, 119, 109, 0.8);
+  background-color: rgba(79, 119, 109, 0.9);
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -77,6 +53,8 @@
   position: relative;
   z-index: 150;
 }
+
+.cfus-left.panel-cerrado { width: 44px; }
 
 .panel-header {
   padding: 16px 16px 12px;
@@ -122,6 +100,15 @@
 }
 .panel-toggle:hover  { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .panel-toggle:active { background: rgba(255, 255, 255, 0.06); }
+
+/* Desktop: el panel de la lista se queda fijo, sin poder angostarlo a la
+   pestaña de 44px — se oculta el botón solo mientras está abierto (evita el
+   clic que lo colapsa); si llega ya colapsado (modo "detalle directo desde
+   Dashboard", sin lista) el botón se sigue viendo para poder reabrirlo. El
+   toggle de móvil (lista/detalle en pantalla completa) no se toca. */
+@media (min-width: 769px) {
+  .cfus-left:not(.panel-cerrado) .panel-toggle { display: none; }
+}
 
 /* Opening: panel expands first, then content fades in */
 .cfus-left { transition: width 220ms cubic-bezier(0.4,0,0.2,1); }
@@ -218,7 +205,7 @@
   cursor: pointer;
   box-shadow: none;
   transition: background 200ms ease-in-out, color 150ms ease-in-out, border-color 150ms;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
   max-width: 100%;
 }
@@ -231,7 +218,7 @@
 .cfus-left .filtro-chip-pendiente_validacion,
 .cfus-left .filtro-chip-vencido,
 .cfus-left .filtro-chip-porvencer,
-.cfus-left .filtro-chip-alta       { color: rgba(221, 201, 163, 0.90); }
+.cfus-left .filtro-chip-alta       { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 
 .cfus-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
@@ -434,7 +421,7 @@
   min-width: 0;
   min-height: 0;
   font-size: 0.80rem;
-  color: rgba(255, 255, 255, 0.60) !important;
+  color: rgba(255, 255, 255, 0.80) !important;
   margin: 0;
   padding-right: 26px;
   padding-bottom: 26px;
@@ -1642,10 +1629,10 @@
   .cfus-left                  { width: 230px !important; }
   .cfus-left.panel-cerrado    { width: 44px  !important; }
   /* A este ancho el panel no alcanza para el folio + el padding-right fijo
-     que reserva espacio para el badge absoluto (pensado para 340px) — con
-     badges largos como "Pendiente de validación" no queda casi nada para el
-     folio y word-break:break-all lo parte letra por letra. El badge pasa a
-     fluir debajo del folio en vez de superponerse. */
+     que reserva espacio para el badge absoluto (pensado para el ancho de
+     escritorio) — con badges largos como "Pendiente de validación" no
+     queda casi nada para el folio y word-break:break-all lo parte letra
+     por letra. El badge pasa a fluir debajo del folio en vez de superponerse. */
   .cfus-left .fus-card-top      { padding-right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .cfus-left .fus-card-top > span { position: static; }
   .cfus-right    { padding: 1.25rem; }
@@ -1716,7 +1703,6 @@
   .cfus-left .left-filtros::-webkit-scrollbar { display: none; }
   .cfus-left .filtro-chip { flex-shrink: 0; }
 
-  .resize-handle { display: none; }
   .cfus-inner.has-detail { overflow: hidden; }
 
   /* Detalle: ocultar la lista para que el detalle use toda la pantalla */

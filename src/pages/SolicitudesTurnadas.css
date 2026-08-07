@@ -6,7 +6,7 @@
   display: flex;
   height: 100%;
   overflow: hidden;
-  background-color: rgba(79, 119, 109, 0.8);
+  background-color: rgba(79, 119, 109, 0.9);
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -14,46 +14,22 @@
   background-blend-mode: multiply;
 }
 
-/* ── Modo dashboard: ocultar panel izquierdo y handle (PC y móvil) ──
+/* ── Modo dashboard: ocultar panel izquierdo (PC y móvil) ──
    :not(.panel-cerrado) es necesario porque colapsar el panel (botón toggle)
    también le quita "lista-mode" al contenedor — sin esta excepción, la
    pestaña colapsada quedaba con display:none en vez de reducirse a 44px. */
-.st-inner:not(.lista-mode):not(.has-detail) .st-left:not(.panel-cerrado),
-.st-inner:not(.lista-mode):not(.has-detail) .resize-handle {
+.st-inner:not(.lista-mode):not(.has-detail) .st-left:not(.panel-cerrado) {
   display: none;
 }
 
-/* ── Handle de resize ── */
-.resize-handle {
-  width: 6px;
-  flex-shrink: 0;
-  cursor: col-resize;
-  background: transparent;
-  position: relative;
-  z-index: 10;
-  transition: background 150ms;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.resize-handle:hover  { background: rgba(35,91,78,0.08); }
-.resize-handle:active { background: rgba(35,91,78,0.15); }
-
-.resize-dots {
-  width: 3px;
-  height: 24px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.25);
-  pointer-events: none;
-}
-
-/* ── Panel izquierdo — glassmorphism verde translúcido ── */
+/* ── Panel izquierdo — glassmorphism verde translúcido — ancho fijo, ya no
+   se puede angostar/ensanchar arrastrando (antes tenía un resize-handle). ── */
 .st-left {
-  width: 340px;
+  width: 530px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background-color: rgba(79, 119, 109, 0.8);
+  background-color: rgba(79, 119, 109, 0.9);
   background-image: url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
@@ -69,6 +45,8 @@
   position: relative;
   z-index: 150;
 }
+
+.st-left.panel-cerrado { width: 44px; }
 
 .st-left .panel-header {
   padding: 16px 16px 12px;
@@ -191,7 +169,7 @@
   cursor: pointer;
   box-shadow: none;
   transition: background 200ms ease-in-out, color 150ms ease-in-out, border-color 150ms;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
   max-width: 100%;
 }
@@ -204,7 +182,7 @@
 .st-left .filtro-chip-rechazado,
 .st-left .filtro-chip-vencido,
 .st-left .filtro-chip-porvencer,
-.st-left .filtro-chip-alta           { color: rgba(221, 201, 163, 0.90); }
+.st-left .filtro-chip-alta           { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 
 .st-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
@@ -406,7 +384,7 @@
   min-width: 0;
   min-height: 0;
   font-size: 0.80rem;
-  color: rgba(255, 255, 255, 0.50) !important;
+  color: rgba(255, 255, 255, 0.80) !important;
   margin: 0;
   padding-right: 26px;
   padding-bottom: 26px;
@@ -1500,7 +1478,6 @@
   .st-left .left-filtros::-webkit-scrollbar { display: none; }
   .st-left .filtro-chip { flex-shrink: 0; }
 
-  .resize-handle { display: none; }
   .st-inner.has-detail { overflow: hidden; }
 
   /* Detalle: ocultar la lista para que el detalle use toda la pantalla */

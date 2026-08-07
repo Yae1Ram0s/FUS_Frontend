@@ -5,7 +5,6 @@ import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
-import { useResizablePanel } from '../hooks/useResizablePanel'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import FusFolioPicker from '../components/Calendario/FusFolioPicker'
 import FechaInput from '../components/FechaInput'
@@ -352,7 +351,6 @@ export default function CalendarioActividades() {
   const [ultraCompacto, setUltraCompacto] = useState(() => window.innerWidth < 640)
   const { user } = useAuth()
   const notifCtx = useNotificaciones()
-  const { leftWidth, containerRef, startResize } = useResizablePanel('scs_calendario_panel_w')
   const mesesCargadosRef = useRef(new Set())
   const toastTimeoutRef  = useRef(null)
   const diaScrollRef     = useRef(null)
@@ -516,9 +514,9 @@ export default function CalendarioActividades() {
 
   return (
     <AppLayout>
-      <div className="cal-page" ref={containerRef}>
+      <div className="cal-page">
         {/* ── Sidebar propio del calendario ── */}
-        <div className={`cal-sidebar${!panelAbierto ? ' panel-cerrado' : ''}`} style={{ width: panelAbierto ? leftWidth : 44 }}>
+        <div className={`cal-sidebar${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
             {panelAbierto && <div className="panel-header-left"><h3 className="panel-title">Calendario</h3></div>}
             <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
@@ -559,11 +557,6 @@ export default function CalendarioActividades() {
             </div>
           )}
 
-          {panelAbierto && (
-            <div className="resize-handle" onMouseDown={startResize} onTouchStart={startResize}>
-              <span className="resize-dots" />
-            </div>
-          )}
         </div>
 
         {/* ── Panel principal ── */}
