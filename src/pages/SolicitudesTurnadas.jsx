@@ -7,6 +7,7 @@ import ModalTimeline from '../components/ModalTimeline'
 import ModalDescargarPDF from '../components/ModalDescargarPDF'
 import { descargar } from '../utils/descargarArchivo'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
+import ConfirmModal from '../components/Comisionado/ConfirmModal'
 import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
@@ -58,14 +59,17 @@ function tipoTagSeguimiento(s) {
 }
 
 /* ── Sección Respuestas y Seguimiento ── */
-function Seguimientos({ turnadoId, folio, estatusFus, onRegistrado }) {
-  // Fuente única de verdad: fus.estatusParticular (ya se refresca via
-  // setFusData en cada acción). 'Pendiente_validacion' bloquea nuevas
+function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
+  // Fuente única de verdad: turnado.estatusTitular (ya se refresca via
+  // setTurnadoData en cada acción) — cada persona turnada avanza su propio
+  // turnado de forma independiente, así que el estatus del FUS completo
+  // (que en un FUS con varias personas se queda en 'Atendido' hasta que
+  // TODAS concluyen) no sirve aquí. 'Pendiente_validacion' bloquea nuevas
   // respuestas mientras el Particular valida — si rechaza, vuelve a
   // 'Rechazado', que SÍ sigue abierto (la siguiente respuesta reabre el
-  // FUS, mismo criterio que ya tiene el flujo de Comisionado).
-  const concluido = estatusFus === 'Concluido'
-  const pendienteValidacion = estatusFus === 'Pendiente_validacion'
+  // turnado, mismo criterio que ya tiene el flujo de Comisionado).
+  const concluido = estatusTurnado === 'Concluido'
+  const pendienteValidacion = estatusTurnado === 'Pendiente_validacion'
   const soloLectura = concluido || pendienteValidacion
   const { user } = useAuth()
   const hoy = new Date().toISOString().split('T')[0]
@@ -293,7 +297,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
   const [turnadoData,    setTurnadoData]    = useState(turnadoInicial)
   const [modalComisionar, setModalComisionar] = useState(false)
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
-  const [marcandoAtendido, setMarcandoAtendido] = useState(false)
+  const [modalAtendido, setModalAtendido] = useState(false)
   const toast = useToast()
   const fus = fusData
   const turnado = turnadoData
@@ -443,7 +447,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
         : <Seguimientos
             turnadoId={turnado.id}
             folio={fus.folio}
-            estatusFus={fus.estatusParticular}
+            estatusTurnado={turnado.estatusTitular}
             onRegistrado={(estatusParticular, estatusTitular) => {
               if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
               if (estatusTitular) setTurnadoData(t => ({ ...t, estatusTitular }))
@@ -458,27 +462,25 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
           comisionado); ese caso lo sigue cubriendo AccionesValidacion. */}
       {!fus.idComisionado && turnado.estatusTitular === 'En_seguimiento' && (
         <div className="dt-actions">
-          <button
-            type="button"
-            className="com-btn-verde"
-            disabled={marcandoAtendido}
-            onClick={async () => {
-              setMarcandoAtendido(true)
-              try {
+          <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>
+            Atendido
+          </button>
+          {modalAtendido && (
+            <ConfirmModal
+              titulo="Marcar como atendido"
+              texto="¿Confirmas que tu respuesta está completa? Será revisada por el Particular o su equipo, y ya no podrás registrar más respuestas hasta que la validen."
+              textoBoton="Confirmar"
+              colorBoton="verde"
+              onClose={() => setModalAtendido(false)}
+              onConfirmar={async () => {
                 const { data } = await api.post(`/turnados/${turnado.id}/atendido/`)
                 setTurnadoData(t => ({ ...t, estatusTitular: data.estatusTitular }))
                 if (data.estatusParticular) setFusData(f => ({ ...f, estatusParticular: data.estatusParticular }))
+                setModalAtendido(false)
                 toast.success('Tu parte se marcó como atendida.')
-              } catch (err) {
-                toast.error(err.response?.data?.detail || 'No se pudo marcar como atendida.')
-              } finally {
-                setMarcandoAtendido(false)
-              }
-            }}
-          >
-            {marcandoAtendido && <span className="btn-spinner" />}
-            {marcandoAtendido ? 'Guardando…' : 'Atendido'}
-          </button>
+              }}
+            />
+          )}
         </div>
       )}
 

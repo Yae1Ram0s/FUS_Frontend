@@ -66,7 +66,7 @@ export default function DocumentoRespuestasModal({
   // ConcluirPersonaTurnadoView/RechazarPersonaTurnadoView en el backend. No
   // afecta a las demás personas del mismo FUS ni, al concluir, al FUS
   // completo hasta que todas estén concluidas.
-  const puedeValidar = turnado?.estatusTitular === 'Atendido'
+  const puedeValidar = turnado?.estatusTitular === 'Pendiente_validacion'
 
   const enviar = async (accion, datos) => {
     if (envioEnCursoRef.current) return

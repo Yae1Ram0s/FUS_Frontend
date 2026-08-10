@@ -20,6 +20,7 @@ const PanelAdmin = lazy(() => import('./pages/PanelAdmin'))
 const CalendarioActividades = lazy(() => import('./pages/CalendarioActividades'))
 const FUSComisionados = lazy(() => import('./pages/FUSComisionados'))
 const Reportes = lazy(() => import('./pages/Reportes'))
+const ReportesROL2 = lazy(() => import('./pages/ReportesROL2'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 export default function App() {
@@ -71,6 +72,7 @@ export default function App() {
                   <Route path="/rol2/bitacora"    element={<Bitacora />} />
                   <Route path="/rol2/dashboard"   element={<DashboardROL2 />} />
                   <Route path="/rol2/calendario"  element={<CalendarioActividades />} />
+                  <Route path="/rol2/reportes"    element={<ReportesROL2 />} />
                 </Route>
 
                 {/* COMISIONADO */}

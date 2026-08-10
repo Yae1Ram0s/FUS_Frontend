@@ -108,8 +108,8 @@ export function NotificacionesProvider({ children }) {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const wsBase = (import.meta.env.VITE_WS_URL || '').replace(/\/$/, '')
     const wsUrl = wsBase
-      ? `${wsBase}/ws/notificaciones/?token=${accessToken}`
-      : `${proto}://${window.location.host}/ws/notificaciones/?token=${accessToken}`
+      ? `${wsBase}/ws/notificaciones/`
+      : `${proto}://${window.location.host}/ws/notificaciones/`
 
     const connect = () => {
       if (disposed) return
@@ -120,6 +120,9 @@ export function NotificacionesProvider({ children }) {
 
         ws.onopen = () => {
           if (disposed) return
+          // El token va como primer mensaje (no en la URL) para que no
+          // quede registrado en logs de proxies/servidores intermedios.
+          ws.send(JSON.stringify({ token: accessToken }))
           reconnectIntentos.current = 0
           if (pollingId.current) { clearInterval(pollingId.current); pollingId.current = null }
         }

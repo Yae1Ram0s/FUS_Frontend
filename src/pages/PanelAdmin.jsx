@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useCountUp } from '../hooks/useCountUp'
+import '../components/Comisionado/Comisionado.css'
 import './PanelAdmin.css'
 
 // label corto (cabe en una línea, como "Total de FUS") + sub con el detalle
@@ -345,24 +346,27 @@ export default function PanelAdmin() {
 
         {/* Modal — Agregar */}
         {modal === 'agregar' && createPortal(
-          <div className="adm-overlay" onClick={() => setModal(false)}>
-            <div className="adm-modal" onClick={e => e.stopPropagation()}>
-              <h3 className="adm-modal-title">Agregar correo autorizado</h3>
+          <div className="com-overlay" role="dialog" aria-modal="true" aria-label="Agregar correo autorizado" onClick={() => !guardando && setModal(false)}>
+            <div className="com-modal" onClick={e => e.stopPropagation()}>
+              <div className="com-modal-top">
+                <h3>Agregar correo autorizado</h3>
+                <button type="button" className="com-modal-x" onClick={() => setModal(false)} disabled={guardando} aria-label="Cerrar">✕</button>
+              </div>
               <form onSubmit={agregarCorreo} className="adm-modal-form">
                 <label>Email institucional
-                  <input type="email" placeholder="usuario@anam.gob.mx"
+                  <input className="com-pill-input" type="email" placeholder="usuario@anam.gob.mx"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     required />
                 </label>
                 <label>Nombre completo
-                  <input type="text" placeholder="Nombre Apellido"
+                  <input className="com-pill-input" type="text" placeholder="Nombre Apellido"
                     value={form.nombre}
                     onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                     required />
                 </label>
                 <label>Rol
-                  <select value={form.rol} onChange={e => {
+                  <select className="com-pill-input" value={form.rol} onChange={e => {
                     const rol = e.target.value
                     setForm(f => ({ ...f, rol }))
                     setError('')
@@ -381,7 +385,7 @@ export default function PanelAdmin() {
                 ) : (
                   <label>Unidad administrativa{form.rol === 'COMISIONADO' && <span className="adm-campo-requerido"> *</span>}
                     <select
-                      className={unidadFaltante && error ? 'adm-select-error' : ''}
+                      className={`com-pill-input${unidadFaltante && error ? ' adm-select-error' : ''}`}
                       value={form.unidadAdministrativa}
                       onChange={e => { setForm(f => ({ ...f, unidadAdministrativa: e.target.value })); setError('') }}>
                       <option value="" disabled={form.rol === 'COMISIONADO'}>Sin asignar</option>
@@ -412,10 +416,10 @@ export default function PanelAdmin() {
                     Este usuario podrá llenar, turnar y consultar FUS en tu representación: solo verá y operará las solicitudes registradas por ti.
                   </p>
                 )}
-                {error && <p className="adm-modal-error">{error}</p>}
-                <div className="adm-modal-actions">
-                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
-                  <button type="submit" className={`adm-btn-save${unidadFaltante ? ' adm-btn-save-bloqueado' : ''}`} disabled={guardando}>
+                {error && <p className="com-alert-error">{error}</p>}
+                <div className="com-confirm-acciones">
+                  <button type="button" className="com-btn-ghost" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
+                  <button type="submit" className={`com-btn-verde${unidadFaltante ? ' adm-btn-save-bloqueado' : ''}`} disabled={guardando}>
                     {guardando && <span className="btn-spinner" />}
                     {guardando ? 'Guardando…' : 'Agregar'}
                   </button>
@@ -428,24 +432,27 @@ export default function PanelAdmin() {
 
         {/* Modal — Editar */}
         {modal === 'editar' && editando && createPortal(
-          <div className="adm-overlay" onClick={() => setModal(false)}>
-            <div className="adm-modal" onClick={e => e.stopPropagation()}>
-              <h3 className="adm-modal-title">Editar usuario</h3>
+          <div className="com-overlay" role="dialog" aria-modal="true" aria-label="Editar usuario" onClick={() => !guardando && setModal(false)}>
+            <div className="com-modal" onClick={e => e.stopPropagation()}>
+              <div className="com-modal-top">
+                <h3>Editar usuario</h3>
+                <button type="button" className="com-modal-x" onClick={() => setModal(false)} disabled={guardando} aria-label="Cerrar">✕</button>
+              </div>
               <form onSubmit={guardarEdicion} className="adm-modal-form">
                 <label>Nombre completo
-                  <input type="text" placeholder="Nombre Apellido"
+                  <input className="com-pill-input" type="text" placeholder="Nombre Apellido"
                     value={formEdit.nombre}
                     onChange={e => setFormEdit(f => ({ ...f, nombre: e.target.value }))}
                     required />
                 </label>
                 <label>Correo electrónico
-                  <input type="email" placeholder="usuario@anam.gob.mx"
+                  <input className="com-pill-input" type="email" placeholder="usuario@anam.gob.mx"
                     value={formEdit.email}
                     onChange={e => setFormEdit(f => ({ ...f, email: e.target.value }))}
                     required />
                 </label>
                 <label>Rol
-                  <select value={formEdit.rol}
+                  <select className="com-pill-input" value={formEdit.rol}
                     onChange={e => setFormEdit(f => ({ ...f, rol: e.target.value }))}>
                     <option value="ROL1">Particular del Titular</option>
                     <option value="ROL2">Titular/Enlace Estratégico</option>
@@ -454,7 +461,7 @@ export default function PanelAdmin() {
                   </select>
                 </label>
                 <label>Unidad administrativa
-                  <select value={formEdit.unidadAdministrativa}
+                  <select className="com-pill-input" value={formEdit.unidadAdministrativa}
                     onChange={e => setFormEdit(f => ({ ...f, unidadAdministrativa: e.target.value }))}>
                     <option value="">Sin asignar</option>
                     <optgroup label="Direcciones generales">
@@ -473,10 +480,10 @@ export default function PanelAdmin() {
                     </optgroup>
                   </select>
                 </label>
-                {error && <p className="adm-modal-error">{error}</p>}
-                <div className="adm-modal-actions">
-                  <button type="button" className="adm-btn-cancel" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
-                  <button type="submit" className="adm-btn-save" disabled={guardando}>
+                {error && <p className="com-alert-error">{error}</p>}
+                <div className="com-confirm-acciones">
+                  <button type="button" className="com-btn-ghost" onClick={() => setModal(false)} disabled={guardando}>Cancelar</button>
+                  <button type="submit" className="com-btn-verde" disabled={guardando}>
                     {guardando && <span className="btn-spinner" />}
                     {guardando ? 'Guardando…' : 'Guardar cambios'}
                   </button>

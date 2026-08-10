@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
@@ -92,6 +92,11 @@ const ICON_BUILDING = (
 const ICON_LIST = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+)
+const ICON_INBOX = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
   </svg>
 )
 
@@ -287,6 +292,20 @@ export default function Reportes() {
   const [exportando, setExportando] = useState('')
   const [guardarAlExportar, setGuardarAlExportar] = useState(false)
   const [guardadosAbierto, setGuardadosAbierto] = useState(false)
+  const [seccionesAbiertas, setSeccionesAbiertas] = useState(false)
+  const seccionesRef = useRef(null)
+
+  // Cerrar el desplegable de "Secciones del reporte" al tocar fuera — un
+  // <details>/<summary> nativo no soporta esto (solo se cierra volviendo a
+  // hacer clic en el mismo resumen), por eso es un dropdown controlado.
+  useEffect(() => {
+    if (!seccionesAbiertas) return
+    const handle = (e) => {
+      if (seccionesRef.current && !seccionesRef.current.contains(e.target)) setSeccionesAbiertas(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [seccionesAbiertas])
 
   const rangoFechas = tipoPeriodo === 'Personalizado'
     ? personalizado
@@ -518,12 +537,16 @@ export default function Reportes() {
                       <input type="checkbox" checked={guardarAlExportar} onChange={e => setGuardarAlExportar(e.target.checked)} />
                       Guardar copia al exportar
                     </label>
-                    <details className="rep-selector">
-                      <summary>Secciones del reporte ({seleccion.length})</summary>
-                      <div>{opciones.secciones.map(s => (
-                        <label key={s.id}><input type="checkbox" checked={visible(s.id)} onChange={() => toggleSeccion(s.id)} />{s.nombre}</label>
-                      ))}</div>
-                    </details>
+                    <div className="rep-selector" ref={seccionesRef}>
+                      <button type="button" onClick={() => setSeccionesAbiertas(v => !v)} aria-expanded={seccionesAbiertas}>
+                        Secciones del reporte ({seleccion.length})
+                      </button>
+                      {seccionesAbiertas && (
+                        <div>{opciones.secciones.map(s => (
+                          <label key={s.id}><input type="checkbox" checked={visible(s.id)} onChange={() => toggleSeccion(s.id)} />{s.nombre}</label>
+                        ))}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -575,6 +598,36 @@ export default function Reportes() {
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
+                      </Panel>
+                    )}
+
+                    {visible('canal_recepcion') && (
+                      <Panel titulo="Canal de recepción" icon={ICON_INBOX}>
+                        {data.canal_recepcion.length === 0 ? <p className="dash-empty">Sin datos en el periodo.</p> : (
+                          <ResponsiveContainer width="100%" height={Math.max(140, data.canal_recepcion.length * 28)}>
+                            <BarChart data={data.canal_recepcion} layout="vertical" margin={{ top: 0, right: 14, left: 4, bottom: 0 }}>
+                              <XAxis type="number" hide />
+                              <YAxis type="category" dataKey="nombre" width={130} axisLine={false} tickLine={false} tick={{ fontSize: 10.5, fill: '#55555a' }} />
+                              <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'rgba(31,86,71,0.06)' }} />
+                              <Bar dataKey="cantidad" name="FUS" radius={[0, 8, 8, 0]}>
+                                {data.canal_recepcion.map((_, i) => <Cell key={i} fill={COLORES[i % COLORES.length]} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </Panel>
+                    )}
+
+                    {visible('antiguedad') && (
+                      <Panel titulo="Antigüedad de solicitudes" icon={ICON_CLOCK}>
+                        <div className="dash-bucket-row">
+                          {data.antiguedad.map((b, i) => (
+                            <div key={b.rango} className={`dash-bucket-card${i === 2 ? ' dash-bucket-card-warn' : ''}${i === 3 ? ' dash-bucket-card-danger' : ''}`}>
+                              <span className="dash-bucket-value">{b.cantidad}</span>
+                              <span className="dash-bucket-label">{b.rango}</span>
+                            </div>
+                          ))}
+                        </div>
                       </Panel>
                     )}
 

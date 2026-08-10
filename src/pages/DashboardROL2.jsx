@@ -197,8 +197,8 @@ export default function DashboardROL2() {
       return { id: t.id, folio: t.idFus.folio, asunto: t.idFus.descripcion || 'Sin descripción', tipo, icon, badge }
     })
 
-  /* ── FUS atendidos esta semana (real, agrupado por día — lunes a domingo) ── */
-  const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+  /* ── FUS atendidos esta semana (real, agrupado por día — solo hábiles, lunes a viernes) ── */
+  const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
   const inicioSemana = new Date(ahora)
   inicioSemana.setHours(0, 0, 0, 0)
   inicioSemana.setDate(inicioSemana.getDate() - ((inicioSemana.getDay() + 6) % 7))
@@ -215,10 +215,12 @@ export default function DashboardROL2() {
   const totalSemanaActual = atendidosPorDia.reduce((s, d) => s + d.value, 0)
   const inicioSemanaAnt = new Date(inicioSemana)
   inicioSemanaAnt.setDate(inicioSemanaAnt.getDate() - 7)
+  const finSemanaAntHabil = new Date(inicioSemanaAnt)
+  finSemanaAntHabil.setDate(finSemanaAntHabil.getDate() + 5)
   const totalSemanaAnterior = turnados.filter(t => {
     if (t.estatusTitular !== 'Concluido' || !t.idFus?.fechaConclusion) return false
     const fc = new Date(t.idFus.fechaConclusion)
-    return fc >= inicioSemanaAnt && fc < inicioSemana
+    return fc >= inicioSemanaAnt && fc < finSemanaAntHabil
   }).length
   // Con 0 y 0 la comparación "igual que la semana pasada" es técnicamente
   // cierta pero engañosa — suena a que sí hubo actividad y se mantuvo, cuando

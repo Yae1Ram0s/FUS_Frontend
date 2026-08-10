@@ -14,7 +14,9 @@ import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
 const PRIORIDAD_COLORES = { Alta: '#b91c1c', Media: '#92400e', Baja: '#15803d' }
-const ESTADO_COLORES = { Pendiente: '#8a93a8', 'En proceso': '#c9a227', Finalizado: '#1F5647', Cancelado: '#b91c1c' }
+// Todo lo que no sea "Concluido" — usado para que el KPI "Prioridad alta"
+// (que cuenta solo lo sin concluir) lleve exactamente a esos mismos folios.
+const ESTADOS_NO_CONCLUIDO = ['Registrado', 'Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado']
 
 const ICON_FOLDER = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -41,11 +43,6 @@ const ICON_STACK = (
 const ICON_ALARM = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3 2 6"/><path d="M22 6l-3-3"/>
-  </svg>
-)
-const ICON_MOON = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
   </svg>
 )
 const ICON_FLAG = (
@@ -101,38 +98,6 @@ function diasDesde(iso, ahora) {
   return (ahora - new Date(iso).getTime()) / DIA_MS
 }
 
-/* ── Tarjeta de KPI minimalista, estilo Apple ── */
-function KpiTile({ icon, value, label, sublabel, accent, live, onClick }) {
-  const count = useCountUp(value)
-  return (
-    <div
-      className={`dash-mini-stat${onClick ? ' dash-mini-stat-clickable' : ''}`}
-      style={{ '--accent': accent }}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e => e.key === 'Enter' && onClick()) : undefined}
-    >
-      <span className="dash-mini-stat-icon">{icon}</span>
-      <div className="dash-mini-stat-body">
-        <div className="dash-mini-stat-value-row">
-          <span className="dash-mini-stat-value">{count}</span>
-          {live && <span className="dash-mini-stat-live" />}
-        </div>
-        <span className="dash-mini-stat-label">{label}</span>
-        {sublabel && <span className="dash-mini-stat-sub">{sublabel}</span>}
-      </div>
-      {onClick && (
-        <span className="dash-mini-stat-arrow">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </span>
-      )}
-    </div>
-  )
-}
-
 /* ── Barras horizontales genéricas ── */
 function BarrasHorizontales({ data }) {
   const max = Math.max(1, ...data.map(d => d.value))
@@ -179,46 +144,8 @@ function TendenciaChart({ data }) {
   )
 }
 
-/* ── Donut multi-segmento (conic-gradient enmascarado) ── */
-function DonutEstados({ data }) {
-  const total = data.reduce((s, d) => s + d.value, 0)
-  let acc = 0
-  const stops = total > 0
-    ? data.map(d => {
-        const start = (acc / total) * 360
-        acc += d.value
-        const end = (acc / total) * 360
-        return `${d.color} ${start}deg ${end}deg`
-      }).join(', ')
-    : null
-
-  return (
-    <div className="dash-donut-multi-wrap">
-      <div className="dash-donut-multi-figure">
-        <div
-          className={`dash-donut-multi-ring${total === 0 ? ' dash-donut-multi-empty' : ''}`}
-          style={total > 0 ? { background: `conic-gradient(${stops})` } : undefined}
-        />
-        <div className="dash-donut-multi-total">
-          <span className="dash-donut-multi-total-value">{total}</span>
-          <span className="dash-donut-multi-total-label">Total</span>
-        </div>
-      </div>
-      <ul className="dash-donut-legend">
-        {data.map(d => (
-          <li key={d.label}>
-            <span className="dash-dot" style={{ background: d.color }} />
-            <span className="dash-legend-label">{d.label}</span>
-            <span className="dash-legend-value">{d.value}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-/* ── Rediseño "liquid glass" (solo ROL1) — tarjeta de KPI con glow e icono
-   degradado. Reusa useCountUp igual que KpiTile para no perder la animación. ── */
+/* ── Rediseño "liquid glass" — tarjeta de KPI con glow e icono degradado,
+   usada por ambos dashboards (ROL1 y su Equipo del Particular). ── */
 function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
   const count = useCountUp(value)
   return (
@@ -297,52 +224,52 @@ export default function DashboardROL1() {
   }, [reintentar, ultimaNotifFolio, ultimaNotifId])
 
   const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
-  const irAConsultarPrioridad = (prioridad) => navigate(`/rol1/consultar-fus?modo=lista&prioridad=${encodeURIComponent(prioridad)}`)
+  // "Prioridad alta" en el KPI cuenta solo lo que sigue sin concluir (ver
+  // prioridadAltaPendiente más abajo) — sin este mismo filtro de estatus, el
+  // clic llevaba a TODOS los de prioridad alta (incluyendo ya concluidos),
+  // mostrando más folios de los que el número de la tarjeta prometía.
+  const irAConsultarPrioridad = (prioridad) => navigate(
+    `/rol1/consultar-fus?modo=lista&prioridad=${encodeURIComponent(prioridad)}&filtro=${encodeURIComponent(ESTADOS_NO_CONCLUIDO.join(','))}`
+  )
   const irAlFus = (folio) => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(folio)}`)
 
   /* ── 1. KPIs principales ── */
   const totalFUS     = fusData.length
   const pendientes   = fusData.filter(f => f.estatusParticular === 'Registrado').length
-  // "En proceso" = todo lo que sigue activo, ni Registrado (sin arrancar) ni
-  // Concluido (cerrado) — incluye Pendiente_validacion y Rechazado, que antes
-  // no caían en ninguna de las 3 tarjetas y hacían que el Total no cuadrara
-  // con Pendientes + En proceso + Finalizados.
-  const ENPROCESO_ESTATUS = ['Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado']
-  const enProceso    = fusData.filter(f => ENPROCESO_ESTATUS.includes(f.estatusParticular)).length
+  // KPI "Atendidos" (tarjeta principal): cuenta nada más el estatus
+  // 'Atendido', para que el número coincida exactamente con lo que muestra
+  // el filtro al que lleva el clic.
+  const atendidos    = fusData.filter(f => f.estatusParticular === 'Atendido').length
   const finalizados  = fusData.filter(f => f.estatusParticular === 'Concluido').length
 
   const noConcluidos = fusData.filter(f => f.estatusParticular !== 'Concluido')
-
-  /* ── Antigüedad / alertas — umbrales bajados para forzar resolución más rápida ── */
-  const bucket01   = noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) <= 1).length
-  const bucket23   = noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 1 && diasDesde(f.fechaHora, ahora) <= 3).length
-  const bucket45   = noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 3 && diasDesde(f.fechaHora, ahora) <= 5).length
-  const bucketMas5 = noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 5).length
-
-  const vencidas = bucketMas5
-  const proximasAVencer = bucket45
   const prioridadAltaPendiente = noConcluidos.filter(f => f.prioridad === 'Alta').length
 
-  /* Última actividad por folio (para "sin movimiento") */
-  const ultimaActividadPorFolio = {}
-  bitacora.forEach(b => {
-    const t = new Date(b.fechaHora).getTime()
-    if (!ultimaActividadPorFolio[b.fusFolio] || t > ultimaActividadPorFolio[b.fusFolio]) {
-      ultimaActividadPorFolio[b.fusFolio] = t
-    }
-  })
-  const SIN_MOVIMIENTO_DIAS = 3
-  const sinMovimiento = noConcluidos.filter(f => {
-    const ultima = ultimaActividadPorFolio[f.folio] ?? (f.fechaHora ? new Date(f.fechaHora).getTime() : ahora)
-    return (ahora - ultima) / DIA_MS > SIN_MOVIMIENTO_DIAS
-  }).length
+  /* ── Antigüedad de solicitudes (equipo del particular) ── */
+  const antiguedadBuckets = [
+    { key: '0-1', label: '0-1 días', value: noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) <= 1).length },
+    { key: '2-3', label: '2-3 días', value: noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 1 && diasDesde(f.fechaHora, ahora) <= 3).length },
+    { key: '4-5', label: '4-5 días', value: noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 3 && diasDesde(f.fechaHora, ahora) <= 5).length, warn: true },
+    { key: '>5',  label: 'Más de 5 días', value: noConcluidos.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) > 5).length, danger: true },
+  ]
 
-  /* ── 3. Tendencia — últimos 14 días ── */
+  /* ── Productividad (equipo del particular) — mismos 3 indicadores que
+     "Análisis de productividad" en Reportes, calculados aquí sobre el total
+     acumulado (el dashboard no tiene selector de periodo como Reportes). ── */
+  const dentroSLA = fusData.filter(f => f.fechaConclusion && (!f.fechaLimite || new Date(f.fechaConclusion) <= new Date(f.fechaLimite))).length
+  const fusUltimos30 = fusData.filter(f => f.fechaHora && diasDesde(f.fechaHora, ahora) <= 30).length
+  const productividadBuckets = [
+    { key: 'tasa',      label: 'Tasa de conclusión', value: `${totalFUS ? Math.round(finalizados * 1000 / totalFUS) / 10 : 0}%` },
+    { key: 'fus-dia',   label: 'FUS por día',        value: Math.round(fusUltimos30 * 10 / 30) / 10 },
+    { key: 'eficiencia', label: 'Eficiencia SLA',    value: `${finalizados ? Math.round(dentroSLA * 1000 / finalizados) / 10 : 0}%` },
+  ]
+
+  /* ── 3. Tendencia — últimos 14 días, solo hábiles (lunes a viernes) ── */
   const dias14 = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(ahora - (13 - i) * DIA_MS)
     d.setHours(0, 0, 0, 0)
     return d
-  })
+  }).filter(d => d.getDay() !== 0 && d.getDay() !== 6)
   const tendencia = dias14.map(d => ({
     label: d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' }),
     value: fusData.filter(f => {
@@ -352,44 +279,21 @@ export default function DashboardROL1() {
     }).length,
   }))
 
-  /* ── 4. Distribución por estado ── */
-  const distribucionEstado = [
-    { label: 'Pendiente',  value: pendientes,  color: ESTADO_COLORES.Pendiente },
-    { label: 'En proceso', value: enProceso,   color: ESTADO_COLORES['En proceso'] },
-    { label: 'Finalizado', value: finalizados, color: ESTADO_COLORES.Finalizado },
-    { label: 'Cancelado',  value: 0,           color: ESTADO_COLORES.Cancelado },
-  ]
-
-  /* ── 5. Distribución por prioridad ── */
+  /* ── Distribución por prioridad — Distribución por estado, Canal de
+     recepción y Antigüedad de solicitudes se movieron a Reportes. ── */
   const distribucionPrioridad = ['Alta', 'Media', 'Baja'].map(p => ({
     label: p,
     value: fusData.filter(f => f.prioridad === p).length,
     color: PRIORIDAD_COLORES[p],
   }))
 
-  /* ── 6. Canal de recepción ── */
-  const medioCounts = {}
-  fusData.forEach(f => {
-    const m = f.idMedioRecepcion?.nombreMedio || 'Otro'
-    medioCounts[m] = (medioCounts[m] || 0) + 1
-  })
-  const canalRecepcion = Object.entries(medioCounts).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
-
-  /* ── 7. Antigüedad ── */
-  const antiguedadBuckets = [
-    { key: '0-1',   label: '0-1 días',    value: bucket01 },
-    { key: '2-3',   label: '2-3 días',    value: bucket23 },
-    { key: '4-5',   label: '4-5 días',    value: bucket45, warn: true },
-    { key: '>5',    label: 'Más de 5 días', value: bucketMas5, danger: true },
-  ]
-
-  /* ── Rediseño "liquid glass" (solo ROL1, ver JSX final) — misma lógica de
+  /* ── Rediseño "liquid glass" (ambos dashboards, ver JSX final) — misma lógica de
      datos, solo se reempaqueta para el nuevo layout visual. ── */
   const kpis2 = [
     { icon: ICON_STACK,  label: 'Total de FUS',   sub: 'Todas las solicitudes',      value: totalFUS,              color: 'blue',  onClick: () => irAConsultar('') },
-    { icon: ICON_FOLDER, label: 'Pendientes',     sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado') },
-    { icon: ICON_TARGET, label: 'En proceso',     sub: 'En trámite, sin concluir',   value: enProceso,             color: 'blue',  onClick: () => irAConsultar('') },
-    { icon: ICON_CHECK,  label: 'Finalizados',    sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido') },
+    { icon: ICON_FOLDER, label: 'Registrados',    sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado') },
+    { icon: ICON_TARGET, label: 'Atendidos',      sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido') },
+    { icon: ICON_CHECK,  label: 'Concluidos',     sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido') },
     { icon: ICON_FLAG,   label: 'Prioridad alta', sub: 'Sin concluir',               value: prioridadAltaPendiente, color: 'red',  onClick: () => irAConsultarPrioridad('Alta') },
   ]
 
@@ -624,7 +528,7 @@ export default function DashboardROL1() {
                 </div>
 
                 <div className="dash2-card">
-                  <div className="dash2-card-title">FUS registrados por día (últimos 7 días)</div>
+                  <div className="dash2-card-title">FUS registrados por día (últimos 7 días hábiles)</div>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={tendencia.slice(-7)} margin={{ top: 10, right: 10, left: -20, bottom: 8 }}>
                       <CartesianGrid vertical={false} stroke="#f0f0f2" />
@@ -656,8 +560,7 @@ export default function DashboardROL1() {
   return (
     <AppLayout>
       <div className="dash-bg">
-        <div className="dash-wrap-apple">
-        <div className="dash-mega-card">
+        <div className="dash2-wrap">
 
           {errorCarga && fusData.length > 0 && (
             <div className="banner-error-carga">
@@ -666,103 +569,39 @@ export default function DashboardROL1() {
             </div>
           )}
 
-          <header className="dash-header-apple">
-            <h1>Hola, {nombre}</h1>
-            <p>Panorama ejecutivo del Sistema de Control de Solicitudes</p>
-          </header>
-
-          {/* ── 1. KPIs principales ── */}
-          <div className="dash-section">
-            <div className="dash-stat-row">
-              <KpiTile
-                accent="#1F5647" icon={ICON_STACK}
-                value={totalFUS} label="Total de FUS" sublabel="Todas las solicitudes"
-                onClick={() => irAConsultar('')}
-              />
-              <KpiTile
-                accent="#235b4e" icon={ICON_FOLDER}
-                value={pendientes} label="Pendientes" sublabel="Registradas, sin turnar"
-                onClick={() => irAConsultar('Registrado')}
-              />
-              <KpiTile
-                accent="#c9a227" icon={ICON_TARGET} live
-                value={enProceso} label="En proceso" sublabel="En trámite, sin concluir"
-                onClick={() => irAConsultar('')}
-              />
-              <KpiTile
-                accent="#1a7a52" icon={ICON_CHECK}
-                value={finalizados} label="Finalizados" sublabel="Atendidos y cerrados"
-                onClick={() => irAConsultar('Concluido')}
-              />
-            </div>
+          <div className="dash2-ambient">
+            <div className="dash2-blob dash2-blob--1" />
+            <div className="dash2-blob dash2-blob--2" />
+            <div className="dash2-blob dash2-blob--3" />
           </div>
 
-          {/* ── 8. Alertas importantes ── */}
-          <div className="dash-section">
-            <div className="dash-section-head">
-              <h3>Alertas importantes</h3>
-              <p className="dash-section-caption">Solo excepciones que requieren atención</p>
-            </div>
-            <div className="dash-stat-row">
-              <KpiTile
-                accent="#b91c1c" icon={ICON_ALARM}
-                value={vencidas} label="Solicitudes vencidas" sublabel="Más de 5 días abiertas"
-                onClick={() => irAConsultar('')}
-              />
-              <KpiTile
-                accent="#92400e" icon={ICON_MOON}
-                value={sinMovimiento} label="Sin movimiento" sublabel="Más de 3 días sin actividad"
-                onClick={() => irAConsultar('')}
-              />
-              <KpiTile
-                accent="#b91c1c" icon={ICON_FLAG}
-                value={prioridadAltaPendiente} label="Prioridad alta pendiente" sublabel="Sin concluir"
-                onClick={() => irAConsultar('')}
-              />
-              <KpiTile
-                accent="#c9a227" icon={ICON_HOURGLASS}
-                value={proximasAVencer} label="Próximas a vencer" sublabel="Entre 4 y 5 días abiertas"
-                onClick={() => irAConsultar('')}
-              />
-            </div>
-          </div>
+          <div className="dash2-content">
+            <header className="dash2-header">
+              <h1>Hola, {nombre}</h1>
+              <p>Panorama ejecutivo del Sistema de Control de Solicitudes</p>
+            </header>
 
-          {/* ── 3. Tendencia de solicitudes ── */}
-          <div className="dash-section">
-            <div className="dash-card">
-              <h2>Tendencia de solicitudes</h2>
-              <p className="dash-subtitle">Solicitudes registradas por día — últimos 14 días</p>
-              <TendenciaChart data={tendencia} />
+            <div className="kpi2-row">
+              {kpis2.map((k, i) => <Kpi2Card key={k.label} {...k} index={i} />)}
             </div>
-          </div>
 
-          {/* ── 4 y 5. Distribución por estado / prioridad ── */}
-          <div className="dash-section">
-            <div className="dash-grid-2">
-              <div className="dash-card">
-                <h2>Distribución por estado</h2>
-                <p className="dash-subtitle">Proporción del total de FUS</p>
-                <DonutEstados data={distribucionEstado} />
+            {/* Distribución por estado y Canal de recepción se movieron a
+                Reportes — con filtros de periodo reales, en vez de solo el
+                total acumulado sin fecha. */}
+            <div className="dash2-grid-bottom">
+              <div className="dash2-card">
+                <div className="dash2-card-title">Tendencia de solicitudes</div>
+                <TendenciaChart data={tendencia} />
               </div>
-              <div className="dash-card">
-                <h2>Distribución por prioridad</h2>
-                <p className="dash-subtitle">Todas las solicitudes registradas</p>
+              <div className="dash2-card">
+                <div className="dash2-card-title">Distribución por prioridad</div>
                 <BarrasHorizontales data={distribucionPrioridad} />
               </div>
             </div>
-          </div>
 
-          {/* ── 6 y 7. Canal de recepción / Antigüedad ── */}
-          <div className="dash-section">
-            <div className="dash-grid-2">
-              <div className="dash-card">
-                <h2>Canal de recepción</h2>
-                <p className="dash-subtitle">Cómo llegan las solicitudes</p>
-                <BarrasHorizontales data={canalRecepcion} />
-              </div>
-              <div className="dash-card">
-                <h2>Antigüedad de solicitudes</h2>
-                <p className="dash-subtitle">Solicitudes abiertas, por tiempo transcurrido</p>
+            <div className="dash2-grid-bottom">
+              <div className="dash2-card">
+                <div className="dash2-card-title">Antigüedad de solicitudes</div>
                 <div className="dash-bucket-row">
                   {antiguedadBuckets.map(b => (
                     <div key={b.key} className={`dash-bucket-card${b.warn ? ' dash-bucket-card-warn' : ''}${b.danger ? ' dash-bucket-card-danger' : ''}`}>
@@ -772,10 +611,20 @@ export default function DashboardROL1() {
                   ))}
                 </div>
               </div>
+              <div className="dash2-card">
+                <div className="dash2-card-title">Productividad</div>
+                <div className="dash-bucket-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {productividadBuckets.map(b => (
+                    <div key={b.key} className="dash-bucket-card">
+                      <span className="dash-bucket-value">{b.value}</span>
+                      <span className="dash-bucket-label">{b.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-        </div>
         </div>
       </div>
     </AppLayout>

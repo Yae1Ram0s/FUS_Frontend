@@ -121,6 +121,7 @@ const MENU_ROL1 = [
 ]
 const MENU_ROL2 = [
   { path: '/rol2/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
+  { path: '/rol2/reportes', label: 'Reportes', icon: ICON_REPORTES },
 ]
 const MENU_COMISIONADO = [
   { path: '/comisionado/bitacora', label: 'Bitácora', icon: ICON_BITACORA },
