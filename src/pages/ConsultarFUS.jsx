@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -69,24 +69,40 @@ export default function ConsultarFUS() {
     version: 0,
   })
 
+  // Firma de "qué se está pidiendo" (sin página/append): si cambia entre una
+  // llamada y la siguiente, la página/append que traía `solicitud` quedaron
+  // obsoletos (pertenecen al filtro anterior) y se ignoran para esta
+  // llamada — si no, cambiar de filtro estando en "página 2" mezclaba
+  // resultados de dos conjuntos filtrados distintos.
+  const filtrosKeyRef = useRef('')
   const cargarPagina = useCallback(async ({ signal }) => {
-    const params = { page: solicitud.page, page_size: PAGE_SIZE }
-    if (!folioParam && filtro.length)   params.estatusParticular = filtro.join(',')
-    if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
-    if (!folioParam && busquedaAplicada) params.search = busquedaAplicada
+    const filtrosKey = JSON.stringify([folioParam, filtro, prioridadFiltro, busquedaAplicada])
+    const filtrosCambiaron = filtrosKeyRef.current !== filtrosKey
+    filtrosKeyRef.current = filtrosKey
+    const page   = filtrosCambiaron ? 1 : solicitud.page
+    const append = filtrosCambiaron ? false : solicitud.append
+
+    const params = { page, page_size: PAGE_SIZE }
+    if (folioParam) {
+      // Consulta puntual por folio (clic en notificación/bitácora/dashboard):
+      // se filtra en el servidor, así se encuentra aunque no esté entre los
+      // más recientes de la bandeja general.
+      params.folio = folioParam
+    } else {
+      if (filtro.length)   params.estatusParticular = filtro.join(',')
+      if (prioridadFiltro) params.prioridad = prioridadFiltro
+      if (busquedaAplicada) params.search = busquedaAplicada
+    }
     const response = await api.get('/fus/', { params, signal })
     const items = response.data.results || []
-    const match = folioParam
-      ? items.find(item => item.folio === folioParam)
-      : null
+    const match = folioParam ? (items[0] || null) : null
     return {
-      items: match
-        ? [match, ...items.filter(item => item.id !== match.id)]
-        : items,
+      items,
       total: response.data.total || 0,
-      page: solicitud.page,
-      append: solicitud.append,
+      page,
+      append,
       match,
+      folioNoEncontrado: Boolean(folioParam) && !match,
     }
   }, [
     busquedaAplicada,
@@ -106,11 +122,16 @@ export default function ConsultarFUS() {
       setSearchParams({}, { replace: true })
       return
     }
+    if (result.folioNoEncontrado) {
+      toast.error(`No se encontró la solicitud ${folioParam}.`)
+      setSearchParams({}, { replace: true })
+      return
+    }
     setSeleccionado(anterior => {
       if (!anterior) return anterior
       return result.items.find(item => item.id === anterior.id) || anterior
     })
-  }, [setSearchParams])
+  }, [folioParam, setSearchParams, toast])
   const {
     data: resultado,
     loading: cargando,
@@ -266,7 +287,12 @@ export default function ConsultarFUS() {
                 <h3 className="panel-title">Solicitudes FUS</h3>
               </div>
             )}
-            <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
+            <button
+              className="panel-toggle"
+              onClick={() => setPanelAbierto(p => !p)}
+              title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}
+              aria-expanded={panelAbierto}
+            >
               <svg
                 className={panelAbierto ? 'panel-toggle-icon-open' : 'panel-toggle-icon-closed'}
                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -284,6 +310,7 @@ export default function ConsultarFUS() {
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input
+                aria-label="Buscar por folio, descripción, contacto, medio"
                 placeholder="Buscar por folio, descripción, contacto, medio…"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}

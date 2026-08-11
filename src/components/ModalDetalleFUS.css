@@ -1,27 +1,57 @@
-/* El centrado (position:fixed + transform) y el alto seguro (--app-vh) ya los
-   da .modal-card compartido (ConsultarFUS.css) — acá solo el look propio. */
-.mdet-modal.modal-card {
+/* Mismo diseño glass que ComisionarModal (.com-*, definido en
+   Comisionado/Comisionado.css) — el ancho/alto propios de esta pantalla
+   (más contenido que el resto de los modales) van aparte. Este componente
+   carga su CSS DESPUÉS de Comisionado.css, así que necesita su propio
+   @media para el ancho móvil — un override sin condición perdería contra
+   la regla responsive ya cargada por orden de aparición, no de especificidad. */
+.mdet-modal.com-modal {
   width: 640px;
-  max-width: calc(100vw - 32px);
   max-height: 85vh;
   max-height: calc(var(--app-vh, 100vh) * 0.85);
-  z-index: 9999;
-  background: #ffffff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  /* Fondo un poco más opaco que el resto de los modales: acá hay bastante
+     texto de lectura (descripción, contexto, respuestas) y el degradado
+     traslúcido por defecto dejaba pasar demasiado el fondo animado de
+     Bitácora, bajando el contraste. */
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.62));
 }
-.mdet-modal .modal-title { font-weight: 600; text-align: left; }
-.mdet-modal .modal-header { background: #235b4e; flex-shrink: 0; }
+.mdet-modal .com-modal-top { padding: 18px 22px 14px; flex-shrink: 0; }
 
 .mdet-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 8px 24px 24px;
-  overflow-y: auto !important;
+  padding: 4px 22px 22px;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  background: #ffffff;
 }
+
+/* ── Cabecera del solicitante — mismo patrón de avatar+nombre que el resto
+   del sistema (PersonasYRespuestasCard), en vez de una fila más de texto. ── */
+.mdet-solicitante-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 16px;
+}
+.mdet-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #235b4e;
+  color: #DDC9A3;
+  font-size: .92rem;
+  font-weight: 700;
+}
+.mdet-solicitante-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mdet-solicitante-info strong { font-size: .98rem; font-weight: 700; color: #1a2f28; }
+.mdet-solicitante-info small { font-size: .78rem; font-weight: 400; color: rgba(26, 47, 40, 0.50); }
 
 .mdet-row {
   display: flex;
@@ -29,7 +59,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 12px 0;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid rgba(35, 91, 78, 0.14);
 }
 .mdet-row:last-of-type { border-bottom: none; }
 
@@ -39,7 +69,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: #718096;
+  color: rgba(26, 47, 40, 0.55);
 }
 
 .mdet-value {
@@ -48,30 +78,80 @@
   text-align: right;
   font-size: .88rem;
   font-weight: 500;
-  color: #2d3748;
+  color: #1a2f28;
   line-height: 1.5;
 }
 
-.mdet-solicitante { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.mdet-solicitante strong { font-weight: 700; color: #2d3748; }
-.mdet-solicitante small { font-size: .76rem; font-weight: 400; color: #a0aec0; }
-
-.mdet-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.mdet-badge {
+.mdet-prioridad-pill {
   display: inline-block;
-  font-size: .74rem;
+  font-size: .78rem;
   font-weight: 700;
   padding: 4px 14px;
-  border-radius: 20px;
-  background: #f8f1e4;
-  color: #8a6820;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 16%, white);
+  color: var(--c);
 }
+.mdet-criterios {
+  list-style: none;
+  margin: -6px 0 0;
+  padding: 0 0 12px;
+  border-bottom: 1px solid rgba(35, 91, 78, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mdet-criterios li {
+  font-size: .78rem;
+  color: rgba(26, 47, 40, 0.65);
+  padding-left: 14px;
+  position: relative;
+}
+.mdet-criterios li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: .55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(35, 91, 78, 0.45);
+}
+
+/* ── Campos de texto largo (Descripción, Contexto) — apilados y alineados a
+   la izquierda: el diseño anterior los justificaba a la derecha igual que
+   los campos cortos, y un párrafo de varias líneas alineado a la derecha
+   es mucho más difícil de leer. ── */
+.mdet-bloque {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(35, 91, 78, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mdet-texto-largo {
+  margin: 0;
+  font-size: .88rem;
+  color: #1a2f28;
+  line-height: 1.6;
+}
+
+.mdet-externo-card {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(35, 91, 78, 0.14);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mdet-externo-nombre { font-size: .88rem; font-weight: 700; color: #1a2f28; }
+.mdet-externo-dato { font-size: .82rem; color: rgba(26, 47, 40, 0.65); }
 
 /* ── Respuestas ── */
 .mdet-seguimientos {
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid rgba(35, 91, 78, 0.14);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -86,49 +166,41 @@
 }
 
 .mdet-seg-card {
-  background: #f7fafc;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(35, 91, 78, 0.14);
   border-radius: 12px;
   padding: 12px 15px;
 }
 .mdet-seg-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.mdet-seg-autor { font-size: .82rem; font-weight: 700; color: #2d3748; }
-.mdet-seg-fecha { font-size: .72rem; color: #a0aec0; white-space: nowrap; flex-shrink: 0; }
-.mdet-seg-texto { margin: 0; font-size: .85rem; color: #4a5568; line-height: 1.6; white-space: pre-wrap; }
-.mdet-seg-empty { font-size: .82rem; color: #a0aec0; margin: 0; }
+.mdet-seg-autor { font-size: .82rem; font-weight: 700; color: #1a2f28; }
+.mdet-seg-fecha { font-size: .72rem; color: rgba(26, 47, 40, 0.50); white-space: nowrap; flex-shrink: 0; }
+.mdet-seg-texto { margin: 0; font-size: .85rem; color: rgba(26, 47, 40, 0.80); line-height: 1.6; white-space: pre-wrap; }
+.mdet-seg-empty { font-size: .82rem; color: rgba(26, 47, 40, 0.45); margin: 0; }
 
 @media (max-width: 768px) {
-  .mdet-overlay { z-index: 9999; }
-  .mdet-modal.modal-card {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
+  .mdet-modal.com-modal {
+    width: 92vw;
+    max-width: 92vw;
     max-height: 82vh;
     max-height: calc(100svh - 80px);
     max-height: calc(var(--app-vh, 100vh) * 0.82);
-    z-index: 9999;
-    border-radius: 18px;
   }
-  .mdet-modal .modal-header { padding: 14px 16px; }
-  .mdet-modal .modal-title { font-size: 1rem; }
+  .mdet-modal .com-modal-top { padding: 14px 16px 10px; }
+  .mdet-modal .com-modal-top h3 { font-size: 1rem; }
   .mdet-body { padding: 6px 16px 18px; }
 
   .mdet-row { flex-direction: column; align-items: flex-start; gap: 5px; padding: 11px 0; }
-  .mdet-value, .mdet-solicitante, .mdet-badges {
-    width: 100%;
-    text-align: left;
-    align-items: flex-start;
-    justify-content: flex-start;
-  }
+  .mdet-value { width: 100%; text-align: left; }
 
   .mdet-seguimientos { margin-top: 14px; padding-top: 14px; }
   .mdet-seg-meta { flex-wrap: wrap; gap: 4px 10px; }
 }
 
 @media (max-width: 480px) {
-  .mdet-modal .modal-title { font-size: .92rem; }
+  .mdet-modal .com-modal-top h3 { font-size: .92rem; }
   .mdet-body { padding: 4px 14px 16px; }
   .mdet-label { font-size: .64rem; }
   .mdet-value { font-size: .85rem; }
-  .mdet-badge { padding: 3px 12px; font-size: .70rem; }
   .mdet-seg-card { padding: 10px 12px; }
   .mdet-seg-autor { font-size: .78rem; }
   .mdet-seg-texto { font-size: .82rem; }

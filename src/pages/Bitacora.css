@@ -404,6 +404,25 @@
 .bita-unidad-opcion:hover { background: rgba(31, 86, 71, 0.08); color: #1F5647; }
 .bita-unidad-opcion.seleccionada { background: rgba(31, 86, 71, 0.10); color: #1F5647; }
 
+/* ── Popover de Responsable — mismo cascarón que Unidad administrativa,
+   más el buscador propio arriba de la lista. ── */
+.bita-resp-popover { min-width: 260px; max-height: 300px; }
+.bita-resp-popover-buscar {
+  font: inherit;
+  font-size: .82rem;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  color: #1d1d1f;
+  flex-shrink: 0;
+}
+.bita-resp-popover-buscar:focus { outline: none; border-color: rgba(31, 86, 71, 0.4); background: #ffffff; }
+.bita-resp-popover-cargando { display: flex; justify-content: center; padding: 10px; }
+.bita-resp-popover-vacio { font-size: .78rem; color: rgba(10, 30, 20, 0.45); padding: 8px 10px; margin: 0; }
+.bita-resp-popover-email { font-weight: 400; color: rgba(10, 30, 20, 0.50); }
+
 .bita-fechas { display: flex; align-items: center; gap: 6px; }
 .bita-sep { color: rgba(10, 30, 20, 0.45); font-size: .82rem; font-weight: 600; }
 
@@ -496,6 +515,12 @@
   opacity: .75;
 }
 .bita-chip button:hover { opacity: 1; background: rgba(31, 86, 71, 0.16); }
+
+/* Chips que reabren su filtro (todos salvo "Columnas: …") — el botón × sigue
+   siendo su propia zona de clic (con stopPropagation) para poder quitarlos
+   sin reabrir el popover. */
+.bita-chip-clickable { cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
+.bita-chip-clickable:hover { background: rgba(31, 86, 71, 0.16); border-color: rgba(31, 86, 71, 0.34); }
 
 .bita-limpiar-todo {
   background: transparent;

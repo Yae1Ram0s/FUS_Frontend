@@ -53,7 +53,6 @@ const formVacio = () => ({
   descripcion:         '',
   contexto:            '',
   idMedioRecepcion:    '',
-  medioEspecificacion: '',
   prioridad:           '',
   criterios:           [],
   fechaLimite:         '',
@@ -135,7 +134,6 @@ export default function RegistrarFUS() {
         descripcion:         f.descripcion || '',
         contexto:            f.contexto || '',
         idMedioRecepcion:    f.idMedioRecepcion?.id || '',
-        medioEspecificacion: f.medioEspecificacion || '',
         prioridad:           f.prioridad || '',
         criterios:           f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : [],
         fechaLimite:         toDatetimeLocal(f.fechaLimite),
@@ -252,7 +250,6 @@ export default function RegistrarFUS() {
       fd.append('descripcion',          form.descripcion)
       fd.append('contexto',             form.contexto)
       fd.append('idMedioRecepcion',     form.idMedioRecepcion)
-      fd.append('medioEspecificacion',  form.medioEspecificacion)
       fd.append('prioridad',            form.prioridad)
       fd.append('criterios',            form.criterios.join(' | '))
       fd.append('fechaLimite', form.fechaLimite)

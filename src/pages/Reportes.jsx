@@ -7,6 +7,7 @@ import Spinner from '../components/Spinner'
 import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { useToast } from '../context/ToastContext'
 import { useCountUp } from '../hooks/useCountUp'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import './DashboardROL1.css'
@@ -282,6 +283,7 @@ function Mini({ titulo, valor, delta, notaFija }) {
 }
 
 export default function Reportes() {
+  const toast = useToast()
   const [tipoPeriodo, setTipoPeriodo] = useState('Mes')
   const [mesRef, setMesRef] = useState(mesInput(hoy))
   const [compararCon, setCompararCon] = useState(() => mesAnterior(mesInput(hoy)))
@@ -376,22 +378,33 @@ export default function Reportes() {
       link.click()
       URL.revokeObjectURL(link.href)
       if (guardarAlExportar) recargarGuardados()
+    } catch {
+      toast.error('No se pudo generar el reporte. Intenta de nuevo.')
     } finally {
       setExportando('')
     }
   }
 
   const descargarGuardado = async (g) => {
-    const response = await api.get(`/reportes/guardados/${g.id}/descargar/`, { responseType: 'blob' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(response.data)
-    link.download = g.nombreArchivo
-    link.click()
-    URL.revokeObjectURL(link.href)
+    try {
+      const response = await api.get(`/reportes/guardados/${g.id}/descargar/`, { responseType: 'blob' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(response.data)
+      link.download = g.nombreArchivo
+      link.click()
+      URL.revokeObjectURL(link.href)
+    } catch {
+      toast.error('No se pudo descargar el reporte guardado.')
+    }
   }
   const borrarGuardado = async (id) => {
-    await api.delete(`/reportes/guardados/${id}/descargar/`)
-    recargarGuardados()
+    if (!window.confirm('¿Eliminar este reporte guardado? Esta acción no se puede deshacer.')) return
+    try {
+      await api.delete(`/reportes/guardados/${id}/descargar/`)
+      recargarGuardados()
+    } catch {
+      toast.error('No se pudo eliminar el reporte guardado.')
+    }
   }
 
   const resumen = data?.resumen

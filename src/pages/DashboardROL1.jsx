@@ -155,7 +155,9 @@ function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e => e.key === 'Enter' && onClick()) : undefined}
+      onKeyDown={onClick ? (e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() }
+      }) : undefined}
     >
       <div className={`kpi2-glow kpi2-glow--${color}`} />
       <div className={`kpi2-icon kpi2-icon--${color}`}>{icon}</div>
@@ -169,7 +171,13 @@ function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
 
 function Venc2Item({ item, onClick }) {
   return (
-    <div className="venc-item venc-item-clickable" onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick()}>
+    <div
+      className="venc-item venc-item-clickable"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+    >
       <div className={`venc-icon venc-icon--${item.color}`}>{item.icon}</div>
       <div className="venc-texto">
         <div className="venc-folio">{item.folio}</div>
@@ -500,7 +508,13 @@ export default function DashboardROL1() {
                       {vencimientos2.map(v => (
                         <Venc2Item key={v.folio} item={v} onClick={() => irAlFus(v.folio)} />
                       ))}
-                      <div className="ver-todos" onClick={() => irAConsultar('')}>
+                      <div
+                        className="ver-todos"
+                        onClick={() => irAConsultar('')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irAConsultar('') } }}
+                      >
                         Ver todos los vencimientos {ICON_ARROW_RIGHT}
                       </div>
                     </>
@@ -517,7 +531,7 @@ export default function DashboardROL1() {
                         onClick={() => irAlFus(a.folio)}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={e => e.key === 'Enter' && irAlFus(a.folio)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irAlFus(a.folio) } }}
                       >
                         <span className="aviso-folio">{a.folio}</span>
                         <span className="aviso-texto">{a.texto}</span>

@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
+import ModalVencimientos from '../components/ModalVencimientos'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
@@ -110,6 +111,7 @@ export default function DashboardROL2() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const nombre = user?.nombre || user?.email || 'Usuario'
+  const [mostrarVencimientos, setMostrarVencimientos] = useState(false)
 
   const cargarDashboard = useCallback(
     async ({ signal }) => ({
@@ -184,18 +186,22 @@ export default function DashboardROL2() {
     if (dias === 0) return 'Hoy'
     return `En ${dias} día${dias === 1 ? '' : 's'}`
   }
-  const proximosVencimientos = conFechaLimite
+  const mapVencimiento = t => {
+    const prioridad = t.idFus?.prioridad
+    let tipo, icon, badge
+    if (prioridad === 'Alta') { tipo = 'red'; icon = ICON_FLAG; badge = 'Prioridad alta' }
+    else if (prioridad === 'Media') { tipo = 'amber'; icon = ICON_CLOCK; badge = 'Prioridad media' }
+    else { tipo = 'blue'; icon = ICON_HOURGLASS; badge = badgeRelativo(t.idFus.fechaLimite) }
+    return { id: t.id, folio: t.idFus.folio, asunto: t.idFus.descripcion || 'Sin descripción', tipo, icon, badge }
+  }
+  const ordenVencimientos = conFechaLimite
     .slice()
     .sort((a, b) => new Date(a.idFus.fechaLimite) - new Date(b.idFus.fechaLimite))
-    .slice(0, 5)
-    .map(t => {
-      const prioridad = t.idFus?.prioridad
-      let tipo, icon, badge
-      if (prioridad === 'Alta') { tipo = 'red'; icon = ICON_FLAG; badge = 'Prioridad alta' }
-      else if (prioridad === 'Media') { tipo = 'amber'; icon = ICON_CLOCK; badge = 'Prioridad media' }
-      else { tipo = 'blue'; icon = ICON_HOURGLASS; badge = badgeRelativo(t.idFus.fechaLimite) }
-      return { id: t.id, folio: t.idFus.folio, asunto: t.idFus.descripcion || 'Sin descripción', tipo, icon, badge }
-    })
+  const proximosVencimientos = ordenVencimientos.slice(0, 5).map(mapVencimiento)
+  // El modal muestra los siguientes en la fila, no un duplicado de los que
+  // ya se ven en la tarjeta — y al derivarse de `turnados` en cada render,
+  // se mantiene en vivo igual que el resto del dashboard.
+  const otrosVencimientos = ordenVencimientos.slice(5).map(mapVencimiento)
 
   /* ── FUS atendidos esta semana (real, agrupado por día — solo hábiles, lunes a viernes) ── */
   const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -340,7 +346,7 @@ export default function DashboardROL2() {
                         <span className={`venc-badge venc-badge--${v.tipo}`}>{v.badge}</span>
                       </div>
                     ))}
-                    <div className="ver-todos" onClick={() => irAConsultar('')}>
+                    <div className="ver-todos" onClick={() => setMostrarVencimientos(true)}>
                       Ver todos mis vencimientos {ICON_ARROW_RIGHT}
                     </div>
                   </>
@@ -432,6 +438,14 @@ export default function DashboardROL2() {
 
         </div>
       </div>
+
+      {mostrarVencimientos && (
+        <ModalVencimientos
+          vencimientos={otrosVencimientos}
+          onClose={() => setMostrarVencimientos(false)}
+          onSelect={folio => { setMostrarVencimientos(false); irAlFus(folio) }}
+        />
+      )}
     </AppLayout>
   )
 }

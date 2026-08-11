@@ -1,0 +1,34 @@
+/* Mismo diseño glass que ComisionarModal (.com-*, definido en
+   Comisionado/Comisionado.css) — solo el ancho/alto propios de esta
+   pantalla (lista larga con scroll) van aparte. */
+.mvc-modal.com-modal {
+  width: 460px;
+  max-height: 80vh;
+  max-height: calc(var(--app-vh, 100vh) * 0.8);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.mvc-modal .com-modal-top { padding: 18px 22px 14px; flex-shrink: 0; }
+
+.mvc-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4px 22px 22px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 768px) {
+  .mvc-modal.com-modal {
+    width: 92vw;
+    max-width: 92vw;
+    max-height: 82vh;
+    max-height: calc(100svh - 80px);
+    max-height: calc(var(--app-vh, 100vh) * 0.82);
+  }
+  .mvc-modal .com-modal-top { padding: 14px 16px 10px; }
+  .mvc-modal .com-modal-top h3 { font-size: .96rem; }
+  .mvc-body { padding: 14px 16px 18px; }
+}
