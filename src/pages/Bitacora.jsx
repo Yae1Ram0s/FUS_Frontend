@@ -42,7 +42,7 @@ const COLUMNAS_TOGGLEABLES = [
 ]
 
 const COL_VISIBLES_DEFAULT = {
-  folio: true, fecha: true, nombre: true, usuario: true, unidadAdministrativa: false,
+  folio: true, fecha: true, nombre: true, usuario: false, unidadAdministrativa: false,
   estatus: true, cambioEstatus: false, observaciones: false,
 }
 
@@ -115,8 +115,11 @@ function SkeletonList() {
 export default function Bitacora() {
   const { user } = useAuth()
   const rol       = user?.rol || 'ROL1'
-  const esADM     = rol === 'ROL1'
+  // El equipo del particular comparte la vista operativa de su ROL1, aunque
+  // el backend siempre limita los registros a los FUS de ese titular.
+  const esParticular = rol === 'ROL1' || rol === 'EQUIPO_PARTICULAR'
   const estatusOpciones = ESTATUS_POR_ROL[rol] || ESTATUS_POR_ROL.ROL1
+  const estatusFlujoOpciones = estatusOpciones.filter(e => e !== 'Vencido' && e !== 'PorVencer')
 
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -139,11 +142,25 @@ export default function Bitacora() {
     return () => clearTimeout(t)
   }, [fBusqueda])
 
-  const [colVisibles, setColVisibles] = useState(COL_VISIBLES_DEFAULT)
+  const columnasStorageKey = 'scs:bitacora:columnas:v2'
+  const [colVisibles, setColVisibles] = useState(() => {
+    try {
+      const guardadas = JSON.parse(localStorage.getItem(columnasStorageKey) || '{}')
+      return { ...COL_VISIBLES_DEFAULT, ...guardadas, folio: true, estatus: true }
+    } catch {
+      return COL_VISIBLES_DEFAULT
+    }
+  })
   const [previewFolio, setPreviewFolio] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [exportando, setExportando] = useState(false)
   const [modalDescargarAbierto, setModalDescargarAbierto] = useState(false)
+  const [panelFiltrosAbierto, setPanelFiltrosAbierto] = useState(false)
+  const [menuColumnasAbierto, setMenuColumnasAbierto] = useState(false)
+  const [columnasMenuPos, setColumnasMenuPos] = useState({ top: 0, left: 0 })
+  const [accionesAbiertas, setAccionesAbiertas] = useState(null)
+  const menuColumnasRef = useRef(null)
+  const columnasBtnRef = useRef(null)
   const [descargandoFolio, setDescargandoFolio] = useState(null)
   const ordInicial = searchParams.get('ordering') || ''
   const [sortCol, setSortCol] = useState(() => ordInicial.replace(/^-/, '') || null)
@@ -159,7 +176,7 @@ export default function Bitacora() {
   const unidadPopoverRef = useRef(null)
   const unidadBtnRef = useRef(null)
 
-  // ── Responsable (solo ROL1): filtro explícito, separado del buscador
+  // ── Responsable (ROL1 y su equipo): filtro explícito, separado del buscador
   // combinado `q` — con autocompletar sobre /auth/correos-autorizados/
   // (mismo endpoint que ya usa Panel Admin), mismo patrón visual que Unidad
   // administrativa (pastilla + popover con checkboxes). ──
@@ -192,6 +209,21 @@ export default function Bitacora() {
   }
 
   useEffect(() => {
+    localStorage.setItem(columnasStorageKey, JSON.stringify(colVisibles))
+  }, [colVisibles, columnasStorageKey])
+
+  useEffect(() => {
+    if (!menuColumnasAbierto) return
+    const cerrar = e => {
+      if (menuColumnasRef.current?.contains(e.target)) return
+      if (columnasBtnRef.current?.contains(e.target)) return
+      setMenuColumnasAbierto(false)
+    }
+    document.addEventListener('mousedown', cerrar)
+    return () => document.removeEventListener('mousedown', cerrar)
+  }, [menuColumnasAbierto])
+
+  useEffect(() => {
     const el = bitaBgRef.current
     if (!el) return
     const onScroll = () => {
@@ -218,6 +250,21 @@ export default function Bitacora() {
     }, 450)
   }
 
+  // Posición de los popovers de catálogo (Unidad/Responsable/Estatus):
+  // ancladas al botón con getBoundingClientRect, pero sin clamping se salían
+  // de la pantalla en móvil (botón cerca del borde derecho + popover de
+  // 220-260px de ancho, o cerca del borde inferior + popover con su propio
+  // alto máximo). Se acota a los bordes del viewport en ambos ejes; en
+  // desktop, con espacio de sobra, esto no cambia nada.
+  const posicionPopover = (btnRef, ancho, alto) => {
+    const r = btnRef.current.getBoundingClientRect()
+    const margen = 12
+    const left = Math.max(margen, Math.min(r.left, window.innerWidth - ancho - margen))
+    const cabeAbajo = r.bottom + 6 + alto <= window.innerHeight - margen
+    const top = cabeAbajo ? r.bottom + 6 : Math.max(margen, r.top - alto - 6)
+    return { top, left }
+  }
+
   useEffect(() => {
     if (!unidadPopoverAbierto) return
     const cerrar = e => {
@@ -231,16 +278,26 @@ export default function Bitacora() {
 
   const abrirUnidadPopover = () => {
     if (!unidadPopoverAbierto && unidadBtnRef.current) {
-      const r = unidadBtnRef.current.getBoundingClientRect()
-      setUnidadPopoverPos({ top: r.bottom + 6, left: r.left })
+      setUnidadPopoverPos(posicionPopover(unidadBtnRef, 220, 260))
     }
     if (!unidadesCargadas) {
-      api.get('/catalogos/unidades-administrativas/')
-        .then(r => setUnidades(Array.isArray(r.data) ? r.data : []))
+      api.get('/bitacora/responsables/')
+        .then(r => {
+          const responsables = Array.isArray(r.data) ? r.data : []
+          const unicas = new Map()
+          responsables.forEach(item => {
+            if (item.unidadAdministrativa && item.unidadAdministrativaNombre) {
+              unicas.set(item.unidadAdministrativa, {
+                idUnidadAdministrativa: item.unidadAdministrativa,
+                unidadAdministrativa: item.unidadAdministrativaNombre,
+              })
+            }
+          })
+          setUnidades([...unicas.values()])
+        })
         .catch(() => {})
       setUnidadesCargadas(true)
     }
-    setColVisibles(v => ({ ...v, unidadAdministrativa: true }))
     setUnidadPopoverAbierto(v => !v)
   }
 
@@ -256,21 +313,10 @@ export default function Bitacora() {
   }
 
   const quitarUnidad = (id) => {
-    setUnidadSeleccionadas(prev => {
-      const siguiente = prev.filter(item => item.idUnidadAdministrativa !== id)
-      setColVisibles(v => ({ ...v, unidadAdministrativa: siguiente.length > 0 }))
-      return siguiente
-    })
+    setUnidadSeleccionadas(prev => prev.filter(item => item.idUnidadAdministrativa !== id))
     setFUnidades(prev => prev.filter(item => item !== id))
   }
 
-  const quitarColumna = (key) => {
-    toggleColumna(key)
-    if (key === 'unidadAdministrativa') {
-      setUnidadSeleccionadas([])
-      setFUnidades([])
-    }
-  }
 
   useEffect(() => {
     if (!respPopoverAbierto) return
@@ -289,7 +335,7 @@ export default function Bitacora() {
     if (!respPopoverAbierto) return
     setRespBuscando(true)
     const t = setTimeout(() => {
-      api.get('/auth/correos-autorizados/', { params: { search: respBusqueda } })
+      api.get('/bitacora/responsables/', { params: { search: respBusqueda } })
         .then(r => setRespResultados(Array.isArray(r.data) ? r.data : []))
         .catch(() => setRespResultados([]))
         .finally(() => setRespBuscando(false))
@@ -299,8 +345,7 @@ export default function Bitacora() {
 
   const abrirRespPopover = () => {
     if (!respPopoverAbierto && respBtnRef.current) {
-      const r = respBtnRef.current.getBoundingClientRect()
-      setRespPopoverPos({ top: r.bottom + 6, left: r.left })
+      setRespPopoverPos(posicionPopover(respBtnRef, 260, 300))
     }
     setRespPopoverAbierto(v => !v)
   }
@@ -331,8 +376,7 @@ export default function Bitacora() {
 
   const abrirEstatusPopover = () => {
     if (!estatusPopoverAbierto && estatusBtnRef.current) {
-      const r = estatusBtnRef.current.getBoundingClientRect()
-      setEstatusPopoverPos({ top: r.bottom + 6, left: r.left })
+      setEstatusPopoverPos(posicionPopover(estatusBtnRef, 220, 260))
     }
     setEstatusPopoverAbierto(v => !v)
   }
@@ -347,7 +391,8 @@ export default function Bitacora() {
   // antes de medir la posición del botón — si no, el popover se abriría en
   // un punto (0,0) o mal calculado.
   const abrirDesdeChip = (abrirPopover) => {
-    if (compacto) {
+    if (!panelFiltrosAbierto || compacto) {
+      setPanelFiltrosAbierto(true)
       editarFiltros()
       setTimeout(abrirPopover, 220)
     } else {
@@ -355,14 +400,30 @@ export default function Bitacora() {
     }
   }
 
+  const abrirRangoDesdeChip = () => {
+    setPanelFiltrosAbierto(true)
+    setPresetFecha('rango')
+    editarFiltros()
+  }
+
   // Al entrar con filtros ya en la URL (búsqueda compartida/recargada), acá
   // solo viajan ids/correos — hay que resolver sus nombres para las
   // pastillas y chips, igual que si el usuario los hubiera elegido a mano.
   useEffect(() => {
     if (fUnidades.length && !unidadesCargadas) {
-      api.get('/catalogos/unidades-administrativas/')
+      api.get('/bitacora/responsables/')
         .then(r => {
-          const lista = Array.isArray(r.data) ? r.data : []
+          const responsables = Array.isArray(r.data) ? r.data : []
+          const unicas = new Map()
+          responsables.forEach(item => {
+            if (item.unidadAdministrativa && item.unidadAdministrativaNombre) {
+              unicas.set(item.unidadAdministrativa, {
+                idUnidadAdministrativa: item.unidadAdministrativa,
+                unidadAdministrativa: item.unidadAdministrativaNombre,
+              })
+            }
+          })
+          const lista = [...unicas.values()]
           setUnidades(lista)
           setUnidadSeleccionadas(lista.filter(u => fUnidades.includes(u.idUnidadAdministrativa)))
           setColVisibles(v => ({ ...v, unidadAdministrativa: true }))
@@ -372,7 +433,7 @@ export default function Bitacora() {
     }
     if (fResponsables.length) {
       Promise.all(fResponsables.map(email =>
-        api.get('/auth/correos-autorizados/', { params: { search: email } })
+        api.get('/bitacora/responsables/', { params: { search: email } })
           .then(r => (Array.isArray(r.data) ? r.data : []).find(c => c.email === email))
           .catch(() => null)
       )).then(resultados => {
@@ -444,7 +505,6 @@ export default function Bitacora() {
     setFBusqueda('')
     setFEstatus([]); setFDesde(''); setFHasta('')
     setPresetFecha(null)
-    setColVisibles(COL_VISIBLES_DEFAULT)
     setUnidadSeleccionadas([])
     setFUnidades([])
     setRespSeleccionados([])
@@ -452,10 +512,12 @@ export default function Bitacora() {
     setSortCol(null); setSortDir('asc')
   }
   const toggleColumna = (key) => setColVisibles(v => ({ ...v, [key]: !v[key] }))
-  // Solo columnas AGREGADAS (activadas) más allá del default — no las que el
-  // usuario desactivó desde su estado por defecto (esas no generan chip).
-  const columnasAgregadas = COLUMNAS_TOGGLEABLES.filter(c => colVisibles[c.key] && !COL_VISIBLES_DEFAULT[c.key])
   const filtrosActivosChips = Boolean(fBusqueda || fEstatus.length || fUnidades.length || fResponsables.length || fDesde || fHasta)
+  const estatusFlujoSeleccionados = fEstatus.filter(e => e !== 'Vencido' && e !== 'PorVencer')
+  const cantidadFiltrosActivos = (
+    (fBusqueda ? 1 : 0) + fEstatus.length + fUnidades.length +
+    fResponsables.length + ((fDesde || fHasta) ? 1 : 0)
+  )
 
   const formatearFechaHoraBitacora = d => d
     ? new Date(d).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' })
@@ -465,6 +527,18 @@ export default function Bitacora() {
   // registrada o una eliminación): en esos casos no hay estadoNuevo/Anterior
   // y el registro simplemente no lleva badge de estatus.
   const estatusDeRegistro = r => r.estadoNuevo || r.estadoAnterior || null
+
+  const descripcionMovimiento = r => {
+    if (r.accion === 'REGISTRO_RESPUESTA') return 'Respuesta de seguimiento registrada'
+    if (r.accion === 'REGISTRO_ACCION') return 'Acción por emprender registrada'
+    if (r.accion === 'REAPERTURA_FUS') return 'Solicitud retomada después de un rechazo'
+    if (r.estadoAnterior && r.estadoNuevo && r.estadoAnterior !== r.estadoNuevo) {
+      return `Cambió de ${ESTATUS_FUS_LABELS[r.estadoAnterior] || r.estadoAnterior} a ${ESTATUS_FUS_LABELS[r.estadoNuevo] || r.estadoNuevo}`
+    }
+    if (r.observaciones) return r.observaciones
+    const estatus = estatusDeRegistro(r)
+    return estatus ? `Solicitud en ${ESTATUS_FUS_LABELS[estatus] || estatus}` : 'Movimiento registrado'
+  }
 
   const fmtFechaCorta = s => {
     const [y, m, d] = s.split('-')
@@ -506,9 +580,9 @@ export default function Bitacora() {
     const cols = []
     if (colVisibles.fecha)            cols.push('fecha')
     if (colVisibles.folio)            cols.push('folio')
-    if (esADM && colVisibles.nombre)  cols.push('nombre')
-    if (esADM && colVisibles.usuario) cols.push('usuario')
-    if (esADM && colVisibles.unidadAdministrativa) cols.push('unidadAdministrativa')
+    if (esParticular && colVisibles.nombre)  cols.push('nombre')
+    if (esParticular && colVisibles.usuario) cols.push('usuario')
+    if (esParticular && colVisibles.unidadAdministrativa) cols.push('unidadAdministrativa')
     if (colVisibles.estatus)          cols.push('estatus')
     if (colVisibles.cambioEstatus)  { cols.push('estado_ant'); cols.push('estado_nuevo') }
     if (colVisibles.observaciones)    cols.push('observaciones')
@@ -517,7 +591,7 @@ export default function Bitacora() {
 
   const exportParams = () => {
     const p = new URLSearchParams()
-    if (fBusquedaDeb)         p.set('q',           fBusquedaDeb)
+    if (fBusqueda.trim())     p.set('q',           fBusqueda.trim())
     fEstatus.forEach(e => p.append('estatus_fus', e))
     fUnidades.forEach(id => p.append('unidadAdministrativa', id))
     fResponsables.forEach(email => p.append('usuario', email))
@@ -531,8 +605,8 @@ export default function Bitacora() {
 
   const cantColumnasUI = [
     colVisibles.fecha, colVisibles.folio,
-    esADM && colVisibles.nombre, esADM && colVisibles.usuario,
-    esADM && colVisibles.unidadAdministrativa,
+    esParticular && colVisibles.nombre, esParticular && colVisibles.usuario,
+    esParticular && colVisibles.unidadAdministrativa,
     colVisibles.estatus, colVisibles.cambioEstatus, colVisibles.observaciones,
   ].filter(Boolean).length
   const COLS = 1 + cantColumnasUI
@@ -567,27 +641,27 @@ export default function Bitacora() {
           </div>
           <div className="bita-header-right">
             <span className="bita-total">
-              {total.toLocaleString()} registros
+              <strong>{total.toLocaleString()}</strong>
+              <span>registros</span>
               {cargando && registros.length > 0 && <span className="btn-spinner bita-total-spinner" />}
             </span>
-            <button className="bita-export-btn bita-export-descargar"
-              disabled={exportando}
-              onClick={() => setModalDescargarAbierto(true)}
-              title="Descargar bitácora">
+            <button type="button" className="bita-header-descargar" disabled={exportando} onClick={() => setModalDescargarAbierto(true)}>
               {exportando
                 ? <span className="btn-spinner" />
-                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>}
-              {exportando ? 'Generando…' : 'Descargar'}
+              <span className="bita-header-descargar-label">
+                {exportando ? 'Generando…' : 'Descargar'}
+              </span>
             </button>
           </div>
         </div>
 
         {/* Filtros */}
-        <div className={`bita-filtros-sticky${compacto ? ' bita-filtros-compacto' : ''}`}>
-          {compacto && (
+        <div className={`bita-filtros-sticky${compacto && filtrosActivosChips ? ' bita-filtros-compacto' : ''}`}>
+          {compacto && filtrosActivosChips && (
             <button type="button" className="bita-editar-filtros-btn" onClick={editarFiltros}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9"/>
@@ -605,42 +679,119 @@ export default function Bitacora() {
                 </svg>
                 <input className="bita-input bita-busqueda"
                   ref={busquedaInputRef}
-                  placeholder={esADM ? 'Buscar por folio, usuario o nombre…' : 'Buscar por folio…'}
+                  placeholder={esParticular ? 'Buscar por folio, usuario o nombre…' : 'Buscar por folio…'}
                   value={fBusqueda} onChange={e => setFBusqueda(e.target.value)} />
+              </div>
+              <button
+                type="button"
+                className={`bita-toolbar-btn${panelFiltrosAbierto ? ' activo' : ''}`}
+                aria-expanded={panelFiltrosAbierto}
+                onClick={() => setPanelFiltrosAbierto(abierto => {
+                  if (!abierto) editarFiltros()
+                  return !abierto
+                })}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+                Filtros
+                {cantidadFiltrosActivos > 0 && <span className="bita-toolbar-count">{cantidadFiltrosActivos}</span>}
+              </button>
+              <div className="bita-columnas-menu-wrap">
+                <button
+                  type="button"
+                  ref={columnasBtnRef}
+                  className={`bita-toolbar-btn${menuColumnasAbierto ? ' activo' : ''}`}
+                  aria-expanded={menuColumnasAbierto}
+                  onClick={() => {
+                    // En móvil el menú se muestra como hoja inferior fija (ver
+                    // @media en Bitacora.css: position:fixed anclado al fondo,
+                    // no al botón) — ahí no se calcula/aplica posición en JS
+                    // para no pisar ese anclaje con top/left en línea.
+                    if (!menuColumnasAbierto && columnasBtnRef.current && window.innerWidth > 768) {
+                      setColumnasMenuPos(posicionPopover(columnasBtnRef, 270, 320))
+                    }
+                    setMenuColumnasAbierto(abierto => !abierto)
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/>
+                  </svg>
+                  Columnas
+                </button>
+                {menuColumnasAbierto && createPortal(
+                  <div
+                    className="bita-columnas-menu"
+                    ref={menuColumnasRef}
+                    style={window.innerWidth > 768 ? { position: 'fixed', top: columnasMenuPos.top, left: columnasMenuPos.left } : undefined}
+                  >
+                    <div className="bita-columnas-menu-head">
+                      <strong>Personalizar columnas</strong>
+                      <span>Elige la información visible</span>
+                    </div>
+                    <div className="bita-columnas-menu-lista">
+                      {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esParticular).map(c => (
+                        <label key={c.key} className="bita-columnas-opcion">
+                          <input type="checkbox" checked={Boolean(colVisibles[c.key])} onChange={() => toggleColumna(c.key)} />
+                          <span>{c.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <button type="button" className="bita-columnas-restablecer" onClick={() => setColVisibles(COL_VISIBLES_DEFAULT)}>
+                      Restablecer columnas
+                    </button>
+                  </div>,
+                  document.body
+                )}
               </div>
             </div>
 
-            {/* Fila 2: presets de fecha + columnas opcionales, scroll horizontal combinado */}
-            <div className="bita-fila-pildoras">
-              <div className="bita-pildoras-scroll">
+            <div className={`bita-filtros-panel${panelFiltrosAbierto ? ' abierto' : ''}`}>
+              <div className="bita-filtros-grid">
+                <section className="bita-filtro-grupo bita-filtro-periodo">
+                  <span className="bita-filtro-titulo">Periodo</span>
+                  <div className="bita-filtro-opciones">
                 <button type="button" className={`bita-pildora${presetFecha === 'hoy' ? ' activa' : ''}`} onClick={() => handlePresetClick('hoy')}>Hoy</button>
                 <button type="button" className={`bita-pildora${presetFecha === 'semana' ? ' activa' : ''}`} onClick={() => handlePresetClick('semana')}>Semana</button>
                 <button type="button" className={`bita-pildora${presetFecha === 'mes' ? ' activa' : ''}`} onClick={() => handlePresetClick('mes')}>Mes</button>
-                <button type="button" className={`bita-pildora${presetFecha === 'rango' ? ' activa' : ''}`} onClick={() => handlePresetClick('rango')}>Rango</button>
-                <span className="bita-pildoras-sep" />
-                {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esADM).map(c => c.key === 'unidadAdministrativa' ? (
-                  <div key={c.key} className="bita-unidad-pill-wrap">
-                    <button type="button" ref={unidadBtnRef} className={`bita-pildora${colVisibles.unidadAdministrativa ? ' activa' : ''}`} onClick={abrirUnidadPopover}>
-                      {colVisibles.unidadAdministrativa && unidadSeleccionadas.length === 1
+                    <button type="button" className={`bita-pildora${presetFecha === 'rango' ? ' activa' : ''}`} onClick={() => handlePresetClick('rango')}>Personalizado</button>
+                  </div>
+                  {presetFecha === 'rango' && (
+                    <div className="bita-fechas">
+                      <div className="bita-fecha-grupo">
+                        <span className="bita-fecha-lbl">Desde</span>
+                        <FechaInput className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
+                      </div>
+                      <div className="bita-fecha-grupo">
+                        <span className="bita-fecha-lbl">Hasta</span>
+                        <FechaInput className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {esParticular && (
+                  <section className="bita-filtro-grupo">
+                    <span className="bita-filtro-titulo">Unidad administrativa</span>
+                    <div className="bita-unidad-pill-wrap">
+                    <button type="button" ref={unidadBtnRef} className={`bita-pildora bita-pildora-selector${unidadSeleccionadas.length ? ' activa' : ''}`} onClick={abrirUnidadPopover}>
+                      {unidadSeleccionadas.length === 1
                         ? unidadSeleccionadas[0].unidadAdministrativa
                         : unidadSeleccionadas.length > 1
                           ? `${unidadSeleccionadas.length} unidades`
-                          : c.label}
+                          : 'Todas las unidades'}
+                      <span aria-hidden="true">⌄</span>
                     </button>
                     {unidadPopoverAbierto && createPortal(
                       <div className="bita-unidad-popover" ref={unidadPopoverRef} style={{ position: 'fixed', top: unidadPopoverPos.top, left: unidadPopoverPos.left }}>
                         {unidades.map(u => {
                           const seleccionado = unidadSeleccionadas.some(item => item.idUnidadAdministrativa === u.idUnidadAdministrativa)
                           return (
-                            <label
-                              key={u.idUnidadAdministrativa}
-                              className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={seleccionado}
-                                onChange={() => toggleUnidad(u)}
-                              />
+                            <label key={u.idUnidadAdministrativa} className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}>
+                              <input type="checkbox" checked={seleccionado} onChange={() => toggleUnidad(u)} />
                               <span>{u.unidadAdministrativa}</span>
                             </label>
                           )
@@ -648,20 +799,20 @@ export default function Bitacora() {
                       </div>,
                       document.body
                     )}
-                  </div>
-                ) : (
-                  <button key={c.key} type="button" className={`bita-pildora${colVisibles[c.key] ? ' activa' : ''}`} onClick={() => toggleColumna(c.key)}>
-                    {c.label}
-                  </button>
-                ))}
-                {esADM && (
-                  <div className="bita-unidad-pill-wrap">
-                    <button type="button" ref={respBtnRef} className={`bita-pildora${respSeleccionados.length ? ' activa' : ''}`} onClick={abrirRespPopover}>
+                    </div>
+                  </section>
+                )}
+                {esParticular && (
+                  <section className="bita-filtro-grupo">
+                    <span className="bita-filtro-titulo">Responsable</span>
+                    <div className="bita-unidad-pill-wrap">
+                    <button type="button" ref={respBtnRef} className={`bita-pildora bita-pildora-selector${respSeleccionados.length ? ' activa' : ''}`} onClick={abrirRespPopover}>
                       {respSeleccionados.length === 1
                         ? respSeleccionados[0].nombre
                         : respSeleccionados.length > 1
                           ? `${respSeleccionados.length} responsables`
-                          : 'Responsable'}
+                          : 'Todos los responsables'}
+                      <span aria-hidden="true">⌄</span>
                     </button>
                     {respPopoverAbierto && createPortal(
                       <div className="bita-unidad-popover bita-resp-popover" ref={respPopoverRef} style={{ position: 'fixed', top: respPopoverPos.top, left: respPopoverPos.left }}>
@@ -689,41 +840,23 @@ export default function Bitacora() {
                       </div>,
                       document.body
                     )}
-                  </div>
+                    </div>
+                  </section>
                 )}
-                <span className="bita-pildoras-sep" />
-                <button type="button" className={`bita-pildora${fEstatus.includes('Vencido') ? ' activa' : ''}`} onClick={() => toggleEstatus('Vencido')}>Vencido</button>
-                <button type="button" className={`bita-pildora${fEstatus.includes('PorVencer') ? ' activa' : ''}`} onClick={() => toggleEstatus('PorVencer')}>Por vencer</button>
-              </div>
-            </div>
-
-            {presetFecha === 'rango' && (
-              <div className="bita-fechas">
-                <div className="bita-fecha-grupo">
-                  <span className="bita-fecha-lbl">Desde</span>
-                  <FechaInput className="bita-input" type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} />
-                </div>
-                <span className="bita-sep">–</span>
-                <div className="bita-fecha-grupo">
-                  <span className="bita-fecha-lbl">Hasta</span>
-                  <FechaInput className="bita-input" type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} />
-                </div>
-              </div>
-            )}
-
-            {/* Fila 3: Estatus (multi-selección) */}
-            <div className="bita-fila-selects">
-              <div className="bita-unidad-pill-wrap">
-                <button type="button" ref={estatusBtnRef} className={`bita-pildora bita-pildora-estatus${fEstatus.length ? ' activa' : ''}`} onClick={abrirEstatusPopover}>
-                  {fEstatus.length === 1
-                    ? (ESTATUS_FUS_LABELS[fEstatus[0]] || fEstatus[0])
-                    : fEstatus.length > 1
-                      ? `${fEstatus.length} estatus`
+                <section className="bita-filtro-grupo">
+                  <span className="bita-filtro-titulo">Estatus</span>
+                  <div className="bita-unidad-pill-wrap">
+                <button type="button" ref={estatusBtnRef} className={`bita-pildora bita-pildora-selector${estatusFlujoSeleccionados.length ? ' activa' : ''}`} onClick={abrirEstatusPopover}>
+                  {estatusFlujoSeleccionados.length === 1
+                    ? (ESTATUS_FUS_LABELS[estatusFlujoSeleccionados[0]] || estatusFlujoSeleccionados[0])
+                    : estatusFlujoSeleccionados.length > 1
+                      ? `${estatusFlujoSeleccionados.length} estatus seleccionados`
                       : 'Todos los estatus'}
+                  <span aria-hidden="true">⌄</span>
                 </button>
                 {estatusPopoverAbierto && createPortal(
                   <div className="bita-unidad-popover" ref={estatusPopoverRef} style={{ position: 'fixed', top: estatusPopoverPos.top, left: estatusPopoverPos.left }}>
-                    {estatusOpciones.map(e => {
+                    {estatusFlujoOpciones.map(e => {
                       const seleccionado = fEstatus.includes(e)
                       return (
                         <label key={e} className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}>
@@ -735,6 +868,15 @@ export default function Bitacora() {
                   </div>,
                   document.body
                 )}
+                  </div>
+                </section>
+                <section className="bita-filtro-grupo">
+                  <span className="bita-filtro-titulo">Temporalidad</span>
+                  <div className="bita-filtro-opciones">
+                    <button type="button" className={`bita-pildora bita-pildora-alerta${fEstatus.includes('Vencido') ? ' activa' : ''}`} onClick={() => toggleEstatus('Vencido')}>Vencido</button>
+                    <button type="button" className={`bita-pildora bita-pildora-aviso${fEstatus.includes('PorVencer') ? ' activa' : ''}`} onClick={() => toggleEstatus('PorVencer')}>Por vencer</button>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -742,62 +884,66 @@ export default function Bitacora() {
           {/* Fila 4: FILTROS ACTIVOS — dentro del panel verde */}
           {filtrosActivosChips && <hr className="bita-divider" />}
           {(filtrosActivosChips || compacto) && (
-            <div className={`bita-chips${compacto ? ' bita-chips-compacta' : ''}`}>
+            <div className={`bita-chips${compacto && filtrosActivosChips ? ' bita-chips-compacta' : ''}`}>
               {filtrosActivosChips && <span className="chips-label">FILTROS ACTIVOS:</span>}
               {fBusqueda && (
-                <span className="bita-chip bita-chip-clickable" onClick={() => busquedaInputRef.current?.focus()} title="Editar la búsqueda">
+                <span className="bita-chip bita-chip-busqueda bita-chip-clickable" onClick={() => busquedaInputRef.current?.focus()} title="Editar la búsqueda">
                   Búsqueda: "{fBusqueda}"
                   <button type="button" onClick={e => { e.stopPropagation(); setFBusqueda('') }} aria-label="Quitar filtro de búsqueda">×</button>
                 </span>
               )}
               {fUnidades.length > 0 && unidadSeleccionadas.map(u => (
-                <span key={u.idUnidadAdministrativa} className="bita-chip bita-chip-clickable" onClick={() => abrirDesdeChip(abrirUnidadPopover)} title="Editar unidades seleccionadas">
+                <span key={u.idUnidadAdministrativa} className="bita-chip bita-chip-entidad bita-chip-clickable" onClick={() => abrirDesdeChip(abrirUnidadPopover)} title="Editar unidades seleccionadas">
                   Unidad administrativa: {u.unidadAdministrativa}
                   <button type="button" onClick={e => { e.stopPropagation(); quitarUnidad(u.idUnidadAdministrativa) }} aria-label="Quitar unidad administrativa seleccionada">×</button>
                 </span>
               ))}
               {fResponsables.length > 0 && respSeleccionados.map(r => (
-                <span key={r.email} className="bita-chip bita-chip-clickable" onClick={() => abrirDesdeChip(abrirRespPopover)} title="Editar responsables seleccionados">
+                <span key={r.email} className="bita-chip bita-chip-entidad bita-chip-clickable" onClick={() => abrirDesdeChip(abrirRespPopover)} title="Editar responsables seleccionados">
                   Responsable: {r.nombre}
                   <button type="button" onClick={e => { e.stopPropagation(); quitarResponsable(r.email) }} aria-label="Quitar responsable seleccionado">×</button>
                 </span>
               ))}
               {fEstatus.map(e => (
-                <span key={e} className="bita-chip bita-chip-clickable" onClick={() => abrirDesdeChip(abrirEstatusPopover)} title="Editar estatus seleccionados">
+                <span
+                  key={e}
+                  className={`bita-chip bita-chip-estatus bita-chip-estatus-${e.toLowerCase()} bita-chip-clickable`}
+                  onClick={() => {
+                    if (e === 'Vencido' || e === 'PorVencer') {
+                      setPanelFiltrosAbierto(true)
+                      editarFiltros()
+                    } else abrirDesdeChip(abrirEstatusPopover)
+                  }}
+                  title="Editar estatus seleccionados"
+                >
                   Estatus: {ESTATUS_FUS_LABELS[e] || e}
                   <button type="button" onClick={ev => { ev.stopPropagation(); toggleEstatus(e) }} aria-label={`Quitar estatus ${ESTATUS_FUS_LABELS[e] || e}`}>×</button>
                 </span>
               ))}
               {fDesde && fHasta ? (
-                <span className="bita-chip bita-chip-clickable" onClick={() => setPresetFecha('rango')} title="Editar rango de fechas">
-                  Fecha: {fmtFechaCorta(fDesde)} – {fmtFechaCorta(fHasta)}
+                <span className="bita-chip bita-chip-periodo bita-chip-clickable" onClick={abrirRangoDesdeChip} title="Editar rango de fechas">
+                  Periodo: {fmtFechaCorta(fDesde)} – {fmtFechaCorta(fHasta)}
                   <button type="button" onClick={e => { e.stopPropagation(); setFDesde(''); setFHasta(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha">×</button>
                 </span>
               ) : (
                 <>
                   {fDesde && (
-                    <span className="bita-chip bita-chip-clickable" onClick={() => setPresetFecha('rango')} title="Editar fecha desde">
+                    <span className="bita-chip bita-chip-periodo bita-chip-clickable" onClick={abrirRangoDesdeChip} title="Editar fecha desde">
                       Desde: {fmtFechaCorta(fDesde)}
                       <button type="button" onClick={e => { e.stopPropagation(); setFDesde(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha desde">×</button>
                     </span>
                   )}
                   {fHasta && (
-                    <span className="bita-chip bita-chip-clickable" onClick={() => setPresetFecha('rango')} title="Editar fecha hasta">
+                    <span className="bita-chip bita-chip-periodo bita-chip-clickable" onClick={abrirRangoDesdeChip} title="Editar fecha hasta">
                       Hasta: {fmtFechaCorta(fHasta)}
                       <button type="button" onClick={e => { e.stopPropagation(); setFHasta(''); setPresetFecha(null) }} aria-label="Quitar filtro de fecha hasta">×</button>
                     </span>
                   )}
                 </>
               )}
-              {columnasAgregadas.filter(c => c.key !== 'unidadAdministrativa').map(c => (
-                <span key={c.key} className="bita-chip">
-                  Columnas: {c.label}
-                  <button type="button" onClick={() => quitarColumna(c.key)} aria-label={`Quitar columna ${c.label}`}>×</button>
-                </span>
-              ))}
               {filtrosActivosChips && <button type="button" className="bita-limpiar-todo" onClick={limpiar}>Limpiar todo</button>}
-              {compacto && (
-                <button type="button" className="bita-editar-filtros-btn-inline" onClick={editarFiltros}>
+              {compacto && filtrosActivosChips && (
+                <button type="button" className="bita-editar-filtros-btn-inline" onClick={() => { setPanelFiltrosAbierto(true); editarFiltros() }}>
                   Editar
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9"/>
@@ -814,10 +960,10 @@ export default function Bitacora() {
             <thead>
               <tr>
                 {colVisibles.fecha   && th('fecha', 'Fecha y hora (CDMX)')}
-                {colVisibles.folio   && th('folio', 'Folio')}
-                {esADM && colVisibles.nombre                && th('nombre', 'Responsable', false)}
-                {esADM && colVisibles.usuario               && th('usuario', 'Correo del responsable', false)}
-                {esADM && colVisibles.unidadAdministrativa  && th('unidadAdministrativa', 'Unidad administrativa', false)}
+                {colVisibles.folio   && th('folio', 'Folio y movimiento')}
+                {esParticular && colVisibles.nombre                && th('nombre', 'Responsable', false)}
+                {esParticular && colVisibles.usuario               && th('usuario', 'Correo del responsable', false)}
+                {esParticular && colVisibles.unidadAdministrativa  && th('unidadAdministrativa', 'Unidad administrativa', false)}
                 {colVisibles.estatus && th('estatus', 'Estatus')}
                 {colVisibles.cambioEstatus  && th('cambioEstatus', 'Cambio de estatus', false)}
                 {colVisibles.observaciones  && th('observaciones', 'Observaciones')}
@@ -840,19 +986,32 @@ export default function Bitacora() {
                 <tr><td colSpan={COLS} className="bita-empty">No hay registros que coincidan con los filtros.</td></tr>
               )}
               {registros.map(r => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  className={r.fusFolio ? 'bita-row-clickeable' : ''}
+                  tabIndex={r.fusFolio ? 0 : undefined}
+                  onClick={() => r.fusFolio && setDetalleFolio(r.fusFolio)}
+                  onKeyDown={e => {
+                    if (r.fusFolio && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setDetalleFolio(r.fusFolio)
+                    }
+                  }}
+                  aria-label={r.fusFolio ? `Abrir detalle del FUS ${r.fusFolio}` : undefined}
+                >
                   {colVisibles.fecha && <td className="bita-fecha" data-label="Fecha y hora (CDMX)">{formatearFechaHoraBitacora(r.fechaHora)}</td>}
                   {colVisibles.folio && (
                     <td className="bita-folio" data-label="Folio">
                       {r.fusFolio
                         ? <a
-                            href={`${esADM ? '/rol1/consultar-fus' : '/rol2/solicitudes'}?folio=${encodeURIComponent(r.fusFolio)}`}
+                            href={`${esParticular ? '/rol1/consultar-fus' : '/rol2/solicitudes'}?folio=${encodeURIComponent(r.fusFolio)}`}
                             className="bita-folio-link"
-                            onClick={e => { e.preventDefault(); setDetalleFolio(r.fusFolio) }}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); setDetalleFolio(r.fusFolio) }}
                           >
                             {r.fusFolio}
                           </a>
                         : '—'}
+                      <span className="bita-movimiento">{descripcionMovimiento(r)}</span>
                       <span className="bita-folio-fecha-mobile">{formatearFechaHoraBitacora(r.fechaHora)}</span>
                       {estatusDeRegistro(r) && (
                         <span className="bita-mobile-badge">
@@ -861,9 +1020,9 @@ export default function Bitacora() {
                       )}
                     </td>
                   )}
-                  {esADM && colVisibles.nombre  && <td className="bita-usuario" data-label="Responsable">{r.nombre || '—'}</td>}
-                  {esADM && colVisibles.usuario && <td className="bita-email-col" data-label="Correo del responsable">{r.usuario}</td>}
-                  {esADM && colVisibles.unidadAdministrativa && (
+                  {esParticular && colVisibles.nombre  && <td className="bita-usuario" data-label="Responsable">{r.nombre || '—'}</td>}
+                  {esParticular && colVisibles.usuario && <td className="bita-email-col" data-label="Correo del responsable">{r.usuario}</td>}
+                  {esParticular && colVisibles.unidadAdministrativa && (
                     <td data-label="Unidad administrativa">{r.unidadAdministrativa || '—'}</td>
                   )}
                   {colVisibles.estatus && (
@@ -879,10 +1038,22 @@ export default function Bitacora() {
                   {colVisibles.observaciones  && <td className="bita-obs" data-label="Observaciones">{r.observaciones || '—'}</td>}
                   <td className="bita-col-pdf" data-label="">
                     {r.fusFolio ? (
-                      <div className="bita-acciones-icons">
+                      <div className="bita-acciones-wrap" onClick={e => e.stopPropagation()}>
                         <button
+                          type="button"
+                          className="bita-acciones-mobile-toggle"
+                          aria-label={`Mostrar acciones del FUS ${r.fusFolio}`}
+                          aria-expanded={accionesAbiertas === r.id}
+                          onClick={() => setAccionesAbiertas(actual => actual === r.id ? null : r.id)}
+                        >
+                          <span aria-hidden="true">⋮</span>
+                        </button>
+                        <div className={`bita-acciones-icons${accionesAbiertas === r.id ? ' abiertas' : ''}`}>
+                        <button
+                          type="button"
                           className="bita-eye-btn"
                           title={`Previsualizar FUS ${r.fusFolio}`}
+                          aria-label={`Previsualizar FUS ${r.fusFolio}`}
                           onClick={() => setPreviewFolio(r.fusFolio)}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -891,8 +1062,10 @@ export default function Bitacora() {
                           </svg>
                         </button>
                         <button
+                          type="button"
                           className="bita-historial-btn"
                           title={`Ver historial FUS ${r.fusFolio}`}
+                          aria-label={`Ver historial FUS ${r.fusFolio}`}
                           onClick={() => setModalTimelineFolio(r.fusFolio)}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -902,8 +1075,10 @@ export default function Bitacora() {
                           </svg>
                         </button>
                         <button
+                          type="button"
                           className="bita-dl-btn"
                           title={`Descargar FUS ${r.fusFolio}`}
+                          aria-label={`Descargar FUS ${r.fusFolio}`}
                           disabled={descargandoFolio === r.fusFolio}
                           onClick={() => {
                             setDescargandoFolio(r.fusFolio)
@@ -919,6 +1094,7 @@ export default function Bitacora() {
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                               </svg>}
                         </button>
+                        </div>
                       </div>
                     ) : <span className="bita-no-pdf">—</span>}
                   </td>

@@ -12,6 +12,9 @@ export function NotificacionesProvider({ children }) {
   const [browserNotif,  setBrowserNotif]  = useState(() => localStorage.getItem('scs_browser_notif'))
   const [showPrompt,    setShowPrompt]    = useState(false)
   const [turnadoKey,    setTurnadoKey]    = useState(0)   // sube cuando llega TURNADO nuevo (para ROL2)
+  // null = aún no se intentó conectar; true = WS abierto; false = caído,
+  // operando con el fallback de polling cada 30s (ver más abajo).
+  const [conectado,     setConectado]     = useState(null)
   const wsRef           = useRef(null)
   const pollingId       = useRef(null)
   const reconnectId     = useRef(null)
@@ -124,6 +127,7 @@ export function NotificacionesProvider({ children }) {
           // quede registrado en logs de proxies/servidores intermedios.
           ws.send(JSON.stringify({ token: accessToken }))
           reconnectIntentos.current = 0
+          setConectado(true)
           if (pollingId.current) { clearInterval(pollingId.current); pollingId.current = null }
         }
 
@@ -143,12 +147,14 @@ export function NotificacionesProvider({ children }) {
 
         ws.onerror = () => {
           if (disposed) return
+          setConectado(false)
           if (!pollingId.current) pollingId.current = setInterval(cargar, 30_000)
         }
 
         ws.onclose = (e) => {
           if (wsRef.current === ws) wsRef.current = null
           if (!disposed && e.code !== 4001 && user) {
+            setConectado(false)
             if (!pollingId.current) pollingId.current = setInterval(cargar, 30_000)
             const delay = Math.min(1000 * (2 ** reconnectIntentos.current), 30_000)
             reconnectIntentos.current += 1
@@ -156,6 +162,7 @@ export function NotificacionesProvider({ children }) {
           }
         }
       } catch {
+        setConectado(false)
         if (!pollingId.current) pollingId.current = setInterval(cargar, 30_000)
       }
     }
@@ -222,7 +229,7 @@ export function NotificacionesProvider({ children }) {
   return (
     <NotificacionesContext.Provider value={{
       notifs, noLeidas, cargar, marcarLeida, marcarTodas, limpiarTodas,
-      browserNotif, showPrompt, turnadoKey,
+      browserNotif, showPrompt, turnadoKey, conectado,
       activarBrowserNotif, desactivarBrowserNotif, dismissPrompt,
     }}>
       {children}

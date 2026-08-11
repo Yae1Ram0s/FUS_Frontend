@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useCountUp } from '../hooks/useCountUp'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import '../components/Comisionado/Comisionado.css'
 import './PanelAdmin.css'
 
@@ -99,6 +100,9 @@ export default function PanelAdmin() {
   const [errorOperacion, setErrorOperacion] = useState('')
   const [exito,      setExito]      = useState('')
   const [toggleandoId, setToggleandoId] = useState(null)
+  const guardarEnCursoRef = useRef(false)
+  const agregarEnCursoRef = useRef(false)
+  const toggleEnCursoRef = useRef(new Set())
 
   useEffect(() => {
     api.get('/catalogos/unidades-administrativas/')
@@ -106,14 +110,16 @@ export default function PanelAdmin() {
       .catch(() => {})
   }, [])
 
+  const busquedaDeb = useDebouncedValue(busqueda, 300)
+
   const cargarCorreos = useCallback(async ({ signal }) => {
     const params = {}
-    if (busqueda)     params.search = busqueda
+    if (busquedaDeb) params.search = busquedaDeb
     if (filtroRol)    params.rol    = filtroRol
     if (filtroActivo) params.activo = filtroActivo
     const respuesta = await api.get('/auth/correos-autorizados/', { params, signal })
     return Array.isArray(respuesta.data) ? respuesta.data : []
-  }, [busqueda, filtroRol, filtroActivo])
+  }, [busquedaDeb, filtroRol, filtroActivo])
 
   const {
     data: correos,
@@ -139,6 +145,8 @@ export default function PanelAdmin() {
 
   const guardarEdicion = async (e) => {
     e.preventDefault()
+    if (guardarEnCursoRef.current) return
+    guardarEnCursoRef.current = true
     setError(''); setGuardando(true)
     try {
       await api.patch(`/auth/correos-autorizados/${editando.id}/`, formEdit)
@@ -151,6 +159,7 @@ export default function PanelAdmin() {
       setError(err.response?.data?.detail || 'No se pudo guardar los cambios.')
     } finally {
       setGuardando(false)
+      guardarEnCursoRef.current = false
     }
   }
 
@@ -159,6 +168,8 @@ export default function PanelAdmin() {
       setErrorOperacion('No puedes desactivar tu propia cuenta.')
       return
     }
+    if (toggleEnCursoRef.current.has(c.id)) return
+    toggleEnCursoRef.current.add(c.id)
     setErrorOperacion('')
     setToggleandoId(c.id)
     try {
@@ -168,6 +179,7 @@ export default function PanelAdmin() {
       setErrorOperacion(err.response?.data?.detail || 'No se pudo actualizar el estado de la cuenta.')
     } finally {
       setToggleandoId(null)
+      toggleEnCursoRef.current.delete(c.id)
     }
   }
 
@@ -177,6 +189,8 @@ export default function PanelAdmin() {
       setError('Selecciona la dirección a la que quedará vinculado el comisionado.')
       return
     }
+    if (agregarEnCursoRef.current) return
+    agregarEnCursoRef.current = true
     setError(''); setGuardando(true)
     try {
       await api.post('/auth/correos-autorizados/', form)
@@ -189,6 +203,7 @@ export default function PanelAdmin() {
       setError(err.response?.data?.detail || 'No se pudo agregar el correo.')
     } finally {
       setGuardando(false)
+      agregarEnCursoRef.current = false
     }
   }
 
@@ -282,7 +297,7 @@ export default function PanelAdmin() {
               </tr>
             </thead>
             <tbody>
-              {cargando && (
+              {cargando && correos.length === 0 && (
                 <tr><td colSpan={7} className="adm-loading"><Spinner overlay={false} /></td></tr>
               )}
               {!cargando && correos.length === 0 && (

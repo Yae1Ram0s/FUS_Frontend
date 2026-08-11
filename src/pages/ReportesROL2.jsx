@@ -300,7 +300,10 @@ export default function ReportesROL2() {
                 <span className="rep-heading-icon">{ICON_LAYERS}</span>
                 <div>
                   <h1>Mis reportes</h1>
-                  <p>Desempeño de tus turnados — Titular / Enlace Estratégico</p>
+                  <p>
+                    Desempeño de tus turnados — Titular / Enlace Estratégico
+                    {loading && data && <span className="btn-spinner rep-heading-spinner" />}
+                  </p>
                 </div>
               </div>
               <div className="rep-export">
@@ -365,7 +368,7 @@ export default function ReportesROL2() {
             {loading && !data && <Spinner overlay={false} fill label="Calculando indicadores…" />}
 
             {data && (
-              <>
+              <div className={`rep-resultados${loading ? ' rep-resultados--refrescando' : ''}`}>
                 <div className="kpi2-row rep-kpi-row">
                   <KpiCard index={0} color="blue" icon={ICON_LAYERS} label="Total turnados" value={resumen.total} delta={deltaTotal?.valor ?? 0} deltaTexto={deltaTotal?.texto} mejorSiSube />
                   <KpiCard index={1} color="green" icon={ICON_CHECK} label="Concluidos" value={resumen.concluidos} delta={deltaConcluidos?.valor ?? 0} deltaTexto={deltaConcluidos?.texto} mejorSiSube />
@@ -426,7 +429,7 @@ export default function ReportesROL2() {
                     <TablaDetalle filas={data.detalle} />
                   </Panel>
                 </div>
-              </>
+              </div>
             )}
 
           </div>

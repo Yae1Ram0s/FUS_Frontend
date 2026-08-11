@@ -450,7 +450,10 @@ export default function Reportes() {
                 <span className="rep-heading-icon">{ICON_LAYERS}</span>
                 <div>
                   <h1>Reportes e inteligencia operativa</h1>
-                  <p>Indicadores en tiempo real del sistema de control de solicitudes</p>
+                  <p>
+                    Indicadores en tiempo real del sistema de control de solicitudes
+                    {loading && data && <span className="btn-spinner rep-heading-spinner" />}
+                  </p>
                 </div>
               </div>
               <div className="rep-export">
@@ -568,7 +571,7 @@ export default function Reportes() {
                 {loading && !data && <Spinner overlay={false} fill label="Calculando indicadores…" />}
 
                 {data && (
-                  <>
+                  <div className={`rep-resultados${loading ? ' rep-resultados--refrescando' : ''}`}>
                     {visible('resumen') && (
                       <div className="kpi2-row rep-kpi-row">
                         <KpiCard index={0} color="blue" icon={ICON_LAYERS} label="Total de FUS" value={resumen.total} delta={deltaTotal?.valor ?? 0} deltaTexto={deltaTotal?.texto} mejorSiSube />
@@ -656,7 +659,7 @@ export default function Reportes() {
                       </Panel>
                     )}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 

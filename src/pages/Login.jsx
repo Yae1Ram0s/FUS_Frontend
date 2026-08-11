@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
-import Spinner from '../components/Spinner'
 import { rutaInicioPorRol } from '../utils/rutas'
 import useInstallPrompt from '../hooks/useInstallPrompt'
 import logosImg from '../assets/Logos_P_Hacienda_ANAM.png'
@@ -30,6 +29,8 @@ export default function Login() {
   const [reenviando,  setReenviando]  = useState(false)
   const [reenvioHasta, setReenvioHasta] = useState(0)
   const [reenvioRestante, setReenvioRestante] = useState(0)
+  const [passBloqueadoHasta, setPassBloqueadoHasta] = useState(0)
+  const [passBloqueoRestante, setPassBloqueoRestante] = useState(0)
   const [isRecovery,  setIsRecovery]  = useState(false)
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
@@ -56,6 +57,7 @@ export default function Login() {
     try {
       const guardado = JSON.parse(localStorage.getItem(REENVIO_STORAGE_KEY) || 'null')
       if (guardado?.email === email && guardado?.hasta > Date.now()) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- restaura desde localStorage el cronómetro de reenvío vigente al entrar al paso OTP con este correo
         setReenvioHasta(guardado.hasta)
       } else {
         setReenvioHasta(0)
@@ -69,6 +71,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!reenvioHasta) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetea el contador visible cuando el cronómetro (reenvioHasta) se apaga
       setReenvioRestante(0)
       return undefined
     }
@@ -86,6 +89,26 @@ export default function Login() {
     const intervalo = window.setInterval(actualizarContador, 1000)
     return () => window.clearInterval(intervalo)
   }, [reenvioHasta])
+
+  /* Cuenta regresiva del bloqueo por intentos fallidos de contraseña (ver
+     handlePassword) — mismo patrón que el cronómetro de reenvío de OTP. */
+  useEffect(() => {
+    if (!passBloqueadoHasta) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetea el contador visible cuando el bloqueo (passBloqueadoHasta) se apaga
+      setPassBloqueoRestante(0)
+      return undefined
+    }
+
+    const actualizarContador = () => {
+      const restante = Math.max(0, Math.ceil((passBloqueadoHasta - Date.now()) / 1000))
+      setPassBloqueoRestante(restante)
+      if (restante === 0) setPassBloqueadoHasta(0)
+    }
+
+    actualizarContador()
+    const intervalo = window.setInterval(actualizarContador, 1000)
+    return () => window.clearInterval(intervalo)
+  }, [passBloqueadoHasta])
 
   // La franja de status bar (notch/Dynamic Island) en Safari/iOS no es parte
   // del DOM — la pinta el navegador con el color de <meta name="theme-color">,
@@ -141,6 +164,7 @@ export default function Login() {
   /* ── Paso 2a: login usuario existente ── */
   const handlePassword = async (e) => {
     e.preventDefault()
+    if (passBloqueoRestante > 0) return
     setError('')
     setLoading(true)
     try {
@@ -167,6 +191,10 @@ export default function Login() {
         } catch (err2) {
           setError(err2.response?.data?.detail || err.response.data.detail)
         }
+      } else if (err.response?.data?.code === 'login_bloqueado') {
+        const segundos = err.response.data.segundosRestantes || 60
+        setPassBloqueadoHasta(Date.now() + segundos * 1000)
+        setError(err.response.data.detail)
       } else {
         setError(err.response?.data?.detail || 'Contraseña incorrecta.')
       }
@@ -321,7 +349,7 @@ export default function Login() {
       <form className="login-form" onSubmit={handlePassword} noValidate>
         <div className="lf-email-locked">
           <span>{email}</span>
-          <button type="button" className="lf-cambiar" onClick={() => { setStep(STEP_EMAIL); setError(''); setPassword('') }}>
+          <button type="button" className="lf-cambiar" onClick={() => { setStep(STEP_EMAIL); setError(''); setPassword(''); setPassBloqueadoHasta(0) }}>
             Cambiar
           </button>
         </div>
@@ -357,8 +385,12 @@ export default function Login() {
             {loading ? 'Enviando…' : 'Olvidé mi contraseña'}
           </button>
         </div>
-        <button className="btn-entrar" type="submit" disabled={loading || !password}>
-          {loading ? 'Verificando…' : 'Entrar'}
+        <button className="btn-entrar" type="submit" disabled={loading || !password || passBloqueoRestante > 0}>
+          {loading
+            ? 'Verificando…'
+            : passBloqueoRestante > 0
+              ? `Espera ${String(Math.floor(passBloqueoRestante / 60)).padStart(2, '0')}:${String(passBloqueoRestante % 60).padStart(2, '0')}`
+              : 'Entrar'}
         </button>
       </form>
     )
@@ -511,8 +543,6 @@ export default function Login() {
         </div>
 
         <div className="login-card">
-          {loading && <Spinner label="Verificando…" />}
-
           {showStepIndicator && (
             <div className="lf-steps">
               <span className="lf-step-dot lf-step-done" />

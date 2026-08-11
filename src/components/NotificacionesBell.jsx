@@ -76,7 +76,7 @@ export default function NotificacionesBell() {
 
   const {
     notifs, noLeidas, cargar, marcarLeida, marcarTodas, limpiarTodas,
-    browserNotif, activarBrowserNotif, desactivarBrowserNotif,
+    browserNotif, activarBrowserNotif, desactivarBrowserNotif, conectado,
   } = ctx
 
   const soloHttps       = window.location.protocol === 'https:'
@@ -116,7 +116,7 @@ export default function NotificacionesBell() {
       <button
         className={`notif-bell-btn${noLeidas > 0 ? ' notif-bell-active' : ''}`}
         onClick={toggle}
-        aria-label={`Notificaciones${noLeidas > 0 ? ` (${noLeidas} nuevas)` : ''}`}
+        aria-label={`Notificaciones${noLeidas > 0 ? ` (${noLeidas} nuevas)` : ''}${conectado === false ? ' — sin conexión en tiempo real' : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -128,6 +128,9 @@ export default function NotificacionesBell() {
           <span className="notif-badge" aria-hidden="true">
             {noLeidas > 9 ? '9+' : noLeidas}
           </span>
+        )}
+        {conectado === false && (
+          <span className="notif-offline-dot" title="Sin conexión en tiempo real — actualizando cada 30s" aria-hidden="true" />
         )}
       </button>
 
@@ -154,6 +157,10 @@ export default function NotificacionesBell() {
               </div>
             )}
           </div>
+
+          {conectado === false && (
+            <p className="notif-offline-banner">Sin conexión en tiempo real — actualizando cada 30s.</p>
+          )}
 
           <div className="notif-list">
             {notifs.length === 0 ? (

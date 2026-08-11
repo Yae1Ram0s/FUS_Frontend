@@ -53,6 +53,7 @@ const formVacio = () => ({
   descripcion:         '',
   contexto:            '',
   idMedioRecepcion:    '',
+  medioEspecificacion: '',
   prioridad:           '',
   criterios:           [],
   fechaLimite:         '',
@@ -134,6 +135,7 @@ export default function RegistrarFUS() {
         descripcion:         f.descripcion || '',
         contexto:            f.contexto || '',
         idMedioRecepcion:    f.idMedioRecepcion?.id || '',
+        medioEspecificacion: f.medioEspecificacion || '',
         prioridad:           f.prioridad || '',
         criterios:           f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : [],
         fechaLimite:         toDatetimeLocal(f.fechaLimite),
@@ -241,6 +243,11 @@ export default function RegistrarFUS() {
       return
     }
     if (!form.idMedioRecepcion) { setError('Selecciona un medio de recepción.'); return }
+    const medioSeleccionado = medios.find(m => String(m.id) === String(form.idMedioRecepcion))
+    if (medioSeleccionado?.nombreMedio === 'Otro' && !form.medioEspecificacion.trim()) {
+      setError('Especifica el medio de recepción.')
+      return
+    }
     if (!form.prioridad)         { setError('Selecciona una prioridad.'); return }
 
     envioEnCursoRef.current = true
@@ -250,6 +257,7 @@ export default function RegistrarFUS() {
       fd.append('descripcion',          form.descripcion)
       fd.append('contexto',             form.contexto)
       fd.append('idMedioRecepcion',     form.idMedioRecepcion)
+      fd.append('medioEspecificacion',  medioSeleccionado?.nombreMedio === 'Otro' ? form.medioEspecificacion.trim() : '')
       fd.append('prioridad',            form.prioridad)
       fd.append('criterios',            form.criterios.join(' | '))
       fd.append('fechaLimite', form.fechaLimite)
@@ -415,6 +423,15 @@ export default function RegistrarFUS() {
                       ))}
                     </div>
                   )}
+                  {medios.find(m => String(m.id) === String(form.idMedioRecepcion))?.nombreMedio === 'Otro' && (
+                    <input
+                      type="text"
+                      className="medio-otro-input"
+                      placeholder="Especifica el medio de recepción"
+                      value={form.medioEspecificacion}
+                      onChange={e => set('medioEspecificacion', e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
             </fieldset>
@@ -458,9 +475,11 @@ export default function RegistrarFUS() {
                     onChange={e => set('solicitante_nombre', e.target.value)}
                   />
                   <input
+                    type="tel"
+                    inputMode="numeric"
                     placeholder="Teléfono/Celular"
                     value={form.solicitante_tel}
-                    onChange={e => set('solicitante_tel', e.target.value)}
+                    onChange={e => set('solicitante_tel', e.target.value.replace(/\D/g, ''))}
                   />
                   <input
                     placeholder="Correo electrónico"

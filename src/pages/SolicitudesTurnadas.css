@@ -472,6 +472,11 @@
   color: rgba(31, 86, 71, 0.42);
 }
 
+/* Dos redacciones del mismo aviso: "panel izquierdo" solo tiene sentido en
+   desktop (ahí sí hay un panel lateral fijo); en móvil la lista vive en la
+   barra colapsable de arriba, así que el texto lo describe distinto. */
+.st-hint-mobile { display: none; }
+
 /* ── Panel de estadísticas ROL2 ── */
 .std-panel {
   display: flex;
@@ -1480,8 +1485,25 @@
 
   .st-inner.has-detail { overflow: hidden; }
 
-  /* Detalle: ocultar la lista para que el detalle use toda la pantalla */
-  .st-inner.has-detail .st-left { display: none; }
+  /* Detalle abierto: la lista ya no se oculta del todo — se deja como una
+     barra angosta con solo el toggle (mismo aspecto que ".panel-cerrado"),
+     para poder reabrir la lista con un toque rápido en vez de tener que
+     bajar hasta el botón "Volver" del detalle. */
+  .st-inner.has-detail .st-left {
+    max-height: 52px !important;
+    min-height: 52px;
+  }
+  .st-inner.has-detail .st-left .panel-title,
+  .st-inner.has-detail .st-left .panel-content {
+    display: none;
+  }
+  .st-inner.has-detail .st-left .panel-header {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .st-hint-desktop { display: none; }
+  .st-hint-mobile { display: block; }
 
   /* Lista mode: panel izquierdo toma toda la altura, ocultar el lado derecho */
   .st-inner.lista-mode .st-left {

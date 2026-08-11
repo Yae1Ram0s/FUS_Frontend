@@ -7,8 +7,10 @@ import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import api from '../api/api'
 import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { formatearFechaHora } from '../utils/fechas'
+import { formatMedioRecepcion } from '../utils/medio'
 // Reusa el layout de lista+detalle (.st-*, .seccion, .sec-*, .dt-panel,
 // .drow, .fus-card...) tal cual SolicitudesTurnadas — este chunk se carga
 // aparte (lazy-loading por ruta) y no lo hereda solo, así que hay que
@@ -147,7 +149,7 @@ function DetalleFUSComisionado({ fus, onBack }) {
           <span className="sec-sublabel">Datos generales</span>
           <div className="sec-grid-2">
             <DRow label="Fecha y hora"        value={formatearFechaHora(fus.fechaHora)} />
-            <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
+            <DRow label="Medio de recepción"  value={formatMedioRecepcion(fus.idMedioRecepcion, fus.medioEspecificacion)} />
             <DRow label="Solicitante interno" value={nombreSolicitante} />
           </div>
         </div>
@@ -219,9 +221,10 @@ export default function FUSComisionados() {
     append: false,
     version: 0,
   })
+  const busquedaDeb = useDebouncedValue(busqueda, 300)
   const cargarPagina = useCallback(async ({ signal }) => {
     const params = { page: solicitud.page, page_size: PAGE_SIZE }
-    if (busqueda) params.search = busqueda
+    if (busquedaDeb) params.search = busquedaDeb
     const response = await api.get('/fus/mis-comisionados/', {
       params,
       signal,
@@ -232,7 +235,7 @@ export default function FUSComisionados() {
       page: solicitud.page,
       append: solicitud.append,
     }
-  }, [busqueda, solicitud])
+  }, [busquedaDeb, solicitud])
   const {
     data: resultado,
     loading: cargando,
@@ -252,7 +255,7 @@ export default function FUSComisionados() {
       append: false,
       version: actual.version + 1,
     }))
-  }, [busqueda])
+  }, [busquedaDeb])
 
   useEffect(() => {
     if (!seleccionado) return

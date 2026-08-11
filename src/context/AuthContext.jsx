@@ -41,6 +41,7 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessTokenState] = useState(() => getAccessToken())
   const [cargando, setCargando] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [loggingIn, setLoggingIn] = useState(false)
   const userRef = useRef(user)
   useEffect(() => { userRef.current = user }, [user])
 
@@ -133,13 +134,18 @@ export function AuthProvider({ children }) {
   }, [!!user])
 
   const login = async (email, password) => {
-    const { data } = await api.post('/auth/login/', { email, password })
-    const userData = data.user
-    localStorage.setItem('scs_user', JSON.stringify(userData))
-    marcarActividad()
-    setAccessToken(data.access)
-    setUser(userData)
-    return userData
+    setLoggingIn(true)
+    try {
+      const { data } = await api.post('/auth/login/', { email, password })
+      const userData = data.user
+      localStorage.setItem('scs_user', JSON.stringify(userData))
+      marcarActividad()
+      setAccessToken(data.access)
+      setUser(userData)
+      return userData
+    } finally {
+      setLoggingIn(false)
+    }
   }
 
   const loginWithTokens = (data) => {
@@ -150,12 +156,13 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
-  // `loggingOut` vive aquí (no en Header) y el Spinner se pinta junto a
-  // {children} — no dentro de una página — porque en cuanto `setUser(null)`
-  // se aplica, PrivateRoute redirige a /login y desmonta esa página al
-  // instante; un loader local en el Header desaparecería con ella antes de
-  // alcanzar a verse. Nunca rechaza (.catch swallow), así que cerrar sesión
-  // sigue funcionando aunque la red esté caída.
+  // `loggingOut`/`loggingIn` viven aquí (no en Header/Login) y el Spinner se
+  // pinta junto a {children} — no dentro de una página — porque en cuanto
+  // `setUser(...)` se aplica, PrivateRoute/Login redirigen y desmontan esa
+  // página al instante; un loader local ahí desaparecería con ella antes de
+  // alcanzar a verse. `logout` nunca rechaza (.catch swallow), así que cerrar
+  // sesión sigue funcionando aunque la red esté caída; `login` sí puede
+  // rechazar (contraseña incorrecta, etc.), por eso usa try/finally.
   const logout = async () => {
     setLoggingOut(true)
     await api.post('/auth/logout/').catch(() => {})
@@ -166,6 +173,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{ user, login, loginWithTokens, logout, accessToken, cargando }}>
       {loggingOut && <Spinner label="Cerrando sesión…" />}
+      {loggingIn && <Spinner label="Iniciando sesión…" />}
       {children}
     </AuthContext.Provider>
   )

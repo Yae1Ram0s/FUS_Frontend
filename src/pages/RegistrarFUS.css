@@ -287,8 +287,8 @@
 }
 
 .medios-quick {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   background: rgba(255, 255, 255, 0.50);
   border: 1px solid rgba(35, 91, 78, 0.14);
@@ -300,6 +300,7 @@
 .quick-opt {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 0.8rem;
   color: #235b4e;
@@ -319,6 +320,31 @@
 }
 
 .quick-opt input { accent-color: #235b4e; }
+
+/* Input "Otro" — aparece solo cuando ese medio está seleccionado */
+.medio-otro-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  border-radius: 20px;
+  font-size: 0.875rem;
+  color: #0d2218;
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  outline: none;
+  transition: all 200ms ease-in-out;
+}
+.medio-otro-input::placeholder { color: rgba(30, 80, 65, 0.45); }
+.medio-otro-input:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(35, 91, 78, 0.40);
+}
+.medio-otro-input:focus {
+  border-color: rgba(35, 91, 78, 0.65);
+  box-shadow: 0 0 0 3px rgba(35, 91, 78, 0.12);
+  background: #ffffff;
+}
 
 /* Prioridad wrapper + descripción */
 .prioridad-wrapper {

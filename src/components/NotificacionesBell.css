@@ -64,6 +64,31 @@
   pointer-events: none;
 }
 
+/* Punto de "sin conexión en tiempo real" — esquina opuesta al badge de no
+   leídas para no pisarlo, visible sin abrir el panel. */
+.notif-offline-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: #d97b3f;
+  border: 2px solid var(--bg);
+  pointer-events: none;
+}
+
+/* Aviso dentro del panel cuando el WebSocket cayó y se opera con polling */
+.notif-offline-banner {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 0.7rem;
+  color: #DDC9A3;
+  background: rgba(217, 123, 63, 0.14);
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+
 /* ── Panel desplegable ──
    Glassmorphism sutil: alpha muy alto (0.96) para que quede casi sólido y
    contraste bien con el texto claro de adentro — solo un leve desenfoque

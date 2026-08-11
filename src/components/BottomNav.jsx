@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import './BottomNav.css'
@@ -137,6 +137,8 @@ export default function BottomNav() {
   const location  = useLocation()
   const [open, setOpen] = useState(false)
   const navRef = useRef(null)
+  const itemRefs = useRef([])
+  const [thumb, setThumb] = useState(null)
 
   /* Cerrar el popover al tocar fuera */
   useEffect(() => {
@@ -148,14 +150,12 @@ export default function BottomNav() {
     return () => document.removeEventListener('mousedown', handle)
   }, [open])
 
-  if (!user) return null
-
-  const items = user.rol === 'ROL2' ? NAV_ROL2
+  const items = !user ? [] : user.rol === 'ROL2' ? NAV_ROL2
     : user.rol === 'COMISIONADO' ? NAV_COMISIONADO
     : user.rol === 'EQUIPO_PARTICULAR' ? NAV_EQUIPO_PARTICULAR
     : NAV_ROL1
 
-  const menuItems = user.rol === 'ROL2' ? MENU_ROL2
+  const menuItems = !user ? [] : user.rol === 'ROL2' ? MENU_ROL2
     : user.rol === 'COMISIONADO' ? MENU_COMISIONADO
     : user.rol === 'EQUIPO_PARTICULAR' ? MENU_EQUIPO_PARTICULAR
     : MENU_ROL1
@@ -165,6 +165,38 @@ export default function BottomNav() {
     : location.pathname === item.path
 
   const menuActive = menuItems.some(mi => location.pathname === mi.path)
+  const activeIdx = items.findIndex(isActive)
+  const thumbIdx = activeIdx !== -1 ? activeIdx : (menuActive ? items.length : -1)
+
+  /* Thumb deslizante detrás del ícono activo — se mide en vez de asumir
+     columnas de ancho fijo, porque bottom-nav-compact usa columnas de 72px
+     y el resto usa 1fr (ancho variable según el número de ítems). */
+  useLayoutEffect(() => {
+    const navEl = navRef.current
+    const target = itemRefs.current[thumbIdx]
+    if (!navEl || !target) { setThumb(null); return }
+
+    const medir = () => {
+      const navRect = navEl.getBoundingClientRect()
+      const iconEl = target.querySelector('.bn-icon')
+      const rect = (iconEl || target).getBoundingClientRect()
+      // Pastilla más ovalada que el ícono (más ancha que alta), en vez de
+      // un círculo del mismo tamaño exacto del ícono.
+      const width = rect.width * 1.55
+      setThumb({
+        width,
+        height: rect.height,
+        x: rect.left - navRect.left - (width - rect.width) / 2,
+        y: rect.top - navRect.top,
+      })
+    }
+    medir()
+    window.addEventListener('resize', medir)
+    return () => window.removeEventListener('resize', medir)
+  }, [thumbIdx, items.length])
+
+  if (!user) return null
+
   // Con un solo ítem no hay nada que "desplegar" — el botón navega directo
   // a él (mismo ícono que ese ítem, ej. Bitácora para ROL2/Comisionado). El
   // botón "+"/popover solo aparece cuando de verdad hay varias opciones.
@@ -192,9 +224,22 @@ export default function BottomNav() {
       aria-label="Navegación principal"
       ref={navRef}
     >
+      {thumb && (
+        <span
+          className="bn-thumb"
+          style={{
+            width: thumb.width,
+            height: thumb.height,
+            transform: `translate(${thumb.x}px, ${thumb.y}px)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
       {items.map((item, idx) => (
         <button
           key={`${item.path}-${idx}`}
+          ref={el => { itemRefs.current[idx] = el }}
           className={`bn-item${item.raised ? ' bn-item-raised' : ''}${isActive(item) ? ' bn-item-active' : ''}`}
           onClick={() => ir(item)}
           aria-label={item.label}
@@ -206,6 +251,7 @@ export default function BottomNav() {
       ))}
 
       <button
+        ref={el => { itemRefs.current[items.length] = el }}
         className={`bn-item bn-more${menuActive ? ' bn-item-active' : ''}`}
         onClick={alClicMas}
         aria-label={itemUnico ? itemUnico.label : 'Más opciones'}

@@ -653,6 +653,11 @@
   color: rgba(31, 86, 71, 0.42);
 }
 
+/* Dos redacciones del mismo aviso: "panel izquierdo" solo tiene sentido en
+   desktop (ahí sí hay un panel lateral fijo); en móvil la lista vive en la
+   barra colapsable de arriba, así que el texto lo describe distinto. */
+.cfus-hint-mobile { display: none; }
+
 .stat-icon-wrap {
   width: 42px; height: 42px;
   border-radius: 11px;
@@ -1705,8 +1710,25 @@
 
   .cfus-inner.has-detail { overflow: hidden; }
 
-  /* Detalle: ocultar la lista para que el detalle use toda la pantalla */
-  .cfus-inner.has-detail .cfus-left { display: none; }
+  /* Detalle abierto: la lista ya no se oculta del todo — se deja como una
+     barra angosta con solo el toggle (mismo aspecto que ".panel-cerrado"),
+     para poder reabrir la lista con un toque rápido en vez de tener que
+     bajar hasta el botón "Volver" del detalle. */
+  .cfus-inner.has-detail .cfus-left {
+    max-height: 52px !important;
+    min-height: 52px;
+  }
+  .cfus-inner.has-detail .cfus-left .panel-header-left,
+  .cfus-inner.has-detail .cfus-left .panel-content {
+    display: none;
+  }
+  .cfus-inner.has-detail .cfus-left .panel-header {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .cfus-hint-desktop { display: none; }
+  .cfus-hint-mobile { display: block; }
 
   /* Lista mode: panel izquierdo toma toda la altura, ocultar el lado derecho */
   .cfus-inner.lista-mode .cfus-left {
@@ -1852,10 +1874,6 @@
     gap: 6px;
     max-width: calc(100% - 86px);
     justify-content: flex-end;
-  }
-  .detalle-panel-rol-gestion .btn-volver-mobile {
-    max-width: 68px;
-    margin-bottom: 7px;
   }
   .detalle-panel-rol-gestion .detalle-title,
   .detalle-panel-rol-gestion .detalle-folio {

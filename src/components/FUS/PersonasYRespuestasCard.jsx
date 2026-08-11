@@ -6,7 +6,7 @@ import { esParticular } from '../../utils/permisos'
 import Badge from '../Badge'
 
 export default function PersonasYRespuestasCard({ turnados, cargando, user, onCambio }) {
-  if (cargando) {
+  if (cargando && !turnados.length) {
     return (
       <div className="det-section">
         <Spinner overlay={false} fill />

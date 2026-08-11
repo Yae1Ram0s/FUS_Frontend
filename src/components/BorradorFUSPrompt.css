@@ -1,7 +1,7 @@
 .bfp-wrap {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  top: 24px;
+  right: 24px;
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -21,8 +21,8 @@
 }
 
 @keyframes bfp-slide-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  from { opacity: 0; transform: translateY(-20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }
 
 .bfp-icon {
@@ -105,7 +105,7 @@
   .bfp-wrap {
     left: 16px;
     right: 16px;
-    bottom: 16px;
+    top: 16px;
     max-width: none;
     flex-wrap: wrap;
   }

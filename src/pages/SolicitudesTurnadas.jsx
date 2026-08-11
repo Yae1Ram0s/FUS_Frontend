@@ -18,6 +18,7 @@ import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
@@ -28,6 +29,7 @@ import {
   formatearFechaISO as fmtFechaCorta,
   formatearHora as fmtHora,
 } from '../utils/fechas'
+import { formatMedioRecepcion } from '../utils/medio'
 import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
@@ -364,7 +366,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
           <span className="sec-sublabel">Datos generales</span>
           <div className="sec-grid-2">
             <DRow label="Fecha y hora"        value={formatearFechaHora(fus.fechaHora)} />
-            <DRow label="Medio de recepción"  value={fus.idMedioRecepcion?.nombreMedio} />
+            <DRow label="Medio de recepción"  value={formatMedioRecepcion(fus.idMedioRecepcion, fus.medioEspecificacion)} />
             <DRow label="Solicitante interno" value={nombreSolicitante} />
           </div>
           {fus.idComisionado && (
@@ -578,17 +580,22 @@ export default function SolicitudesTurnadas() {
   const [filtro,       setFiltro]       = useState(() => (searchParams.get('filtro') || '').split(',').filter(Boolean))
   const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
   const [seleccionado, setSeleccionado] = useState(null)
+  // Móvil: turnado que quedó "en pausa" al abrir la barra rápida de lista
+  // desde el detalle (ver panel-toggle) — si se cierra esa lista sin elegir
+  // otra solicitud, se restaura en vez de dejar al usuario en la nada.
+  const [turnadoPausado, setTurnadoPausado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [highlightId,  setHighlightId]  = useState(null)
   const reordenadoRef = useRef(false)
   const [solicitud, setSolicitud] = useState({ page: 1, append: false, version: 0 })
+  const busquedaDeb = useDebouncedValue(busqueda, 300)
 
   const cargarPagina = useCallback(async ({ signal }) => {
     const params = { page: solicitud.page, page_size: PAGE_SIZE }
     if (folioParam)                           params.folio = folioParam
     if (!folioParam && filtro.length)    params.estatusTitular = filtro.join(',')
     if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
-    if (!folioParam && busqueda)        params.search = busqueda
+    if (!folioParam && busquedaDeb)     params.search = busquedaDeb
     const respuesta = await api.get('/turnados/mis-turnados/', { params, signal })
     const items = respuesta.data.results || []
     const match = folioParam
@@ -601,7 +608,7 @@ export default function SolicitudesTurnadas() {
       append: solicitud.append,
       match,
     }
-  }, [busqueda, filtro, folioParam, prioridadFiltro, solicitud])
+  }, [busquedaDeb, filtro, folioParam, prioridadFiltro, solicitud])
 
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
@@ -646,7 +653,7 @@ export default function SolicitudesTurnadas() {
      
     recargar()
      
-  }, [filtro, prioridadFiltro, busqueda, folioParam])
+  }, [filtro, prioridadFiltro, busquedaDeb, folioParam])
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
   useEffect(() => {
@@ -731,7 +738,7 @@ export default function SolicitudesTurnadas() {
   }, [])
 
   useEffect(() => {
-    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
+    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null); setTurnadoPausado(null) }
     window.addEventListener('scs:consultar', handleConsultar)
     return () => window.removeEventListener('scs:consultar', handleConsultar)
   }, [])
@@ -743,7 +750,32 @@ export default function SolicitudesTurnadas() {
         <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
             {panelAbierto && <h3 className="panel-title">Solicitudes turnadas</h3>}
-            <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
+            <button
+              className="panel-toggle"
+              onClick={() => {
+                // Móvil con un detalle abierto: esta barra ya no se oculta (ver
+                // SolicitudesTurnadas.css, ".st-inner.has-detail .st-left") —
+                // tocarla es el atajo rápido de vuelta a la lista, sin bajar
+                // hasta el botón "Volver" del detalle. El turnado que se
+                // estaba viendo queda "en pausa": si se cierra esta lista
+                // rápida sin elegir otra solicitud, se restaura en vez de
+                // dejar la pantalla vacía. En desktop el detalle y la lista
+                // conviven, así que aquí el toggle solo abre/cierra el panel.
+                const esMobile = window.innerWidth <= 768
+                if (seleccionado && esMobile) {
+                  setTurnadoPausado(seleccionado)
+                  setSeleccionado(null)
+                  setPanelAbierto(true)
+                } else if (turnadoPausado && esMobile) {
+                  setSeleccionado(turnadoPausado)
+                  setTurnadoPausado(null)
+                  setPanelAbierto(false)
+                } else {
+                  setPanelAbierto(p => !p)
+                }
+              }}
+              title={seleccionado ? 'Ver lista de solicitudes' : (panelAbierto ? 'Cerrar panel' : 'Abrir panel')}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 {panelAbierto
                   ? <polyline points="15 18 9 12 15 6" />
@@ -867,7 +899,7 @@ export default function SolicitudesTurnadas() {
             ? <DetalleTurnado
                 key={`${seleccionado.id}_${seleccionado.estatusTitular}_${seleccionado.idFus?.estatusParticular}`}
                 turnado={seleccionado}
-                onBack={() => { setSeleccionado(null); setPanelAbierto(true) }}
+                onBack={() => { setSeleccionado(null); setTurnadoPausado(null); setPanelAbierto(true) }}
               />
             : (
               <div className="st-hint-select">
@@ -878,7 +910,8 @@ export default function SolicitudesTurnadas() {
                   <line x1="16" y1="17" x2="8" y2="17"/>
                   <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+                <p className="st-hint-desktop">Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+                <p className="st-hint-mobile">Toca la barra de arriba para abrir la lista y elegir una solicitud</p>
               </div>
             )
           }

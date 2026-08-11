@@ -26,7 +26,10 @@
   flex-shrink: 0;
 }
 .rep-heading h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; }
-.rep-heading p { margin: 2px 0 0; font-size: .82rem; color: #55555a; }
+.rep-heading p { margin: 2px 0 0; font-size: .82rem; color: #55555a; display: flex; align-items: center; gap: 6px; }
+.rep-heading-spinner { width: 10px; height: 10px; color: #1F5647; }
+
+.rep-resultados--refrescando { opacity: 0.55; pointer-events: none; transition: opacity 150ms ease; }
 
 .rep-export { display: flex; gap: 8px; }
 .rep-export button {

@@ -210,15 +210,52 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: .78rem;
-  font-weight: 600;
-  color: rgba(10, 30, 20, 0.55);
-  background: rgba(35, 91, 78, 0.08);
-  border: 1px solid rgba(35, 91, 78, 0.18);
-  border-radius: 20px;
-  padding: 4px 13px;
+  min-height: 42px;
+  font-size: .75rem;
+  font-weight: 700;
+  color: rgba(10, 30, 20, 0.62);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.80), rgba(226, 238, 234, 0.52));
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  padding: 6px 14px;
+  box-shadow:
+    5px 5px 14px rgba(35, 91, 78, 0.13),
+    -3px -3px 10px rgba(255, 255, 255, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.90);
 }
+.bita-total strong { color: #174d3f; font-size: 1rem; font-variant-numeric: tabular-nums; }
 .bita-total-spinner { width: 10px; height: 10px; color: #235b4e; }
+
+.bita-header-descargar {
+  min-height: 42px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(35, 91, 78, 0.91), rgba(24, 75, 63, 0.82));
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow:
+    6px 7px 18px rgba(22, 70, 58, 0.24),
+    -2px -2px 8px rgba(255, 255, 255, 0.70),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.bita-header-descargar:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(145deg, rgba(42, 108, 91, 0.95), rgba(24, 75, 63, 0.90));
+  box-shadow: 7px 9px 22px rgba(22, 70, 58, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+.bita-header-descargar:active { transform: translateY(1px); }
+.bita-header-descargar:focus-visible { outline: 3px solid rgba(188, 149, 92, 0.58); outline-offset: 2px; }
+.bita-header-descargar:disabled { opacity: .62; cursor: not-allowed; transform: none; }
 
 .bita-table-refrescando .bita-table tbody { opacity: 0.5; pointer-events: none; transition: opacity 150ms ease; }
 
@@ -322,6 +359,100 @@
 }
 .bita-busqueda { width: 100%; padding-left: 34px; box-sizing: border-box; }
 
+.bita-toolbar-btn {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid rgba(35, 91, 78, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #1f5647;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: .78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.bita-toolbar-btn:hover { background: rgba(35, 91, 78, 0.10); border-color: rgba(35, 91, 78, 0.38); }
+.bita-toolbar-btn:active { transform: translateY(1px); }
+.bita-toolbar-btn.activo { background: #235b4e; border-color: #235b4e; color: #fff; }
+.bita-toolbar-btn:disabled { opacity: .6; cursor: not-allowed; }
+.bita-toolbar-count {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #ddc9a3;
+  color: #235b4e;
+  font-size: .68rem;
+}
+.bita-toolbar-descargar { background: #235b4e; border-color: #235b4e; color: #fff; }
+.bita-toolbar-descargar:hover { background: #19493e; color: #fff; }
+.bita-columnas-menu-wrap { position: relative; }
+/* position:fixed vía estilo inline (top/left calculados en JS con
+   posicionPopover, portal a document.body) — no position:absolute anclado
+   al wrap: dentro de la barra sticky de filtros eso se salía de la pantalla
+   en móvil (mismo arreglo que ya usan Unidad administrativa/Responsable/
+   Estatus). */
+.bita-columnas-menu {
+  z-index: 40;
+  width: 270px;
+  padding: 14px;
+  border: 1px solid rgba(35, 91, 78, 0.20);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 38px rgba(24, 72, 61, 0.20);
+  animation: bita-panel-entrada 160ms ease both;
+}
+.bita-columnas-menu-head { padding: 2px 2px 11px; border-bottom: 1px solid rgba(35, 91, 78, 0.12); }
+.bita-columnas-menu-head strong { display: block; color: #1f5647; font-size: .82rem; }
+.bita-columnas-menu-head span { display: block; margin-top: 3px; color: rgba(35, 91, 78, 0.58); font-size: .69rem; }
+.bita-columnas-menu-lista { display: grid; gap: 3px; padding: 9px 0; }
+.bita-columnas-opcion {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border-radius: 9px;
+  color: #315f55;
+  font-size: .77rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bita-columnas-opcion:hover { background: rgba(35, 91, 78, 0.07); }
+.bita-columnas-opcion input { accent-color: #235b4e; width: 15px; height: 15px; }
+.bita-columnas-restablecer {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(35, 91, 78, 0.18);
+  border-radius: 9px;
+  background: rgba(35, 91, 78, 0.06);
+  color: #235b4e;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bita-columnas-restablecer:hover { background: rgba(35, 91, 78, 0.12); }
+.bita-filtros-panel { display: none; }
+.bita-filtros-panel.abierto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 2px;
+  animation: bita-panel-entrada 180ms ease both;
+}
+@keyframes bita-panel-entrada {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Fila 2: presets de fecha + columnas opcionales — una sola fila de scroll horizontal */
 .bita-fila-pildoras {
   position: relative;
@@ -380,6 +511,8 @@
   min-width: 220px;
   max-height: 260px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -919,6 +1052,25 @@
 
   .bita-input   { min-width: unset; width: 100%; box-sizing: border-box; }
   .bita-busqueda-wrap { flex: none; width: 100%; }
+  .bita-fila-busqueda { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bita-fila-busqueda .bita-busqueda-wrap { grid-column: 1 / -1; }
+  .bita-toolbar-btn { width: 100%; padding: 8px 6px; font-size: .71rem; }
+  .bita-columnas-menu-wrap { min-width: 0; }
+  .bita-columnas-menu-wrap > .bita-toolbar-btn { width: 100%; }
+  .bita-columnas-menu {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    top: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: min(70vh, 470px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    z-index: 120;
+  }
+  .bita-toolbar-count { min-width: 17px; height: 17px; font-size: .62rem; }
   .bita-fechas  { flex-direction: column; align-items: stretch; }
   .bita-fechas .bita-sep { display: none; }
   .bita-fecha-grupo { width: 100%; }
@@ -965,6 +1117,7 @@
   .bita-table { border-collapse: collapse; }
   .bita-table thead { display: none; }
   .bita-table tbody tr {
+    position: relative;
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(35, 91, 78, 0.10);
@@ -1032,7 +1185,9 @@
     justify-content: flex-start;
     align-items: center;
     flex-wrap: wrap;
-    padding: 12px 14px !important;
+    /* padding-right de sobra: ahí flota el botón de acciones (ver
+       .bita-col-pdf más abajo), que ya no vive en su propia franja al pie. */
+    padding: 12px 52px 12px 14px !important;
   }
   .bita-table td.bita-folio::before { display: none; }
   .bita-folio-link {
@@ -1046,33 +1201,26 @@
   }
   .bita-folio-link:hover, .bita-folio-link:active { color: #16362d; border-bottom-color: #16362d; }
   .bita-folio-fecha-mobile { display: none; }
-  .bita-mobile-badge {
-    display: inline-flex;
-    align-items: center;
-    position: static;
-    flex: 0 1 auto;
-    max-width: 52%;
-    margin-left: auto;
-    font-size: .62rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: rgba(35, 91, 78, 0.12);
-    color: #235b4e;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    line-height: 1.25;
-    text-align: right;
-  }
+  /* El estatus ya se repite como su propia fila ("Estatus", siempre visible
+     — no es una columna que se pueda ocultar) más abajo en la tarjeta; este
+     badge junto al folio era redundante y en su lugar queda el botón de
+     acciones (⋮). */
+  .bita-mobile-badge { display: none; }
 
   .bita-email-col { white-space: normal; word-break: break-word; }
 
+  /* Acciones (⋮): flotan en la esquina superior derecha de la tarjeta, sobre
+     el bloque del folio, en vez de su propia franja al pie — ahí es donde
+     antes se veía el badge de estatus duplicado. */
   .bita-col-pdf {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
     width: auto;
-    justify-content: flex-end;
-    background: #f7fafc;
-    border-radius: 0 0 13px 13px;
-    padding: 8px 14px !important;
+    background: transparent;
+    border-bottom: none;
+    padding: 0 !important;
   }
   .bita-col-pdf::before { display: none; }
   .bita-acciones-icons { gap: 10px; }
@@ -1092,19 +1240,523 @@
     flex: 1 1 135px;
     min-width: 0;
   }
-  .bita-mobile-badge {
-    flex: 0 1 auto;
-    max-width: min(58%, 190px);
-    justify-content: flex-end;
-  }
 }
 
 @media (max-width: 360px) {
   .bita-wrap { padding: .5rem; padding-bottom: calc(.5rem + 90px + env(safe-area-inset-bottom, 0px)); }
-  .bita-mobile-badge {
-    flex: 0 1 auto;
-    max-width: 58%;
-    margin-left: auto;
-    text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BÚSQUEDA AVANZADA — estructura funcional por bloques
+   ═══════════════════════════════════════════════════════════════════════ */
+.bita-filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.bita-filtro-grupo {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(35, 91, 78, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.bita-filtro-periodo { grid-column: span 2; }
+
+.bita-filtro-titulo {
+  display: block;
+  margin-bottom: 8px;
+  color: #315f55;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.bita-filtro-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.bita-filtro-grupo .bita-unidad-pill-wrap,
+.bita-pildora-selector { width: 100%; }
+
+.bita-pildora-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bita-filtro-grupo .bita-fechas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bita-filtro-grupo .bita-fecha-grupo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.bita-pildora-alerta.activa {
+  border-color: #b83232;
+  background: #b83232;
+  color: #fff;
+}
+
+.bita-pildora-aviso.activa {
+  border-color: #b87918;
+  background: #b87918;
+  color: #fff;
+}
+
+.bita-chip-periodo {
+  background: rgba(70, 86, 82, 0.07);
+  border-color: rgba(70, 86, 82, 0.20);
+}
+
+.bita-chip-entidad {
+  background: rgba(35, 91, 78, 0.09);
+  border-color: rgba(35, 91, 78, 0.24);
+}
+
+.bita-chip-estatus-concluido,
+.bita-chip-estatus-atendido,
+.bita-chip-estatus-en_seguimiento {
+  background: rgba(38, 123, 91, 0.12);
+  border-color: rgba(38, 123, 91, 0.30);
+  color: #176244;
+}
+
+.bita-chip-estatus-pendiente_validacion,
+.bita-chip-estatus-porvencer {
+  background: rgba(188, 149, 92, 0.17);
+  border-color: rgba(188, 149, 92, 0.42);
+  color: #795617;
+}
+
+.bita-chip-estatus-rechazado,
+.bita-chip-estatus-vencido {
+  background: rgba(190, 53, 53, 0.10);
+  border-color: rgba(190, 53, 53, 0.28);
+  color: #9b2929;
+}
+
+.bita-chip-estatus-recibido,
+.bita-chip-estatus-turnado,
+.bita-chip-estatus-registrado {
+  background: rgba(61, 110, 145, 0.10);
+  border-color: rgba(61, 110, 145, 0.28);
+  color: #315f7e;
+}
+
+.bita-row-clickeable { cursor: pointer; }
+.bita-row-clickeable:focus-visible {
+  outline: 3px solid rgba(188, 149, 92, 0.75);
+  outline-offset: -3px;
+}
+
+.bita-folio { min-width: 245px; }
+.bita-movimiento {
+  display: block;
+  max-width: 340px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: rgba(10, 30, 20, 0.56);
+  font-family: inherit;
+  font-size: .69rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bita-acciones-wrap { position: relative; display: inline-flex; }
+.bita-acciones-mobile-toggle { display: none; }
+
+@media (max-width: 768px) {
+  .bita-filtros-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .bita-filtro-periodo { grid-column: auto; }
+  .bita-filtro-grupo { padding: 10px; }
+  .bita-filtro-opciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bita-filtro-opciones .bita-pildora { width: 100%; padding-inline: 8px; }
+  .bita-filtro-grupo .bita-fechas { grid-template-columns: minmax(0, 1fr); }
+
+  .bita-chips:not(.bita-chips-compacta) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .bita-chips:not(.bita-chips-compacta)::-webkit-scrollbar { display: none; }
+  .bita-chips .bita-chip { flex: 0 0 auto; max-width: 85vw; }
+  .bita-chips .chips-label { display: none; }
+  .bita-limpiar-todo { flex: 0 0 auto; }
+
+  /* Encabezado de cada tarjeta: más compacto, con el acceso a acciones
+     pegado a la esquina y suficiente aire para que nunca tape el folio. */
+  .bita-table td.bita-folio {
+    align-items: flex-start;
+    min-height: 70px;
+    padding: 11px 46px 10px 13px !important;
+    background: linear-gradient(
+      135deg,
+      rgba(35, 91, 78, 0.105),
+      rgba(255, 255, 255, 0.52)
+    );
+    border-bottom-color: rgba(188, 149, 92, 0.24);
+  }
+  .bita-table td.bita-folio .bita-folio-link {
+    color: rgba(31, 86, 71, 0.78);
+    border-bottom: none;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 140ms ease, border-color 140ms ease, opacity 140ms ease;
+  }
+  .bita-table td.bita-folio .bita-folio-link:hover,
+  .bita-table td.bita-folio .bita-folio-link:active,
+  .bita-table td.bita-folio .bita-folio-link:focus-visible {
+    color: #235b4e;
+    border-bottom-color: transparent;
+  }
+  .bita-movimiento {
+    flex-basis: 100%;
+    order: 3;
+    max-width: 100%;
+    margin-top: 2px;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .bita-acciones-mobile-toggle {
+    display: inline-grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid rgba(35, 91, 78, 0.20);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #235b4e;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .bita-col-pdf {
+    top: 5px;
+    right: 5px;
+  }
+
+  .bita-acciones-icons {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 8;
+    display: none;
+    gap: 7px;
+    padding: 5px;
+    border: 1px solid rgba(35, 91, 78, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 8px 24px rgba(20, 65, 54, 0.18);
+  }
+  .bita-acciones-icons.abiertas { display: flex; animation: bita-panel-entrada 140ms ease both; }
+  .bita-eye-btn, .bita-historial-btn, .bita-dl-btn { width: 36px; height: 36px; }
+}
+
+@media (max-width: 420px) {
+  .bita-filtros-panel.abierto { gap: 8px; }
+  .bita-filtro-grupo { border-radius: 12px; }
+  .bita-pildora { font-size: .72rem; }
+  .bita-chip { font-size: .71rem; }
+}
+
+/* Al desplazarse, la tarjeta sticky conserva únicamente búsqueda y filtros
+   activos. Al abrir un chip, React desactiva temporalmente este estado para
+   mostrar otra vez el panel completo y posicionar correctamente su popover. */
+.bita-filtros-compacto {
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: 0 7px 20px rgba(35, 91, 78, 0.14);
+}
+
+.bita-filtros-compacto > .bita-editar-filtros-btn,
+.bita-filtros-compacto .bita-fila-busqueda > .bita-toolbar-btn,
+.bita-filtros-compacto .bita-fila-busqueda > .bita-columnas-menu-wrap,
+.bita-filtros-compacto .bita-filtros-panel,
+.bita-filtros-compacto .bita-editar-filtros-btn-inline {
+  display: none;
+}
+
+.bita-filtros-compacto .bita-filtros { gap: 0; }
+.bita-filtros-compacto .bita-fila-busqueda { display: flex; }
+.bita-filtros-compacto .bita-busqueda-wrap {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+}
+.bita-filtros-compacto .bita-busqueda {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.bita-filtros-compacto .bita-divider { margin-top: 1px; }
+.bita-filtros-compacto .bita-chips-compacta {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 1px 0 2px;
+  scrollbar-width: none;
+}
+.bita-filtros-compacto .bita-chips-compacta::-webkit-scrollbar { display: none; }
+.bita-filtros-compacto .bita-chip { flex: 0 0 auto; }
+
+@media (max-width: 768px) {
+  .bita-filtros-compacto { padding: 8px 10px; }
+  .bita-filtros-compacto .bita-fila-busqueda { display: block; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BITÁCORA — experiencia específica para teléfonos
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .bita-bg {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    background-size: auto 100%;
+  }
+
+  .bita-wrap {
+    width: 100%;
+    padding: 10px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+
+  /* Encabezado general: título arriba y resumen/descarga en una fila estable. */
+  .bita-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 9px;
+    padding: 11px 12px;
+    border-radius: 16px;
+  }
+  .bita-header-left {
+    min-width: 0;
+    gap: 8px;
+  }
+  .bita-header-left svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+  .bita-header-left h1 {
+    min-width: 0;
+    overflow: hidden;
+    font-size: .92rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bita-header-right {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 8px;
+  }
+  .bita-total,
+  .bita-header-descargar {
+    min-height: 38px;
+    border-radius: 12px;
+  }
+  .bita-total {
+    min-width: 0;
+    justify-content: center;
+    padding: 5px 10px;
+  }
+  .bita-total strong { font-size: .92rem; }
+  .bita-header-descargar {
+    padding: 7px 12px;
+    font-size: .74rem;
+  }
+
+  /* Controles: áreas táctiles cómodas y sin zoom automático en iOS. */
+  .bita-filtros-sticky {
+    top: 0;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+  }
+  .bita-filtros { gap: 9px; }
+  .bita-fila-busqueda { gap: 8px; }
+  .bita-busqueda-wrap { min-width: 0; }
+  .bita-input,
+  .bita-busqueda,
+  .bita-resp-popover-buscar {
+    min-height: 42px;
+    font-size: 16px;
+  }
+  .bita-toolbar-btn {
+    min-height: 42px;
+    padding: 8px;
+    border-radius: 11px;
+    font-size: .74rem;
+  }
+
+  /* Si se abren todos los filtros, solo el panel interno hace scroll. */
+  .bita-filtros-panel.abierto {
+    max-height: min(58vh, 480px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  .bita-filtros-grid { gap: 8px; }
+  .bita-filtro-grupo {
+    padding: 9px;
+    border-radius: 12px;
+  }
+  .bita-filtro-titulo { margin-bottom: 7px; }
+  .bita-pildora {
+    min-height: 40px;
+    padding: 7px 9px;
+  }
+  .bita-pildora-selector {
+    min-width: 0;
+    text-align: left;
+  }
+  .bita-pildora-selector > :first-child,
+  .bita-pildora-selector {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bita-unidad-popover,
+  .bita-resp-popover {
+    max-width: calc(100vw - 24px);
+  }
+  .bita-columnas-menu {
+    left: 10px;
+    right: 10px;
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    max-height: min(66vh, 440px);
+    border-radius: 15px;
+  }
+
+  /* Los chips conservan una sola línea desplazable sin ensanchar la página. */
+  .bita-chips,
+  .bita-chips-compacta {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bita-chips .bita-chip {
+    max-width: calc(100vw - 56px);
+  }
+
+  /* Tarjetas: ningún folio, correo o unidad puede provocar scroll lateral. */
+  .bita-table,
+  .bita-table tbody,
+  .bita-table tbody tr {
+    width: 100%;
+    max-width: 100%;
+  }
+  .bita-table tbody tr {
+    margin-bottom: 10px;
+    border-radius: 15px;
+    box-shadow: 0 4px 14px rgba(35, 91, 78, 0.10);
+  }
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf) {
+    display: grid;
+    grid-template-columns: minmax(104px, 42%) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 12px !important;
+    font-size: .78rem;
+  }
+  .bita-table td::before {
+    min-width: 0;
+    font-size: .64rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf) > * {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: end;
+  }
+  .bita-table td.bita-folio {
+    width: auto;
+    min-width: 0;
+    min-height: 66px;
+    padding: 10px 43px 9px 12px !important;
+  }
+  .bita-table td.bita-folio .bita-folio-link {
+    display: block;
+    max-width: 100%;
+    font-size: .78rem;
+    line-height: 1.28;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .bita-movimiento {
+    margin-top: 3px;
+    font-size: .68rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .bita-email-col,
+  .bita-obs,
+  .bita-table td[data-label="Unidad administrativa"] {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .bita-col-pdf {
+    top: 4px;
+    right: 4px;
+  }
+  .bita-acciones-icons {
+    right: 0;
+    max-width: calc(100vw - 34px);
+  }
+  .bita-empty,
+  .bita-error-cell {
+    min-height: 130px;
+    padding: 1.5rem 1rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .bita-wrap {
+    padding: 7px;
+    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+  .bita-header,
+  .bita-filtros-sticky { border-radius: 14px; }
+  .bita-header-descargar-label { display: none; }
+  .bita-header-descargar { width: 40px; padding-inline: 0; }
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf) {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 4px;
+    text-align: left;
+  }
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf) > * {
+    justify-self: start;
   }
 }

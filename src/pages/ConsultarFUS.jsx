@@ -59,6 +59,10 @@ export default function ConsultarFUS() {
   const [filtro,       setFiltro]       = useState(() => (searchParams.get('filtro') || '').split(',').filter(Boolean))
   const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
   const [seleccionado, setSeleccionado] = useState(null)
+  // Móvil: FUS que quedó "en pausa" al abrir la barra rápida de lista desde
+  // el detalle (ver panel-toggle) — si se cierra esa lista sin elegir otra
+  // solicitud, se restaura este FUS en vez de dejar al usuario en la nada.
+  const [fusPausado,   setFusPausado]   = useState(null)
   const [turnarFUS,    setTurnarFUS]    = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [highlightId,  setHighlightId]  = useState(null)
@@ -262,7 +266,7 @@ export default function ConsultarFUS() {
   }, [])
 
   useEffect(() => {
-    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null) }
+    const handleConsultar = () => { setPanelAbierto(true); setSeleccionado(null); setFusPausado(null) }
     window.addEventListener('scs:consultar', handleConsultar)
     return () => window.removeEventListener('scs:consultar', handleConsultar)
   }, [])
@@ -289,8 +293,29 @@ export default function ConsultarFUS() {
             )}
             <button
               className="panel-toggle"
-              onClick={() => setPanelAbierto(p => !p)}
-              title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}
+              onClick={() => {
+                // Móvil con un detalle abierto: esta barra ya no se oculta (ver
+                // ConsultarFUS.css, ".cfus-inner.has-detail .cfus-left") — tocarla
+                // es el atajo rápido de vuelta a la lista, sin bajar hasta el
+                // botón "Volver" del detalle. El FUS que se estaba viendo queda
+                // "en pausa": si se cierra esta lista rápida sin elegir otra
+                // solicitud, se restaura en vez de dejar la pantalla vacía. En
+                // desktop el detalle y la lista conviven, así que aquí el
+                // toggle solo abre/cierra el panel (sin tocar la selección).
+                const esMobile = window.innerWidth <= 768
+                if (seleccionado && esMobile) {
+                  setFusPausado(seleccionado)
+                  setSeleccionado(null)
+                  setPanelAbierto(true)
+                } else if (fusPausado && esMobile) {
+                  setSeleccionado(fusPausado)
+                  setFusPausado(null)
+                  setPanelAbierto(false)
+                } else {
+                  setPanelAbierto(p => !p)
+                }
+              }}
+              title={seleccionado ? 'Ver lista de solicitudes' : (panelAbierto ? 'Cerrar panel' : 'Abrir panel')}
               aria-expanded={panelAbierto}
             >
               <svg
@@ -408,7 +433,7 @@ export default function ConsultarFUS() {
                 key={`${seleccionado.id}_${seleccionado.estatusParticular}`}
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
-                onBack={() => { setSeleccionado(null); setPanelAbierto(true) }}
+                onBack={() => { setSeleccionado(null); setFusPausado(null); setPanelAbierto(true) }}
               />
             : (
               <div className="cfus-hint-select">
@@ -419,7 +444,8 @@ export default function ConsultarFUS() {
                   <line x1="16" y1="17" x2="8" y2="17"/>
                   <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                <p>Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+                <p className="cfus-hint-desktop">Selecciona una solicitud del panel izquierdo para ver el detalle completo</p>
+                <p className="cfus-hint-mobile">Toca la barra de arriba para abrir la lista y elegir una solicitud</p>
               </div>
             )
           }

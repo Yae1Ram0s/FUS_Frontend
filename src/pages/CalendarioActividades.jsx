@@ -140,6 +140,8 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const [conflicto, setConflicto] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
+  const guardarEnCursoRef = useRef(false)
+  const eliminarEnCursoRef = useRef(false)
   const { user } = useAuth()
   const soloLectura = modal.mode === 'editar' && !esCreador
 
@@ -186,6 +188,8 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const guardar = async (forzar = false) => {
     const msg = validar()
     if (msg) { setError(msg); setConflicto(null); return }
+    if (guardarEnCursoRef.current) return
+    guardarEnCursoRef.current = true
     setError(''); setGuardando(true)
     try {
       if (modal.mode === 'crear') {
@@ -204,10 +208,13 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
       }
     } finally {
       setGuardando(false)
+      guardarEnCursoRef.current = false
     }
   }
 
   const eliminar = async () => {
+    if (eliminarEnCursoRef.current) return
+    eliminarEnCursoRef.current = true
     setEliminando(true)
     try {
       await api.delete(`/actividades/${modal.id}/`)
@@ -216,6 +223,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
       onError('No se pudo eliminar la actividad.')
     } finally {
       setEliminando(false)
+      eliminarEnCursoRef.current = false
     }
   }
 

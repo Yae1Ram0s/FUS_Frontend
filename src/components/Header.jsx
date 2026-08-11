@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import institutionalLogo from '../assets/Logos_P_Hacienda_ANAM.png'
 import NotificacionesBell from './NotificacionesBell'
 import { useAuth } from '../context/AuthContext'
@@ -14,7 +13,6 @@ export default function Header() {
   const profileRef = useRef(null)
   const closeTimerRef = useRef(null)
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
 
   const initials = (user?.nombre || user?.email || 'U')
     .split(' ')
@@ -67,7 +65,6 @@ export default function Header() {
   const handleLogout = () => {
     closeProfile()
     logout()
-    navigate('/login', { replace: true })
   }
 
   return (

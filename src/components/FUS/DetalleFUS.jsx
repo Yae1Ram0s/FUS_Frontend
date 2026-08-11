@@ -14,6 +14,7 @@ import { useNotificaciones } from '../../context/NotificacionesContext'
 import { useTurnadosFUS } from '../../hooks/useTurnadosFUS'
 import { descargar } from '../../utils/descargarArchivo'
 import { formatearFechaHora } from '../../utils/fechas'
+import { formatMedioRecepcion } from '../../utils/medio'
 import { obtenerIniciales } from '../../utils/personas'
 import { puedeComisionar, puedeGestionarComisionados } from '../../utils/permisos'
 
@@ -68,14 +69,18 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
 
   return (
     <>
+      {/* Fuera de la tarjeta (.detalle-panel) a propósito: adentro, el
+          encabezado tiene fondo verde oscuro y este botón usa el mismo verde
+          como color de texto — quedaba prácticamente invisible. Aquí, sobre
+          el fondo claro de .cfus-right, sí se ve. */}
+      <button className="btn-volver-mobile" onClick={onBack} aria-label="Volver">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Volver
+      </button>
       <div className={`detalle-panel${esRolGestion ? ' detalle-panel-rol-gestion' : ''}`}>
         <div className="detalle-header">
-          <button className="btn-volver-mobile" onClick={onBack} aria-label="Volver">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Volver
-          </button>
           <div className="detalle-header-main">
             <div>
               <h2 className="detalle-title">Detalle de la solicitud</h2>
@@ -115,7 +120,7 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
           <span className="det-section-legend">Datos generales</span>
           <div className="det-grid-2">
             <Row label="Fecha y hora" value={formatearFechaHora(fus.fechaHora)} />
-            <Row label="Medio de recepción" value={fus.idMedioRecepcion?.nombreMedio} />
+            <Row label="Medio de recepción" value={formatMedioRecepcion(fus.idMedioRecepcion, fus.medioEspecificacion)} />
             <Row label="Solicitante interno" value={fus.idSolicitanteInterno?.nombre} />
           </div>
           {fus.idComisionado && !fus.tieneTurnado && (
