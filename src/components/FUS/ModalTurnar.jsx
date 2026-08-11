@@ -149,18 +149,14 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
   const limite = fus.fechaLimite ? formatearFechaHora(fus.fechaLimite) : 'Sin fecha límite'
 
   return createPortal(
-    <div className="turnar-overlay">
-      <section className="turnar-modal" role="dialog" aria-modal="true" aria-labelledby="turnar-title">
-        <header className="turnar-head">
-          <div>
-            <h2 id="turnar-title">Turnar solicitud</h2>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-labelledby="turnar-title" onClick={() => !loading && onClose()}>
+      <section className="com-modal turnar-modal" onClick={e => e.stopPropagation()}>
+        <header className="com-modal-top">
+          <div className="turnar-modal-titulo">
+            <h3 id="turnar-title">Turnar solicitud</h3>
             <span>{fus.folio}</span>
           </div>
-          <button type="button" className="turnar-close" onClick={onClose} disabled={loading} aria-label="Cerrar">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <button type="button" className="com-modal-x" onClick={onClose} disabled={loading} aria-label="Cerrar">✕</button>
         </header>
 
         <div className="turnar-body">
@@ -276,8 +272,8 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
         </div>
 
         <footer className="turnar-footer">
-          <button type="button" className="turnar-cancel" onClick={onClose} disabled={loading}>Cancelar</button>
-          <button type="button" className="turnar-submit" onClick={handleTurnar} disabled={loading || catalogosCargando}>
+          <button type="button" className="com-btn-ghost" onClick={onClose} disabled={loading}>Cancelar</button>
+          <button type="button" className="com-btn-verde turnar-submit" onClick={handleTurnar} disabled={loading || catalogosCargando}>
             {loading && <span className="btn-spinner" />}
             {loading ? 'Turnando…' : 'Turnar solicitud'}
             {!loading && (

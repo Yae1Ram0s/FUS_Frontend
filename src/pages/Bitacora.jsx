@@ -81,15 +81,11 @@ function ModalPreviewPDF({ folio, onClose }) {
   }, [folio])
 
   return createPortal(
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card bita-modal-preview">
-        <div className="modal-header">
-          <h3 className="modal-title">Vista previa — FUS {folio}</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Cerrar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+    <div className="com-overlay" role="dialog" aria-modal="true" aria-label={`Vista previa — FUS ${folio}`} onClick={onClose}>
+      <div className="com-modal bita-modal-preview" onClick={e => e.stopPropagation()}>
+        <div className="com-modal-top">
+          <h3>Vista previa — FUS {folio}</h3>
+          <button type="button" className="com-modal-x" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
         <div className="bita-modal-preview-body">
           {error && <p className="modal-error">No se pudo cargar la vista previa.</p>}

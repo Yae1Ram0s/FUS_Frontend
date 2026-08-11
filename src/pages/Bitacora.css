@@ -739,13 +739,23 @@
   border-color: #1F5647;
 }
 
-/* ── Modal: previsualización de PDF ── */
-.bita-modal-preview {
+/* ── Modal: previsualización de PDF — mismo diseño glass que
+   ComisionarModal (.com-*, definido en Comisionado/Comisionado.css); ancho
+   y alto propios porque aquí se embebe un PDF completo. ── */
+.bita-modal-preview.com-modal {
   width: min(900px, 92vw);
+  /* Alto fijo (no max-height): al ser flex column, sin un alto forzado el
+     modal se encoge al contenido y el iframe (que depende de flex:1 para
+     estirarse) queda aplastado. */
   height: min(85vh, 1000px);
   height: min(calc(100svh - 80px), 1000px);
   height: min(calc(var(--app-vh, 100vh) * 0.85), 1000px);
+  max-height: none;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
+.bita-modal-preview .com-modal-top { padding: 18px 22px 14px; flex-shrink: 0; }
 
 .bita-modal-preview-body {
   flex: 1;
@@ -763,6 +773,13 @@
   border: 1px solid rgba(195, 212, 207, 0.45);
   border-radius: 12px;
   background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  /* width/height ya son responsivos por sí mismos (min()/calc(var(--app-vh))
+     en la regla de arriba) — aquí solo se ajusta el padding del título. */
+  .bita-modal-preview .com-modal-top { padding: 14px 16px 10px; }
+  .bita-modal-preview .com-modal-top h3 { font-size: .96rem; }
 }
 
 /* ══════════════════════════════════════

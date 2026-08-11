@@ -387,26 +387,6 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
           </div>
         )}
 
-        {/* Mensaje que ROL1 escribió al momento de turnar la solicitud. */}
-        {turnado.solicitudTexto && (
-          <div className="sec-subseccion">
-            <span className="sec-sublabel">Instrucciones del turnado</span>
-            <div className="sec-grid-2">
-              <DRow
-                label="Mensaje del Particular"
-                value={turnado.solicitudTexto}
-                tall
-              />
-              {turnado.idMedio?.nombreMedio && (
-                <DRow
-                  label="Medio de envío"
-                  value={turnado.idMedio.nombreMedio}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Descripción */}
         <div className="sec-subseccion">
           <span className="sec-sublabel">Descripción de la solicitud</span>
@@ -437,6 +417,30 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
           <span className="sec-sublabel">Prioridad</span>
           <PrioridadPills valor={fus.prioridad} criterios={fus.criterios} />
         </div>
+
+        {/* Mensaje que ROL1 escribió al momento de turnar la solicitud. */}
+        {turnado.solicitudTexto && (
+          <div className="sec-subseccion">
+            <span className="sec-sublabel">Detalle del turnado</span>
+            <div className="sec-grid-2">
+              <DRow
+                label="Fecha y hora del turnado"
+                value={formatearFechaHora(turnado.fechaHoraTurnado)}
+              />
+              {turnado.idMedio?.nombreMedio && (
+                <DRow
+                  label="Medio de envío"
+                  value={turnado.idMedio.nombreMedio}
+                />
+              )}
+            </div>
+            <DRow
+              label="Instrucciones"
+              value={turnado.solicitudTexto}
+              tall
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Seguimientos: una vez comisionado, este feed reemplaza al del
