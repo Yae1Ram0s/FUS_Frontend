@@ -9,6 +9,7 @@ import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
 import { useAsyncResource } from '../hooks/useAsyncResource'
+import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './DashboardROL1.css'
 import './Reportes.css'
 
@@ -359,7 +360,7 @@ export default function ReportesROL2() {
                 <label>Prioridad
                   <select name="prioridad" value={filtrosExtra.prioridad} onChange={actualizarExtra}>
                     <option value="">Todas</option>
-                    {['Alta', 'Media', 'Baja'].map(x => <option key={x}>{x}</option>)}
+                    {PRIORIDAD_NIVELES.map(p => <option key={p.valor}>{p.valor}</option>)}
                   </select>
                 </label>
               </div>

@@ -6,6 +6,7 @@ import { ToastProvider }          from './context/ToastContext'
 import PrivateRoute               from './components/PrivateRoute'
 import ErrorBoundary              from './components/ErrorBoundary'
 import Spinner                    from './components/Spinner'
+import BannerSinConexion          from './components/BannerSinConexion'
 
 import './context/Toast.css'
 
@@ -22,6 +23,11 @@ const FUSComisionados = lazy(() => import('./pages/FUSComisionados'))
 const Reportes = lazy(() => import('./pages/Reportes'))
 const ReportesROL2 = lazy(() => import('./pages/ReportesROL2'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const AdminDashboard = lazy(() => import('./features/system-admin/pages/AdminDashboard'))
+const AdminUsuarios = lazy(() => import('./features/system-admin/pages/AdminUsuarios'))
+const AdminSalud = lazy(() => import('./features/system-admin/pages/AdminSalud'))
+const AdminAuditoria = lazy(() => import('./features/system-admin/pages/AdminAuditoria'))
+const AdminOTP = lazy(() => import('./features/system-admin/pages/AdminOTP'))
 
 export default function App() {
   // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
@@ -46,6 +52,7 @@ export default function App() {
         <AuthProvider>
           <NotificacionesProvider>
             <ToastProvider>
+              <BannerSinConexion />
               <Suspense fallback={<Spinner label="Cargando módulo…" />}>
                 <Routes>
                 {/* Pública */}
@@ -80,6 +87,15 @@ export default function App() {
                   <Route path="/comisionado/calendario"       element={<CalendarioActividades />} />
                   <Route path="/comisionado/fus-comisionados" element={<FUSComisionados />} />
                   <Route path="/comisionado/bitacora"         element={<Bitacora />} />
+                </Route>
+
+                {/* ADMIN — administración técnica, sin funciones operativas FUS */}
+                <Route element={<PrivateRoute roles={['ADMIN']} />}>
+                  <Route path="/admin/inicio" element={<AdminDashboard />} />
+                  <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+                  <Route path="/admin/salud" element={<AdminSalud />} />
+                  <Route path="/admin/auditoria" element={<AdminAuditoria />} />
+                  <Route path="/admin/otp" element={<AdminOTP />} />
                 </Route>
 
                 {/* Raíz → login */}

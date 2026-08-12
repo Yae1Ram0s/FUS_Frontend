@@ -39,11 +39,11 @@ const ETIQUETAS = {
 const FALLBACK       = { tint: 'rgba(200,205,215,', text: '#dde1ea', glow: 'rgba(200,205,215,' }
 const FALLBACK_LIGHT = { tint: 'rgba(80,100,130,',  text: '#2a3d5c' }
 
-export default function Badge({ estatus, theme }) {
+export default function Badge({ estatus, theme, className = '' }) {
   if (theme === 'light') {
     const v = VARIANTS_LIGHT[estatus] ?? FALLBACK_LIGHT
     return (
-      <span style={{
+      <span className={className} data-estatus={estatus} style={{
         background:    `${v.tint}0.14)`,
         color:          v.text,
         border:        `1px solid ${v.tint}0.40)`,
@@ -63,7 +63,7 @@ export default function Badge({ estatus, theme }) {
 
   const v = VARIANTS[estatus] ?? FALLBACK
   return (
-    <span style={{
+    <span className={className} data-estatus={estatus} style={{
       background:      `${v.tint}0.13)`,
       color:           v.text,
       border:          `1px solid ${v.tint}0.45)`,

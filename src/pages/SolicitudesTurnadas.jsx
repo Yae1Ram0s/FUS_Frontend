@@ -34,6 +34,11 @@ import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
 
+// Mismo conjunto que usa el KPI "Prioridad alta" del Dashboard (DashboardROL2.jsx)
+// para armar su link — se repite aquí solo para reconocer ese combo en
+// "Filtros activos" (ver chipsActivos) y no como fuente de verdad del filtro.
+const ESTADOS_NO_CONCLUIDO = ['Recibido', 'En_seguimiento', 'Pendiente_validacion', 'Rechazado']
+
 function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
   const existentes = new Set(estadoAnterior.items.map(item => item.id))
@@ -79,7 +84,6 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
   const [actividad,   setActividad]   = useState('')
   const [accionTexto, setAccionTexto] = useState('')
   const [loading,     setLoading]     = useState(false)
-  const [eliminandoId,setEliminandoId] = useState(null)
   const [error,       setError]       = useState('')
   const cargarSeguimientos = useCallback(
     ({ signal }) => api
@@ -127,13 +131,6 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
     } catch (e) {
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
     } finally { setLoading(false) }
-  }
-
-  const eliminar = async id => {
-    setEliminandoId(id)
-    try { await api.delete(`/seguimientos/${id}/`); cargar() }
-    catch (e) { setError(e.response?.data?.detail || 'No se pudo eliminar. Intenta nuevamente.') }
-    finally { setEliminandoId(null) }
   }
 
   return (
@@ -194,16 +191,6 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
                     {fmtFechaCorta(s.fechaActividad)}
                     {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
                   </span>
-                  {!soloLectura && !s.esRechazo && (
-                    <button className="btn-del" onClick={() => eliminar(s.id)} disabled={eliminandoId === s.id} title="Eliminar">
-                      {eliminandoId === s.id
-                        ? <span className="btn-spinner" />
-                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                            <path d="M10 11v6"/><path d="M14 11v6"/>
-                          </svg>}
-                    </button>
-                  )}
                 </div>
                 {s.descripcionActividad && (
                   <p className={s.esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>{s.descripcionActividad}</p>
@@ -432,7 +419,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
               {turnado.idMedio?.nombreMedio && (
                 <DRow
                   label="Medio de envío"
-                  value={turnado.idMedio.nombreMedio}
+                  value={formatMedioRecepcion(turnado.idMedio, turnado.medioEspecificacion)}
                 />
               )}
             </div>
@@ -711,12 +698,24 @@ export default function SolicitudesTurnadas() {
     LABEL_ESTATUS_EXTRA[clave] || estatusROL2.find(e => e.clave === clave)?.nombre || clave
   )
 
+  // El KPI "Prioridad alta" navega con un combo de estatus "sin concluir" +
+  // prioridad — ese combo es un detalle interno del filtro, no algo que el
+  // usuario armó a mano, así que aquí solo se muestra el chip de Prioridad
+  // (no uno por cada estatus del combo).
+  const filtroEsBundleSinConcluir = Boolean(prioridadFiltro)
+    && filtro.length === ESTADOS_NO_CONCLUIDO.length
+    && ESTADOS_NO_CONCLUIDO.every(e => filtro.includes(e))
+
   /* Resumen de "filtros activos" + Limpiar todo (búsqueda + estatus +
      prioridad) — mismo diseño que ya usa Bitácora. */
   const chipsActivos = [
     ...(busqueda ? [{ key: 'busqueda', label: `Búsqueda: "${busqueda}"`, onQuitar: () => setBusqueda('') }] : []),
-    ...filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) })),
-    ...(prioridadFiltro ? [{ key: 'prioridad', label: `Prioridad: ${prioridadFiltro}`, onQuitar: () => setPrioridadFiltro('') }] : []),
+    ...(filtroEsBundleSinConcluir ? [] : filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) }))),
+    ...(prioridadFiltro ? [{
+      key: 'prioridad',
+      label: `Prioridad: ${prioridadFiltro}`,
+      onQuitar: () => { setPrioridadFiltro(''); if (filtroEsBundleSinConcluir) setFiltro([]) },
+    }] : []),
   ]
   const limpiarTodosFiltros = () => {
     setBusqueda('')

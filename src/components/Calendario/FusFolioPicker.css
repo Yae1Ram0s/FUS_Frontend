@@ -8,6 +8,10 @@
 }
 .fusfp-trigger:focus-visible { outline: 2px solid #235b4e; outline-offset: 1px; }
 .fusfp-trigger-disabled { cursor: not-allowed; opacity: 0.7; }
+/* De solo lectura pero con un FUS vinculado: se ve/comporta como link
+   (no como un campo deshabilitado) — el clic navega al FUS. */
+.fusfp-trigger-link { cursor: pointer; opacity: 1; }
+.fusfp-trigger-link:hover .fusfp-chip-folio { text-decoration: underline; }
 
 .fusfp-placeholder { color: rgba(0, 0, 0, 0.38); font-size: 13.5px; }
 

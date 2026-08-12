@@ -93,12 +93,18 @@
 }
 .mdet-criterios {
   list-style: none;
-  margin: -6px 0 0;
+  margin: 0;
   padding: 0 0 12px;
   border-bottom: 1px solid rgba(35, 91, 78, 0.14);
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* La separación de Prioridad se dibuja después de sus criterios. */
+.mdet-row:has(+ .mdet-criterios) {
+  border-bottom: none;
+  padding-bottom: 6px;
 }
 .mdet-criterios li {
   font-size: .78rem;

@@ -427,7 +427,59 @@
   cursor: pointer;
 }
 .bita-columnas-opcion:hover { background: rgba(35, 91, 78, 0.07); }
-.bita-columnas-opcion input { accent-color: #235b4e; width: 15px; height: 15px; }
+
+/* ── Checkbox animado (trazo de círculo que se dibuja al marcar) —
+   compartido por columnas, unidad, responsable y estatus. ── */
+.bita-check-box {
+  position: relative;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+}
+.bita-check-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.bita-check-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.bita-check-svg svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #c8ccd4;
+  stroke-width: 1.5;
+  transition: stroke 0.2s ease;
+}
+.bita-check-svg path { stroke-dasharray: 60; stroke-dashoffset: 0; }
+.bita-check-svg polyline { stroke-dasharray: 22; stroke-dashoffset: 66; }
+
+.bita-check-input:hover + .bita-check-svg svg { stroke: #235b4e; }
+.bita-check-input:focus-visible + .bita-check-svg {
+  outline: 2px solid #235b4e;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.bita-check-input:checked + .bita-check-svg svg { stroke: #235b4e; }
+.bita-check-input:checked + .bita-check-svg path {
+  stroke-dashoffset: 60;
+  transition: all 0.3s linear;
+}
+.bita-check-input:checked + .bita-check-svg polyline {
+  stroke-dashoffset: 42;
+  transition: all 0.2s linear;
+  transition-delay: 0.15s;
+}
 .bita-columnas-restablecer {
   width: 100%;
   padding: 8px 10px;
@@ -524,6 +576,9 @@
   white-space: normal;
 }
 .bita-unidad-opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   background: transparent;
   border: none;
   text-align: left;
@@ -555,6 +610,8 @@
 .bita-resp-popover-cargando { display: flex; justify-content: center; padding: 10px; }
 .bita-resp-popover-vacio { font-size: .78rem; color: rgba(10, 30, 20, 0.45); padding: 8px 10px; margin: 0; }
 .bita-resp-popover-email { font-weight: 400; color: rgba(10, 30, 20, 0.50); }
+.bita-resp-popover-info { display: flex; flex-direction: column; gap: 1px; }
+.bita-resp-popover-unidad { font-weight: 400; font-size: .74rem; color: rgba(10, 30, 20, 0.45); }
 
 .bita-fechas { display: flex; align-items: center; gap: 6px; }
 .bita-sep { color: rgba(10, 30, 20, 0.45); font-size: .82rem; font-weight: 600; }
@@ -918,14 +975,25 @@
 /* ══════════════════════════════════════
    VACÍO / CARGANDO
 ══════════════════════════════════════ */
+/* .bita-empty: se centra con un wrapper interno (.bita-empty-inner) en vez
+   de display:flex directo en el <td> — la especificidad de ".bita-table td"
+   (padding/vertical-align) le gana a un <td> como flex container, dejando el
+   texto pegado a la izquierda; un div hijo normal no tiene ese problema. */
 .bita-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
   text-align: center;
-  padding: 3rem;
-  color: rgba(10, 30, 20, 0.32);
+  padding: 3rem 1rem;
+  min-height: 200px;
+}
+.bita-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.bita-empty-inner svg { color: rgba(10, 30, 20, 0.28); }
+.bita-empty-inner p {
+  margin: 0;
+  color: rgba(10, 30, 20, 0.42);
   font-size: .85rem;
 }
 
@@ -1526,6 +1594,12 @@
   .bita-filtros-compacto { padding: 8px 10px; }
   .bita-filtros-compacto .bita-fila-busqueda { display: block; }
 }
+.bita-unidad-opcion > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bita-popover-mobile-title { display: none; }
+.bita-popover-backdrop { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════
    BITÁCORA — experiencia específica para teléfonos
@@ -1644,16 +1718,89 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .bita-unidad-popover,
-  .bita-resp-popover {
-    max-width: calc(100vw - 24px);
+  /* Todos los menús flotantes se comportan igual: hoja inferior centrada,
+     independiente de la posición del botón que la abrió. Los !important
+     anulan las coordenadas inline calculadas para escritorio. */
+  .bita-popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 119;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(10, 30, 20, 0.18);
+    backdrop-filter: blur(1.5px);
+    -webkit-backdrop-filter: blur(1.5px);
+    cursor: default;
+    animation: bita-backdrop-entrada 150ms ease both;
   }
+  .bita-unidad-popover,
+  .bita-resp-popover,
   .bita-columnas-menu {
-    left: 10px;
-    right: 10px;
-    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-    max-height: min(66vh, 440px);
-    border-radius: 15px;
+    position: fixed !important;
+    inset: auto 10px max(10px, env(safe-area-inset-bottom, 0px)) 10px !important;
+    z-index: 130;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: min(64vh, 460px);
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid rgba(35, 91, 78, 0.16);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 60px rgba(10, 30, 20, 0.28);
+    animation: bita-sheet-entrada 180ms ease both;
+  }
+  .bita-popover-mobile-title {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    display: block;
+    margin: -10px -10px 7px;
+    padding: 13px 14px 10px;
+    border-bottom: 1px solid rgba(35, 91, 78, 0.12);
+    background: rgba(247, 250, 249, 0.98);
+    color: #174d3f;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .bita-resp-popover-buscar {
+    position: sticky;
+    top: 34px;
+    z-index: 2;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 7px;
+    background: #fff;
+  }
+  .bita-unidad-opcion {
+    min-height: 42px;
+    align-items: flex-start;
+    padding: 10px;
+    font-size: .78rem;
+    line-height: 1.35;
+  }
+  .bita-unidad-opcion .bita-check-box,
+  .bita-columnas-opcion .bita-check-box {
+    width: 17px;
+    height: 17px;
+  }
+  .bita-columnas-menu-head {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    margin: -10px -10px 4px;
+    padding: 13px 14px 10px;
+    background: rgba(247, 250, 249, 0.98);
+  }
+  .bita-columnas-opcion {
+    min-height: 42px;
+    padding: 9px 10px;
   }
 
   /* Los chips conservan una sola línea desplazable sin ensanchar la página. */
@@ -1680,7 +1827,12 @@
     border-radius: 15px;
     box-shadow: 0 4px 14px rgba(35, 91, 78, 0.10);
   }
-  .bita-table td:not(.bita-folio):not(.bita-col-pdf) {
+  /* :not(.bita-empty):not(.bita-error-cell):not(.bita-loading) — estas tres
+     son celdas de colSpan a todo el ancho (vacío/error/cargando), no una
+     columna de dato real; sin excluirlas, esta grilla de 2 columnas
+     (etiqueta + valor alineado a la derecha) les ganaba en especificidad a
+     sus propias reglas de centrado y las dejaba pegadas a la derecha. */
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf):not(.bita-empty):not(.bita-error-cell):not(.bita-loading) {
     display: grid;
     grid-template-columns: minmax(104px, 42%) minmax(0, 1fr);
     align-items: center;
@@ -1695,7 +1847,7 @@
     line-height: 1.25;
     white-space: normal;
   }
-  .bita-table td:not(.bita-folio):not(.bita-col-pdf) > * {
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf):not(.bita-empty):not(.bita-error-cell):not(.bita-loading) > * {
     min-width: 0;
     max-width: 100%;
     justify-self: end;
@@ -1741,6 +1893,16 @@
   }
 }
 
+@keyframes bita-sheet-entrada {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bita-backdrop-entrada {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (max-width: 360px) {
   .bita-wrap {
     padding: 7px;
@@ -1750,13 +1912,603 @@
   .bita-filtros-sticky { border-radius: 14px; }
   .bita-header-descargar-label { display: none; }
   .bita-header-descargar { width: 40px; padding-inline: 0; }
-  .bita-table td:not(.bita-folio):not(.bita-col-pdf) {
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf):not(.bita-empty):not(.bita-error-cell):not(.bita-loading) {
     grid-template-columns: minmax(0, 1fr);
     justify-items: start;
     gap: 4px;
     text-align: left;
   }
-  .bita-table td:not(.bita-folio):not(.bita-col-pdf) > * {
+  .bita-table td:not(.bita-folio):not(.bita-col-pdf):not(.bita-empty):not(.bita-error-cell):not(.bita-loading) > * {
     justify-self: start;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FILTROS — mismo lenguaje visual que la sección de Reportes
+   ═══════════════════════════════════════════════════════════════════════ */
+.bita-filtros-sticky {
+  gap: 14px;
+  padding: 18px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: saturate(220%) blur(40px);
+  -webkit-backdrop-filter: saturate(220%) blur(40px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.80) inset, 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+.bita-filtros-panel.abierto {
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.bita-filtros-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+
+.bita-filtro-grupo {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.bita-filtro-periodo,
+.bita-filtro-periodo-solo {
+  flex: 0 1 auto;
+}
+.bita-filtro-periodo-solo { flex-basis: 100%; }
+.bita-filtro-unidad { flex: 1 1 330px; }
+.bita-filtro-responsable { flex: 1 1 240px; max-width: 320px; }
+.bita-filtro-estatus { flex: 0 1 230px; }
+.bita-filtro-temporalidad { flex: 0 1 auto; }
+
+.bita-filtro-titulo {
+  margin-bottom: 7px;
+  color: #344d46;
+  font-size: .68rem;
+  letter-spacing: .03em;
+}
+
+.bita-filtros-separador {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 1px;
+  margin: 1px 0 0;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Periodo como control segmentado, igual al de Reportes. */
+.bita-filtro-periodo .bita-filtro-opciones {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+}
+.bita-filtro-periodo .bita-pildora {
+  min-height: 0;
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #86868b;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.bita-filtro-periodo .bita-pildora:hover {
+  background: rgba(255, 255, 255, 0.50);
+  color: #1f5647;
+}
+.bita-filtro-periodo .bita-pildora.activa,
+.bita-filtro-periodo .bita-pildora.activa:hover {
+  background: #ffffff;
+  color: #1d1d1f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+/* Selectores claros y rectangulares; dejan de parecer chips de estado. */
+.bita-filtro-grupo .bita-pildora-selector {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1d1d1f;
+  font-size: .82rem;
+  font-weight: 500;
+}
+.bita-filtro-grupo .bita-pildora-selector:hover {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(31, 86, 71, 0.25);
+}
+.bita-filtro-grupo .bita-pildora-selector.activa {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(31, 86, 71, 0.36);
+  color: #1f5647;
+}
+
+/* Temporalidad conserva significado semántico, pero con superficie clara. */
+.bita-filtro-temporalidad .bita-pildora {
+  min-height: 40px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: rgba(31, 86, 71, 0.06);
+  border-color: rgba(31, 86, 71, 0.16);
+}
+.bita-filtro-temporalidad .bita-pildora-alerta.activa {
+  background: #b83232;
+  border-color: #b83232;
+  color: #fff;
+}
+.bita-filtro-temporalidad .bita-pildora-aviso.activa {
+  background: #b87918;
+  border-color: #b87918;
+  color: #fff;
+}
+
+@media (max-width: 980px) {
+  .bita-filtros-grid {
+    display: flex;
+  }
+  .bita-filtro-periodo { flex-basis: 100%; }
+  .bita-filtro-responsable { max-width: none; }
+}
+
+@media (max-width: 600px) {
+  .bita-filtros-sticky {
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+  .bita-filtros-panel.abierto {
+    padding-top: 11px;
+  }
+  .bita-filtros-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .bita-filtro-periodo,
+  .bita-filtro-periodo-solo,
+  .bita-filtro-unidad,
+  .bita-filtro-responsable,
+  .bita-filtro-estatus,
+  .bita-filtro-temporalidad {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  .bita-filtro-grupo { padding: 0; border: 0; background: transparent; }
+  .bita-filtros-separador { margin: 1px 0; }
+
+  .bita-filtro-periodo .bita-filtro-opciones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    padding: 0;
+    gap: 6px;
+    background: transparent;
+  }
+  .bita-filtro-periodo .bita-pildora {
+    width: 100%;
+    min-height: 40px;
+    padding: 7px 5px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.045);
+  }
+  .bita-filtro-periodo .bita-pildora.activa,
+  .bita-filtro-periodo .bita-pildora.activa:hover {
+    border-color: rgba(31, 86, 71, 0.22);
+    background: #fff;
+  }
+  .bita-filtro-grupo .bita-pildora-selector {
+    min-height: 42px;
+    font-size: .78rem;
+  }
+  .bita-filtro-temporalidad .bita-filtro-opciones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* La fila superior también adopta los mismos inputs y botones discretos que
+   Reportes; el estado abierto se indica sin cambiar a una pastilla sólida. */
+.bita-busqueda {
+  border-color: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.70);
+  color: #1d1d1f;
+}
+.bita-toolbar-btn {
+  border: 1px solid rgba(31, 86, 71, 0.20);
+  border-radius: 10px;
+  background: rgba(31, 86, 71, 0.08);
+  color: #1f5647;
+}
+.bita-toolbar-btn:hover,
+.bita-toolbar-btn.activo {
+  border-color: rgba(31, 86, 71, 0.28);
+  background: rgba(31, 86, 71, 0.14);
+  color: #1f5647;
+}
+
+/* Acabado ejecutivo: profundidad ligera, jerarquía clara y acentos del
+   sistema sin convertir el filtro en una colección de tarjetas. */
+.bita-filtros-sticky::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(208, 235, 226, 0.36), transparent 34%),
+    radial-gradient(circle at 96% 100%, rgba(221, 201, 163, 0.20), transparent 30%);
+}
+
+.bita-fila-busqueda {
+  align-items: stretch;
+  gap: 10px;
+}
+.bita-busqueda-wrap {
+  min-height: 44px;
+}
+.bita-busqueda {
+  height: 44px;
+  border-color: rgba(31, 86, 71, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 3px 10px rgba(35, 91, 78, 0.035);
+}
+.bita-busqueda:focus {
+  border-color: rgba(31, 86, 71, 0.42);
+  box-shadow: 0 0 0 3px rgba(31, 86, 71, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.bita-toolbar-btn {
+  min-width: 112px;
+  min-height: 44px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.80);
+}
+.bita-toolbar-btn:hover {
+  border-color: rgba(31, 86, 71, 0.30);
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateY(-1px);
+}
+.bita-toolbar-btn.activo {
+  border-color: #1f5647;
+  background: #1f5647;
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(31, 86, 71, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+.bita-toolbar-btn.activo .bita-toolbar-count {
+  background: #ddc9a3;
+  color: #174d3f;
+}
+
+.bita-filtros-panel.abierto {
+  margin-top: 1px;
+}
+.bita-filtro-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+}
+.bita-filtro-titulo::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #bc955c, #ddc9a3);
+}
+
+.bita-filtro-periodo .bita-filtro-opciones {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.035);
+}
+.bita-filtro-periodo .bita-pildora {
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.bita-filtro-periodo .bita-pildora:active { transform: scale(.98); }
+
+.bita-filtro-grupo .bita-pildora-selector {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 2px 7px rgba(35, 91, 78, 0.035);
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+.bita-filtro-grupo .bita-pildora-selector:hover,
+.bita-filtro-grupo .bita-pildora-selector:focus-visible {
+  outline: none;
+  border-color: rgba(31, 86, 71, 0.40);
+  box-shadow: 0 0 0 3px rgba(31, 86, 71, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.90);
+}
+
+.bita-filtros-separador {
+  background: linear-gradient(90deg, transparent, rgba(31, 86, 71, 0.13) 12%, rgba(31, 86, 71, 0.13) 88%, transparent);
+}
+
+.bita-filtro-temporalidad .bita-pildora {
+  font-weight: 700;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.bita-filtro-temporalidad .bita-pildora:hover {
+  border-color: rgba(31, 86, 71, 0.28);
+  background: rgba(31, 86, 71, 0.10);
+}
+.bita-filtro-temporalidad .bita-pildora:active { transform: scale(.98); }
+
+@media (max-width: 600px) {
+  .bita-filtros-sticky::before {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(208, 235, 226, 0.30), transparent 38%),
+      radial-gradient(circle at 100% 100%, rgba(221, 201, 163, 0.16), transparent 34%);
+  }
+  .bita-fila-busqueda { gap: 7px; }
+  .bita-toolbar-btn {
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 7px;
+  }
+  .bita-busqueda-wrap,
+  .bita-busqueda { min-height: 42px; height: 42px; }
+  .bita-filtro-titulo::before { height: 11px; }
+  .bita-filtro-periodo .bita-pildora { border-radius: 10px; }
+  .bita-filtros-separador {
+    background: rgba(31, 86, 71, 0.09);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bita-toolbar-btn,
+  .bita-pildora,
+  .bita-unidad-popover,
+  .bita-columnas-menu,
+  .bita-popover-backdrop {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Escala compacta y uniforme para los controles del panel de filtros. */
+.bita-filtros-sticky {
+  border-radius: 24px;
+}
+
+.bita-busqueda,
+.bita-toolbar-btn,
+.bita-filtro-periodo .bita-filtro-opciones,
+.bita-filtro-grupo .bita-pildora-selector,
+.bita-filtro-temporalidad .bita-pildora {
+  min-height: 40px;
+  height: 40px;
+  border-radius: 14px;
+}
+
+.bita-busqueda {
+  padding-inline: 40px 14px;
+  font-size: .82rem;
+}
+
+.bita-busqueda-wrap {
+  min-height: 40px;
+  height: 40px;
+}
+
+.bita-toolbar-btn {
+  min-width: 108px;
+  min-height: 40px;
+  height: 40px;
+  padding: 7px 13px;
+  border-radius: 14px;
+  font-size: .78rem;
+  line-height: 1;
+}
+
+.bita-filtro-titulo {
+  margin-bottom: 6px;
+  font-size: .64rem;
+  line-height: 1.15;
+  letter-spacing: .045em;
+}
+
+.bita-filtro-periodo .bita-filtro-opciones {
+  align-items: center;
+  padding: 3px;
+}
+
+.bita-filtro-periodo .bita-pildora {
+  min-height: 34px;
+  height: 34px;
+  padding: 5px 12px;
+  font-size: .72rem;
+  line-height: 1;
+}
+
+.bita-filtro-grupo .bita-pildora-selector {
+  padding: 7px 14px;
+  font-size: .78rem;
+  line-height: 1.15;
+  border-radius: 14px;
+}
+
+.bita-selector-chevron {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  margin: -4px 2px 0 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  opacity: .78;
+  transform: rotate(45deg);
+  transform-origin: center;
+}
+
+.bita-filtro-temporalidad .bita-pildora {
+  min-width: 104px;
+  padding: 7px 15px;
+  font-size: .76rem;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .bita-filtros-sticky {
+    border-radius: 18px;
+  }
+
+  .bita-busqueda,
+  .bita-busqueda-wrap,
+  .bita-toolbar-btn,
+  .bita-filtro-grupo .bita-pildora-selector,
+  .bita-filtro-temporalidad .bita-pildora {
+    min-height: 40px;
+    height: 40px;
+  }
+
+  .bita-busqueda { font-size: .78rem; }
+  .bita-toolbar-btn { font-size: .72rem; }
+
+  .bita-filtro-periodo .bita-filtro-opciones {
+    height: auto;
+    min-height: 0;
+    border-radius: 14px;
+  }
+
+  .bita-filtro-periodo .bita-pildora {
+    min-height: 38px;
+    height: 38px;
+    border-radius: 13px;
+    font-size: .70rem;
+  }
+
+  /* Mismo selector segmentado de escritorio, adaptado al ancho móvil. */
+  .bita-filtro-periodo .bita-filtro-opciones {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 999px;
+  }
+
+  .bita-filtro-periodo .bita-pildora {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    padding: 5px 3px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font-size: clamp(.61rem, 2.8vw, .70rem);
+    white-space: nowrap;
+  }
+
+  /* Los paneles inferiores quedan por encima de la navegación móvil. */
+  .bita-unidad-popover,
+  .bita-resp-popover,
+  .bita-columnas-menu {
+    inset: auto 10px calc(90px + env(safe-area-inset-bottom, 0px)) 10px !important;
+    max-height: min(58vh, 430px);
+  }
+}
+
+/* En escritorio, los filtros disponibles para ROL2 aprovechan una sola fila. */
+@media (min-width: 981px) {
+  .bita-filtro-periodo-solo {
+    flex: 0 1 auto;
+    flex-basis: auto;
+  }
+
+  .bita-filtro-periodo-solo + .bita-filtros-separador {
+    display: none;
+  }
+}
+
+/* Estatus de Bitácora: el color acompaña al texto sin sustituirlo. */
+.bita-status-badge {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  font-size: .70rem !important;
+  font-weight: 750 !important;
+  line-height: 1.05;
+  letter-spacing: .01em !important;
+  white-space: normal !important;
+  box-shadow: none !important;
+}
+
+.bita-status-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.bita-status-badge[data-estatus='Recibido'],
+.bita-status-badge[data-estatus='Registrado'] {
+  color: #45677d !important;
+  background: #edf3f7 !important;
+  border-color: #d5e2ea !important;
+}
+
+.bita-status-badge[data-estatus='Turnado'] {
+  color: #2f6670 !important;
+  background: #e8f2f3 !important;
+  border-color: #cee0e2 !important;
+}
+
+.bita-status-badge[data-estatus='En_seguimiento'] {
+  color: #17664c !important;
+  background: #e7f3ee !important;
+  border-color: #cce5db !important;
+}
+
+.bita-status-badge[data-estatus='Atendido'] {
+  color: #79601d !important;
+  background: #f8f0d9 !important;
+  border-color: #ebdcae !important;
+}
+
+.bita-status-badge[data-estatus='Pendiente_validacion'] {
+  color: #8a5a00 !important;
+  background: #fff1d1 !important;
+  border-color: #f1d693 !important;
+}
+
+.bita-status-badge[data-estatus='Concluido'] {
+  color: #106749 !important;
+  background: #e5f3ed !important;
+  border-color: #c8e4d8 !important;
+}
+
+.bita-status-badge[data-estatus='Rechazado'] {
+  color: #a43b42 !important;
+  background: #fdebed !important;
+  border-color: #f4cfd2 !important;
+}
+
+.bita-status-badge[data-estatus='Vencido'] {
+  color: #a32222 !important;
+  background: #fee5e5 !important;
+  border-color: #f4c3c3 !important;
+}
+
+.bita-status-badge[data-estatus='PorVencer'] {
+  color: #9a5817 !important;
+  background: #fff0dc !important;
+  border-color: #f2d3ac !important;
+}
+

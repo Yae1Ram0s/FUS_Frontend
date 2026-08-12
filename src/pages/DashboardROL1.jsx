@@ -63,11 +63,6 @@ const ICON_CORNER = (
     <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
   </svg>
 )
-const ICON_ARROW_RIGHT = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-  </svg>
-)
 const ICON_INFO = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/>
@@ -194,14 +189,8 @@ export default function DashboardROL1() {
   const nombre = user?.nombre || user?.email || 'Usuario'
 
   const cargarDashboard = useCallback(async ({ signal }) => {
-    const [fusData, bitacora] = await Promise.all([
-      fetchAll('/fus/', {}, signal),
-      api.get('/bitacora/', {
-        params: { page: 1, page_size: 100 },
-        signal,
-      }).then(response => response.data.results || []),
-    ])
-    return { fusData, bitacora, ahora: Date.now() }
+    const fusData = await fetchAll('/fus/', {}, signal)
+    return { fusData, ahora: Date.now() }
   }, [])
   const {
     data: dashboard,
@@ -211,11 +200,10 @@ export default function DashboardROL1() {
   } = useAsyncResource(cargarDashboard, {
     initialData: () => ({
       fusData: [],
-      bitacora: [],
       ahora: Date.now(),
     }),
   })
-  const { fusData, bitacora, ahora } = dashboard
+  const { fusData, ahora } = dashboard
 
   // En vivo: cualquier notificación ligada a un FUS (turnar, atendido,
   // comisionar, concluir, rechazar, SLA por vencer, etc.) refresca el
@@ -353,7 +341,7 @@ export default function DashboardROL1() {
   const vencimientos2 = noConcluidos
     .filter(f => f.fechaLimite)
     .sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite))
-    .slice(0, 3)
+    .slice(0, 6)
     .map(f => {
       const tipo = f.estadoTemporalidad === 'Vencido' ? 'alta' : f.estadoTemporalidad === 'PorVencer' ? 'pendiente' : 'proceso'
       const { icon, color } = ICONO_VENCIMIENTO2[tipo]
@@ -364,29 +352,6 @@ export default function DashboardROL1() {
         icon, color,
       }
     })
-
-  /* Avisos — actividad reciente de bitácora, acotada a los propios FUS
-     (mismo criterio de scoping que "última actividad" arriba) y con las
-     mismas etiquetas legibles que usa la pantalla de Bitácora. */
-  const ACCION_LABELS2 = {
-    REGISTRO_FUS:       'Registro FUS',
-    TURNAR_FUS:         'Turnar FUS',
-    ASIGNACION_ESTADO:  'Cambio de estado',
-    REGISTRO_RESPUESTA: 'Registro respuesta',
-    REGISTRO_ACCION:    'Registro acción',
-    CONCLUSION_FUS:     'Conclusión FUS',
-  }
-  const misFolios = new Set(fusData.map(f => f.folio))
-  const avisosRecientes = bitacora
-    .filter(b => misFolios.has(b.fusFolio))
-    .slice()
-    .sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora))
-    .slice(0, 3)
-    .map(b => ({
-      folio: b.fusFolio,
-      texto: ACCION_LABELS2[b.accion] || b.accion,
-      fecha: new Date(b.fechaHora).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
-    }))
 
   if (cargando && fusData.length === 0) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} fill label="Cargando dashboard…" /></div></AppLayout>
@@ -504,39 +469,8 @@ export default function DashboardROL1() {
                   {vencimientos2.length === 0 ? (
                     <p className="dash-empty">Sin solicitudes con fecha límite próxima.</p>
                   ) : (
-                    <>
-                      {vencimientos2.map(v => (
-                        <Venc2Item key={v.folio} item={v} onClick={() => irAlFus(v.folio)} />
-                      ))}
-                      <div
-                        className="ver-todos"
-                        onClick={() => irAConsultar('')}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irAConsultar('') } }}
-                      >
-                        Ver todos los vencimientos {ICON_ARROW_RIGHT}
-                      </div>
-                    </>
-                  )}
-
-                  <div className="dash2-subhead">Actividad reciente</div>
-                  {avisosRecientes.length === 0 ? (
-                    <p className="dash-empty">Sin actividad reciente.</p>
-                  ) : (
-                    avisosRecientes.map((a, i) => (
-                      <div
-                        className="aviso-item aviso-item-clickable"
-                        key={`${a.folio}-${i}`}
-                        onClick={() => irAlFus(a.folio)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); irAlFus(a.folio) } }}
-                      >
-                        <span className="aviso-folio">{a.folio}</span>
-                        <span className="aviso-texto">{a.texto}</span>
-                        <span className="aviso-fecha">{a.fecha}</span>
-                      </div>
+                    vencimientos2.map(v => (
+                      <Venc2Item key={v.folio} item={v} onClick={() => irAlFus(v.folio)} />
                     ))
                   )}
                 </div>

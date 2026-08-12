@@ -88,6 +88,16 @@
 .st-left.panel-cerrado .panel-header { justify-content: center; padding: 12px 0; }
 .st-left.panel-cerrado .panel-toggle { margin-left: 0; }
 
+/* Desktop: el panel de la lista se queda fijo, sin poder angostarlo a la
+   pestaña de 44px — se oculta el botón solo mientras está abierto (evita el
+   clic que lo colapsa); si llega ya colapsado (modo "detalle directo desde
+   Dashboard", sin lista) el botón se sigue viendo para poder reabrirlo. El
+   toggle de móvil (lista/detalle en pantalla completa) no se toca. Mismo
+   criterio que ya usa ConsultarFUS (ROL1). */
+@media (min-width: 769px) {
+  .st-left:not(.panel-cerrado) .panel-toggle { display: none; }
+}
+
 .panel-content {
   display: flex;
   flex-direction: column;

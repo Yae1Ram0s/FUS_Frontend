@@ -14,7 +14,6 @@ const TIPO_INFO = {
   reunion:       { label: 'Reunión',       color: '#5b7fe0', chipBg: '#5b7fe0', chipText: '#ffffff' },
   fus:           { label: 'FUS vinculado', color: '#4a9d6f', chipBg: '#4a9d6f', chipText: '#ffffff' },
   limite:        { label: 'Fecha límite',  color: '#dd9a3a', chipBg: '#dd9a3a', chipText: '#ffffff' },
-  institucional: { label: 'Institucional', color: '#8a6fd6', chipBg: '#8a6fd6', chipText: '#ffffff' },
 }
 
 const DIAS_SEMANA      = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']

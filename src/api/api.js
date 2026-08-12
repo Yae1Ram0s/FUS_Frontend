@@ -19,10 +19,26 @@ export function onAccessTokenChange(fn) {
   return () => listeners.delete(fn)
 }
 
+// Mensaje uniforme para las acciones de escritura (turnar, responder,
+// concluir, rechazar, etc.): si el servidor respondió con un detalle de
+// validación se muestra tal cual; si no hubo respuesta en absoluto (err.response
+// vacío) es una caída de conexión y conviene decirlo explícito, en vez de un
+// "intenta de nuevo" genérico indistinguible de cualquier otro error.
+export function mensajeErrorConexion(err, mensajePorDefecto) {
+  if (err.response?.data?.detail) return err.response.data.detail
+  if (!err.response) return 'Se perdió la conexión a internet. Intenta de nuevo cuando vuelva la conexión.'
+  return mensajePorDefecto
+}
+
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
   withCredentials: true,
+  // Con una conexión colgada (no caída del todo, solo muerta) sin esto la
+  // petición espera indefinidamente en vez de fallar y avisar. Las subidas de
+  // evidencias (multipart, más lentas) pasan su propio `timeout` más alto en
+  // el config de esa llamada puntual — este es solo el default para el resto.
+  timeout: 20000,
 })
 
 api.interceptors.request.use(config => {

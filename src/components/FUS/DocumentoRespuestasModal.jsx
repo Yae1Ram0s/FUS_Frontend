@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import api from '../../api/api'
+import api, { mensajeErrorConexion } from '../../api/api'
+import { useConexionInternet } from '../../hooks/useConexionInternet'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import '../Comisionado/Comisionado.css'
 import './DocumentoRespuestasModal.css'
@@ -53,11 +55,13 @@ export default function DocumentoRespuestasModal({
   turnado = null,
   onValidado,
 }) {
-  const [mostrarMotivo, setMostrarMotivo] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const borradorKey = turnado ? `scs_rechazo_persona_borrador_${turnado.id}` : null
+  const [motivo, setMotivo] = useState(() => (borradorKey && sessionStorage.getItem(borradorKey)) || '')
+  const [mostrarMotivo, setMostrarMotivo] = useState(() => Boolean(motivo))
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const envioEnCursoRef = useRef(false)
+  const enLinea = useConexionInternet()
   useModalBehavior(onClose, { closeEnabled: !enviando })
   const grupos = agruparPorFecha(respuestas)
 
@@ -68,15 +72,25 @@ export default function DocumentoRespuestasModal({
   // completo hasta que todas estén concluidas.
   const puedeValidar = turnado?.estatusTitular === 'Pendiente_validacion'
 
+  // Autoguardado del motivo de rechazo — si la conexión se cae a mitad de
+  // escribirlo, no depende de red y sobrevive a cerrar el modal por accidente.
+  const motivoDeb = useDebouncedValue(motivo, 500)
+  useEffect(() => {
+    if (!borradorKey) return
+    if (motivoDeb.trim()) sessionStorage.setItem(borradorKey, motivoDeb)
+    else sessionStorage.removeItem(borradorKey)
+  }, [motivoDeb, borradorKey])
+
   const enviar = async (accion, datos) => {
     if (envioEnCursoRef.current) return
     envioEnCursoRef.current = true
     setError(''); setEnviando(true)
     try {
       const { data } = await api.post(`/turnados/${turnado.id}/${accion}/`, datos)
+      if (borradorKey) sessionStorage.removeItem(borradorKey)
       onValidado?.(data.estatusParticular)
     } catch (err) {
-      setError(err.response?.data?.detail || 'No se pudo completar la acción. Intenta nuevamente.')
+      setError(mensajeErrorConexion(err, 'No se pudo completar la acción. Intenta nuevamente.'))
       setEnviando(false)
     } finally {
       envioEnCursoRef.current = false
@@ -153,26 +167,28 @@ export default function DocumentoRespuestasModal({
                   autoFocus
                 />
                 {error && <div className="com-alert-error">{error}</div>}
+                {!enLinea && <div className="com-alert-error">Sin conexión a internet — no se puede enviar en este momento.</div>}
                 <div className="com-confirm-acciones">
                   <button type="button" className="com-btn-ghost" onClick={() => { setMostrarMotivo(false); setMotivo(''); setError('') }} disabled={enviando}>
                     Cancelar
                   </button>
-                  <button type="button" className="com-btn-rojo" onClick={rechazar} disabled={enviando}>
+                  <button type="button" className="com-btn-rojo" onClick={rechazar} disabled={enviando || !enLinea}>
                     {enviando && <span className="btn-spinner" />}
-                    {enviando ? 'Rechazando…' : 'Confirmar rechazo'}
+                    {enviando ? 'Rechazando…' : !enLinea ? 'Sin conexión' : 'Confirmar rechazo'}
                   </button>
                 </div>
               </>
             ) : (
               <>
                 {error && <div className="com-alert-error">{error}</div>}
+                {!enLinea && <div className="com-alert-error">Sin conexión a internet — no se puede enviar en este momento.</div>}
                 <div className="com-confirm-acciones">
                   <button type="button" className="com-btn-rojo" onClick={() => setMostrarMotivo(true)} disabled={enviando}>
                     Rechazar
                   </button>
-                  <button type="button" className="com-btn-verde" onClick={concluir} disabled={enviando}>
+                  <button type="button" className="com-btn-verde" onClick={concluir} disabled={enviando || !enLinea}>
                     {enviando && <span className="btn-spinner" />}
-                    {enviando ? 'Concluyendo…' : 'Concluir'}
+                    {enviando ? 'Concluyendo…' : !enLinea ? 'Sin conexión' : 'Concluir'}
                   </button>
                 </div>
               </>

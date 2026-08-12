@@ -139,6 +139,16 @@ const NAV_COMISIONADO = [
   },
 ]
 
+const ICON_SALUD = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+const ICON_USUARIOS = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M16 3.2a4 4 0 0 1 0 7.6M23 21v-2a4 4 0 0 0-3-3.9"/></svg>
+const NAV_ADMIN = [
+  { path: '/admin/inicio', label: 'Inicio', icon: ICON_INICIO },
+  { path: '/admin/usuarios', label: 'Usuarios y accesos', icon: ICON_USUARIOS },
+  { path: '/admin/salud', label: 'Salud del sistema', icon: ICON_SALUD },
+  { path: '/admin/auditoria', label: 'Auditoría', icon: ICON_BITACORA },
+  { path: '/admin/otp', label: 'Códigos OTP', icon: ICON_SALUD },
+]
+
 export default function Sidebar() {
   const { user } = useAuth()
   const [perfilAbierto, setPerfilAbierto] = useState(false)
@@ -163,7 +173,8 @@ export default function Sidebar() {
     setPerfilAbierto(true)
   }
 
-  const items = user?.rol === 'ROL2' ? NAV_ROL2
+  const items = user?.rol === 'ADMIN' ? NAV_ADMIN
+    : user?.rol === 'ROL2' ? NAV_ROL2
     : user?.rol === 'COMISIONADO' ? NAV_COMISIONADO
     : user?.rol === 'EQUIPO_PARTICULAR' ? NAV_EQUIPO_PARTICULAR
     : NAV_ROL1

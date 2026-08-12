@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
@@ -214,6 +215,14 @@ function FUSCard({ f, activo, onClick }) {
 
 /* ── Página principal ── */
 export default function FUSComisionados() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Deep-link puntual (ej. clic en el FUS vinculado de una actividad del
+  // Calendario): igual que ConsultarFUS/SolicitudesTurnadas, se busca por
+  // folio y se selecciona en cuanto llega — este endpoint no tiene un
+  // parámetro de folio exacto propio, así que se reusa `search` (icontains)
+  // y se afina con un match exacto sobre los resultados.
+  const folioParam = searchParams.get('folio')
+
   const [busqueda,     setBusqueda]     = useState('')
   const [seleccionado, setSeleccionado] = useState(null)
   const [solicitud, setSolicitud] = useState({
@@ -224,25 +233,37 @@ export default function FUSComisionados() {
   const busquedaDeb = useDebouncedValue(busqueda, 300)
   const cargarPagina = useCallback(async ({ signal }) => {
     const params = { page: solicitud.page, page_size: PAGE_SIZE }
-    if (busquedaDeb) params.search = busquedaDeb
+    if (folioParam) params.search = folioParam
+    else if (busquedaDeb) params.search = busquedaDeb
     const response = await api.get('/fus/mis-comisionados/', {
       params,
       signal,
     })
+    const items = response.data.results || []
+    const match = folioParam ? items.find(fus => fus.folio === folioParam) : null
     return {
-      items: response.data.results || [],
+      items,
       total: response.data.total || 0,
       page: solicitud.page,
       append: solicitud.append,
+      match,
     }
-  }, [busquedaDeb, solicitud])
+  }, [busquedaDeb, folioParam, solicitud])
+  const procesarCargaExitosa = useCallback(resultado => {
+    if (resultado.match) {
+      setBusqueda('')
+      setSeleccionado(resultado.match)
+      setSearchParams({}, { replace: true })
+    }
+  }, [setSearchParams])
   const {
     data: resultado,
     loading: cargando,
     error: errorCarga,
   } = useAsyncResource(cargarPagina, {
-    initialData: { items: [], total: 0, page: 1, append: false },
+    initialData: { items: [], total: 0, page: 1, append: false, match: null },
     mergeData: combinarPaginas,
+    onSuccess: procesarCargaExitosa,
   })
   const lista = resultado.items
   const totalItems = resultado.total

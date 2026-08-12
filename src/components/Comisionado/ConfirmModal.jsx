@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { mensajeErrorConexion } from '../../api/api'
+import { useConexionInternet } from '../../hooks/useConexionInternet'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import './Comisionado.css'
 
@@ -9,6 +11,7 @@ export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = '
   const [enviando, setEnviando] = useState(false)
   const [error, setError]       = useState('')
   const envioEnCursoRef         = useRef(false)
+  const enLinea                 = useConexionInternet()
   useModalBehavior(onClose, { closeEnabled: !enviando })
 
   const confirmar = async () => {
@@ -18,7 +21,7 @@ export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = '
     try {
       await onConfirmar()
     } catch (err) {
-      setError(err.response?.data?.detail || 'No se pudo completar la acción. Intenta nuevamente.')
+      setError(mensajeErrorConexion(err, 'No se pudo completar la acción. Intenta nuevamente.'))
       setEnviando(false)
     } finally {
       envioEnCursoRef.current = false
@@ -36,12 +39,13 @@ export default function ConfirmModal({ titulo, texto, textoBoton, colorBoton = '
         <p className="com-confirm-texto">{texto}</p>
 
         {error && <div className="com-alert-error">{error}</div>}
+        {!enLinea && <div className="com-alert-error">Sin conexión a internet — no se puede enviar en este momento.</div>}
 
         <div className="com-confirm-acciones">
           <button type="button" className="com-btn-ghost" onClick={onClose} disabled={enviando}>Cancelar</button>
-          <button type="button" className={`com-btn-${colorBoton}`} onClick={confirmar} disabled={enviando}>
+          <button type="button" className={`com-btn-${colorBoton}`} onClick={confirmar} disabled={enviando || !enLinea}>
             {enviando && <span className="btn-spinner" />}
-            {enviando ? 'Guardando…' : textoBoton}
+            {enviando ? 'Guardando…' : !enLinea ? 'Sin conexión' : textoBoton}
           </button>
         </div>
       </div>

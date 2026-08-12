@@ -3,6 +3,7 @@ import Spinner from '../Spinner'
 import DocumentoRespuestasModal from './DocumentoRespuestasModal'
 import { obtenerIniciales } from '../../utils/personas'
 import { esParticular } from '../../utils/permisos'
+import { formatMedioRecepcion } from '../../utils/medio'
 import Badge from '../Badge'
 
 export default function PersonasYRespuestasCard({ turnados, cargando, user, onCambio }) {
@@ -122,7 +123,7 @@ function PersonaFila({ turnado, user, onCambio }) {
           {(turnado.idMedio?.nombreMedio || turnado.solicitudTexto) && (
             <>
               <div className="dt-turnado-pop-divider" />
-              {turnado.idMedio?.nombreMedio && <DatoPersona label="Medio de envío" value={turnado.idMedio.nombreMedio} />}
+              {turnado.idMedio?.nombreMedio && <DatoPersona label="Medio de envío" value={formatMedioRecepcion(turnado.idMedio, turnado.medioEspecificacion)} />}
               {turnado.solicitudTexto && (
                 <div className="dt-turnado-pop-row">
                   <span className="dt-turnado-pop-label">Texto de la solicitud</span>

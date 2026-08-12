@@ -254,15 +254,16 @@
 .lf-group { margin-top: 1.6rem; margin-bottom: 1.1rem; position: relative; }
 .lf-group:first-child { margin-top: 0; }
 
-/* Etiqueta flotante: en reposo vive dentro del pill (como un placeholder),
-   y sube fuera de él al enfocar o al tener valor — el placeholder real
-   (formato: "usuario@anam.gob.mx", "000000"...) se mantiene oculto hasta
-   ese momento para no encimarse con ella (ver input::placeholder abajo). */
+/* Etiqueta fija (sin animación): siempre arriba del pill, en vez de
+   flotar/transicionar al enfocar o tener valor — mismo criterio que ya
+   usaban el input de OTP y el de "Nueva contraseña" en recuperación, ahora
+   aplicado a todos los inputs del login. Al no encimarse nunca con el
+   placeholder real, este se ve desde el reposo (no hace falta ocultarlo
+   hasta el foco). */
 .lf-group label {
   position: absolute;
-  left: 22px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 4px;
+  top: -20px;
   margin: 0;
   max-width: calc(100% - 44px);
   white-space: nowrap;
@@ -271,36 +272,11 @@
   font-family: var(--font-thin);
   font-weight: 400;
   font-style: normal;
-  font-size: 0.92rem;
-  color: #a0a0a0;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  pointer-events: none;
-  transition: 0.18s ease all;
-}
-
-.lf-group:has(input:focus) label,
-.lf-group:has(input:not(:placeholder-shown)) label {
-  top: -20px;
-  left: 4px;
-  transform: translateY(0);
   font-size: 0.78rem;
   color: #3a3a3a;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.lf-group:has(input:focus) label {
-  color: #c9a227;
-}
-
-.lf-group input::placeholder {
-  color: transparent;
-  transition: color 150ms;
-}
-
-.lf-group input:focus::placeholder {
-  color: #a0a0a0;
+  pointer-events: none;
 }
 
 .lf-group input {
@@ -317,7 +293,6 @@
   color: #5a5a5a;
   background: #f4f4f4;
   outline: none;
-  transition: border-color 200ms, box-shadow 200ms, background 200ms;
   box-sizing: border-box;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
 }
@@ -350,7 +325,6 @@
   background: #f4f4f4;
   box-sizing: border-box;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
-  transition: border-color 200ms, box-shadow 200ms, background 200ms;
 }
 
 .lf-email-mobile-wrap:focus-within {
@@ -602,41 +576,8 @@ button.ll-install-hint:hover { color: #235b4e; }
   color: #c9a227 !important;
 }
 
-/* El código OTP no usa la animación de etiqueta flotante. La etiqueta
-   permanece fija para evitar el salto visual al recibir el autoFocus. */
 .lf-group-otp {
   margin-top: 1.6rem;
-}
-
-.lf-group-otp label,
-.lf-group-otp:has(input:focus) label,
-.lf-group-otp:has(input:not(:placeholder-shown)) label {
-  top: -20px;
-  left: 4px;
-  transform: none;
-  font-size: 0.78rem;
-  color: #3a3a3a;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  transition: none;
-}
-
-/* En recuperación las etiquetas de nueva contraseña permanecen fijas.
-   Se elimina el salto/animación al enfocar o comenzar a escribir. */
-.login-form-recovery .lf-group label,
-.login-form-recovery .lf-group:has(input:focus) label,
-.login-form-recovery .lf-group:has(input:not(:placeholder-shown)) label {
-  top: -20px;
-  left: 4px;
-  transform: none;
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  transition: none;
-}
-
-.login-form-recovery .lf-group:has(input:focus) label {
-  color: #3a3a3a;
 }
 
 /* ── Links secundarios ── */

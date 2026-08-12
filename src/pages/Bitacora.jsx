@@ -12,6 +12,7 @@ import Badge from '../components/Badge'
 import { useAuth } from '../context/AuthContext'
 import { useAsyncResource } from '../hooks/useAsyncResource'
 import { descargar } from '../utils/descargarArchivo'
+import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './Bitacora.css'
 
 // Mismo conjunto de valores crudos que FUS.estatusParticular_id puede tener
@@ -112,6 +113,20 @@ function SkeletonList() {
   return Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
 }
 
+function CheckboxAnimado({ checked, onChange }) {
+  return (
+    <span className="bita-check-box">
+      <input type="checkbox" className="bita-check-input" checked={checked} onChange={onChange} />
+      <span className="bita-check-svg" aria-hidden="true">
+        <svg viewBox="0 0 18 18">
+          <path d="M1,9 L1,3.5 C1,2 2,1 3.5,1 L14.5,1 C16,1 17,2 17,3.5 L17,14.5 C17,16 16,17 14.5,17 L3.5,17 C2,17 1,16 1,14.5 L1,9 Z" />
+          <polyline points="1 9 7 14 15 4" />
+        </svg>
+      </span>
+    </span>
+  )
+}
+
 export default function Bitacora() {
   const { user } = useAuth()
   const rol       = user?.rol || 'ROL1'
@@ -134,6 +149,9 @@ export default function Bitacora() {
   const [fEstatus,  setFEstatus]  = useState(() => searchParams.getAll('estatus_fus'))
   const [fDesde,    setFDesde]    = useState(() => searchParams.get('fecha_desde') || '')
   const [fHasta,    setFHasta]    = useState(() => searchParams.get('fecha_hasta') || '')
+  // Solo ROL1/Equipo del Particular y ROL2 — Comisionado no la pidió.
+  const [fPrioridad, setFPrioridad] = useState(() => searchParams.get('prioridad') || '')
+  const puedeFiltrarPrioridad = esParticular || rol === 'ROL2'
 
   const [fBusquedaDeb, setFBusquedaDeb] = useState(fBusqueda)
 
@@ -203,6 +221,20 @@ export default function Bitacora() {
   const abriendoFiltrosRef = useRef(false)
   const desbloquearFiltrosTimerRef = useRef(null)
 
+  const hayMenuFlotanteAbierto = menuColumnasAbierto || unidadPopoverAbierto || respPopoverAbierto || estatusPopoverAbierto
+
+  // En teléfono los selectores se presentan como paneles inferiores. Mientras
+  // uno está abierto, se inmoviliza solamente el contenido de Bitácora para
+  // que el gesto vertical controle la lista del selector y no la pantalla de
+  // fondo.
+  useEffect(() => {
+    const fondo = bitaBgRef.current
+    if (!fondo || !hayMenuFlotanteAbierto || window.innerWidth > 600) return undefined
+    const overflowAnterior = fondo.style.overflowY
+    fondo.style.overflowY = 'hidden'
+    return () => { fondo.style.overflowY = overflowAnterior }
+  }, [hayMenuFlotanteAbierto])
+
   const ordenarPor = (key) => {
     if (sortCol === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortCol(key); setSortDir('asc') }
@@ -232,7 +264,15 @@ export default function Bitacora() {
         setCompacto(false)
         return
       }
-      setCompacto(top > 50)
+      const debeCompactarse = top > 50
+      setCompacto(debeCompactarse)
+      if (debeCompactarse) {
+        setPanelFiltrosAbierto(false)
+        setMenuColumnasAbierto(false)
+        setUnidadPopoverAbierto(false)
+        setRespPopoverAbierto(false)
+        setEstatusPopoverAbierto(false)
+      }
     }
     el.addEventListener('scroll', onScroll)
     return () => {
@@ -455,6 +495,7 @@ export default function Bitacora() {
     fResponsables.forEach(email => params.append('usuario', email))
     if (fDesde)               params.set('fecha_desde', fDesde)
     if (fHasta)               params.set('fecha_hasta', fHasta)
+    if (fPrioridad)           params.set('prioridad', fPrioridad)
     if (sortCol)              params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
 
     const respuesta = await api.get(`/bitacora/?${params.toString()}`, { signal })
@@ -464,7 +505,7 @@ export default function Bitacora() {
       page: solicitud.page,
       append: solicitud.append,
     }
-  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, sortCol, sortDir, solicitud])
+  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir, solicitud])
 
   const {
     data: resultado,
@@ -482,7 +523,7 @@ export default function Bitacora() {
   }
 
 
-  useEffect(() => { cargar(1) }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, sortCol, sortDir])
+  useEffect(() => { cargar(1) }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir])
 
   // Refleja los filtros/orden vigentes en la URL (reemplazando la entrada
   // actual del historial, no apilando una nueva en cada tecleo) — así la
@@ -497,13 +538,15 @@ export default function Bitacora() {
     fResponsables.forEach(email => params.append('usuario', email))
     if (fDesde) params.set('fecha_desde', fDesde)
     if (fHasta) params.set('fecha_hasta', fHasta)
+    if (fPrioridad) params.set('prioridad', fPrioridad)
     if (sortCol) params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
     setSearchParams(params, { replace: true })
-  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, sortCol, sortDir, setSearchParams])
+  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir, setSearchParams])
 
   const limpiar = () => {
     setFBusqueda('')
     setFEstatus([]); setFDesde(''); setFHasta('')
+    setFPrioridad('')
     setPresetFecha(null)
     setUnidadSeleccionadas([])
     setFUnidades([])
@@ -512,11 +555,12 @@ export default function Bitacora() {
     setSortCol(null); setSortDir('asc')
   }
   const toggleColumna = (key) => setColVisibles(v => ({ ...v, [key]: !v[key] }))
-  const filtrosActivosChips = Boolean(fBusqueda || fEstatus.length || fUnidades.length || fResponsables.length || fDesde || fHasta)
+  const togglePrioridad = (valor) => setFPrioridad(prev => prev === valor ? '' : valor)
+  const filtrosActivosChips = Boolean(fBusqueda || fEstatus.length || fUnidades.length || fResponsables.length || fDesde || fHasta || fPrioridad)
   const estatusFlujoSeleccionados = fEstatus.filter(e => e !== 'Vencido' && e !== 'PorVencer')
   const cantidadFiltrosActivos = (
     (fBusqueda ? 1 : 0) + fEstatus.length + fUnidades.length +
-    fResponsables.length + ((fDesde || fHasta) ? 1 : 0)
+    fResponsables.length + ((fDesde || fHasta) ? 1 : 0) + (fPrioridad ? 1 : 0)
   )
 
   const formatearFechaHoraBitacora = d => d
@@ -597,6 +641,7 @@ export default function Bitacora() {
     fResponsables.forEach(email => p.append('usuario', email))
     if (fDesde)               p.set('fecha_desde', fDesde)
     if (fHasta)               p.set('fecha_hasta', fHasta)
+    if (fPrioridad)           p.set('prioridad', fPrioridad)
     if (sortCol)              p.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
     p.set('columnas', columnasVisibles().join(','))
     const qs = p.toString()
@@ -660,7 +705,7 @@ export default function Bitacora() {
         </div>
 
         {/* Filtros */}
-        <div className={`bita-filtros-sticky${compacto && filtrosActivosChips ? ' bita-filtros-compacto' : ''}`}>
+        <div className={`bita-filtros-sticky${compacto ? ' bita-filtros-compacto' : ''}`}>
           {compacto && filtrosActivosChips && (
             <button type="button" className="bita-editar-filtros-btn" onClick={editarFiltros}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -735,7 +780,7 @@ export default function Bitacora() {
                     <div className="bita-columnas-menu-lista">
                       {COLUMNAS_TOGGLEABLES.filter(c => !c.admOnly || esParticular).map(c => (
                         <label key={c.key} className="bita-columnas-opcion">
-                          <input type="checkbox" checked={Boolean(colVisibles[c.key])} onChange={() => toggleColumna(c.key)} />
+                          <CheckboxAnimado checked={Boolean(colVisibles[c.key])} onChange={() => toggleColumna(c.key)} />
                           <span>{c.label}</span>
                         </label>
                       ))}
@@ -751,7 +796,7 @@ export default function Bitacora() {
 
             <div className={`bita-filtros-panel${panelFiltrosAbierto ? ' abierto' : ''}`}>
               <div className="bita-filtros-grid">
-                <section className="bita-filtro-grupo bita-filtro-periodo">
+                <section className={`bita-filtro-grupo bita-filtro-periodo${!esParticular ? ' bita-filtro-periodo-solo' : ''}`}>
                   <span className="bita-filtro-titulo">Periodo</span>
                   <div className="bita-filtro-opciones">
                 <button type="button" className={`bita-pildora${presetFecha === 'hoy' ? ' activa' : ''}`} onClick={() => handlePresetClick('hoy')}>Hoy</button>
@@ -774,7 +819,7 @@ export default function Bitacora() {
                 </section>
 
                 {esParticular && (
-                  <section className="bita-filtro-grupo">
+                  <section className="bita-filtro-grupo bita-filtro-unidad">
                     <span className="bita-filtro-titulo">Unidad administrativa</span>
                     <div className="bita-unidad-pill-wrap">
                     <button type="button" ref={unidadBtnRef} className={`bita-pildora bita-pildora-selector${unidadSeleccionadas.length ? ' activa' : ''}`} onClick={abrirUnidadPopover}>
@@ -783,15 +828,16 @@ export default function Bitacora() {
                         : unidadSeleccionadas.length > 1
                           ? `${unidadSeleccionadas.length} unidades`
                           : 'Todas las unidades'}
-                      <span aria-hidden="true">⌄</span>
+                      <span className="bita-selector-chevron" aria-hidden="true" />
                     </button>
                     {unidadPopoverAbierto && createPortal(
                       <div className="bita-unidad-popover" ref={unidadPopoverRef} style={{ position: 'fixed', top: unidadPopoverPos.top, left: unidadPopoverPos.left }}>
+                        <div className="bita-popover-mobile-title">Unidad administrativa</div>
                         {unidades.map(u => {
                           const seleccionado = unidadSeleccionadas.some(item => item.idUnidadAdministrativa === u.idUnidadAdministrativa)
                           return (
                             <label key={u.idUnidadAdministrativa} className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}>
-                              <input type="checkbox" checked={seleccionado} onChange={() => toggleUnidad(u)} />
+                              <CheckboxAnimado checked={seleccionado} onChange={() => toggleUnidad(u)} />
                               <span>{u.unidadAdministrativa}</span>
                             </label>
                           )
@@ -803,7 +849,7 @@ export default function Bitacora() {
                   </section>
                 )}
                 {esParticular && (
-                  <section className="bita-filtro-grupo">
+                  <section className="bita-filtro-grupo bita-filtro-responsable">
                     <span className="bita-filtro-titulo">Responsable</span>
                     <div className="bita-unidad-pill-wrap">
                     <button type="button" ref={respBtnRef} className={`bita-pildora bita-pildora-selector${respSeleccionados.length ? ' activa' : ''}`} onClick={abrirRespPopover}>
@@ -812,10 +858,11 @@ export default function Bitacora() {
                         : respSeleccionados.length > 1
                           ? `${respSeleccionados.length} responsables`
                           : 'Todos los responsables'}
-                      <span aria-hidden="true">⌄</span>
+                      <span className="bita-selector-chevron" aria-hidden="true" />
                     </button>
                     {respPopoverAbierto && createPortal(
                       <div className="bita-unidad-popover bita-resp-popover" ref={respPopoverRef} style={{ position: 'fixed', top: respPopoverPos.top, left: respPopoverPos.left }}>
+                        <div className="bita-popover-mobile-title">Responsable</div>
                         <input
                           className="bita-resp-popover-buscar"
                           type="text"
@@ -832,8 +879,13 @@ export default function Bitacora() {
                           const seleccionado = respSeleccionados.some(item => item.email === c.email)
                           return (
                             <label key={c.id} className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}>
-                              <input type="checkbox" checked={seleccionado} onChange={() => toggleResponsable(c)} />
-                              <span>{c.nombre} <small className="bita-resp-popover-email">({c.email})</small></span>
+                              <CheckboxAnimado checked={seleccionado} onChange={() => toggleResponsable(c)} />
+                              <span className="bita-resp-popover-info">
+                                <span>{c.nombre} <small className="bita-resp-popover-email">({c.email})</small></span>
+                                {c.unidadAdministrativaNombre && (
+                                  <small className="bita-resp-popover-unidad">{c.unidadAdministrativaNombre}</small>
+                                )}
+                              </span>
                             </label>
                           )
                         })}
@@ -843,7 +895,8 @@ export default function Bitacora() {
                     </div>
                   </section>
                 )}
-                <section className="bita-filtro-grupo">
+                <div className="bita-filtros-separador" aria-hidden="true" />
+                <section className="bita-filtro-grupo bita-filtro-estatus">
                   <span className="bita-filtro-titulo">Estatus</span>
                   <div className="bita-unidad-pill-wrap">
                 <button type="button" ref={estatusBtnRef} className={`bita-pildora bita-pildora-selector${estatusFlujoSeleccionados.length ? ' activa' : ''}`} onClick={abrirEstatusPopover}>
@@ -852,15 +905,16 @@ export default function Bitacora() {
                     : estatusFlujoSeleccionados.length > 1
                       ? `${estatusFlujoSeleccionados.length} estatus seleccionados`
                       : 'Todos los estatus'}
-                  <span aria-hidden="true">⌄</span>
+                  <span className="bita-selector-chevron" aria-hidden="true" />
                 </button>
                 {estatusPopoverAbierto && createPortal(
                   <div className="bita-unidad-popover" ref={estatusPopoverRef} style={{ position: 'fixed', top: estatusPopoverPos.top, left: estatusPopoverPos.left }}>
+                    <div className="bita-popover-mobile-title">Estatus</div>
                     {estatusFlujoOpciones.map(e => {
                       const seleccionado = fEstatus.includes(e)
                       return (
                         <label key={e} className={`bita-unidad-opcion${seleccionado ? ' seleccionada' : ''}`}>
-                          <input type="checkbox" checked={seleccionado} onChange={() => toggleEstatus(e)} />
+                          <CheckboxAnimado checked={seleccionado} onChange={() => toggleEstatus(e)} />
                           <span>{ESTATUS_FUS_LABELS[e] || e}</span>
                         </label>
                       )
@@ -870,13 +924,30 @@ export default function Bitacora() {
                 )}
                   </div>
                 </section>
-                <section className="bita-filtro-grupo">
+                <section className="bita-filtro-grupo bita-filtro-temporalidad">
                   <span className="bita-filtro-titulo">Temporalidad</span>
                   <div className="bita-filtro-opciones">
                     <button type="button" className={`bita-pildora bita-pildora-alerta${fEstatus.includes('Vencido') ? ' activa' : ''}`} onClick={() => toggleEstatus('Vencido')}>Vencido</button>
                     <button type="button" className={`bita-pildora bita-pildora-aviso${fEstatus.includes('PorVencer') ? ' activa' : ''}`} onClick={() => toggleEstatus('PorVencer')}>Por vencer</button>
                   </div>
                 </section>
+                {puedeFiltrarPrioridad && (
+                  <section className="bita-filtro-grupo bita-filtro-prioridad">
+                    <span className="bita-filtro-titulo">Prioridad</span>
+                    <div className="bita-filtro-opciones">
+                      {PRIORIDAD_NIVELES.map(p => (
+                        <button
+                          key={p.valor}
+                          type="button"
+                          className={`bita-pildora${fPrioridad === p.valor ? ' activa' : ''}`}
+                          onClick={() => togglePrioridad(p.valor)}
+                        >
+                          {p.valor}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             </div>
           </div>
@@ -941,6 +1012,12 @@ export default function Bitacora() {
                   )}
                 </>
               )}
+              {fPrioridad && (
+                <span className="bita-chip bita-chip-clickable" onClick={() => { setPanelFiltrosAbierto(true); editarFiltros() }} title="Editar filtro de prioridad">
+                  Prioridad: {fPrioridad}
+                  <button type="button" onClick={e => { e.stopPropagation(); setFPrioridad('') }} aria-label="Quitar filtro de prioridad">×</button>
+                </span>
+              )}
               {filtrosActivosChips && <button type="button" className="bita-limpiar-todo" onClick={limpiar}>Limpiar todo</button>}
               {compacto && filtrosActivosChips && (
                 <button type="button" className="bita-editar-filtros-btn-inline" onClick={() => { setPanelFiltrosAbierto(true); editarFiltros() }}>
@@ -983,7 +1060,16 @@ export default function Bitacora() {
                 </tr>
               )}
               {!cargando && !errorCarga && registros.length === 0 && (
-                <tr><td colSpan={COLS} className="bita-empty">No hay registros que coincidan con los filtros.</td></tr>
+                <tr>
+                  <td colSpan={COLS} className="bita-empty">
+                    <div className="bita-empty-inner">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                      </svg>
+                      <p>No hay registros que coincidan con los filtros.</p>
+                    </div>
+                  </td>
+                </tr>
               )}
               {registros.map(r => (
                 <tr
@@ -1013,11 +1099,6 @@ export default function Bitacora() {
                         : '—'}
                       <span className="bita-movimiento">{descripcionMovimiento(r)}</span>
                       <span className="bita-folio-fecha-mobile">{formatearFechaHoraBitacora(r.fechaHora)}</span>
-                      {estatusDeRegistro(r) && (
-                        <span className="bita-mobile-badge">
-                          {ESTATUS_FUS_LABELS[estatusDeRegistro(r)] || estatusDeRegistro(r)}
-                        </span>
-                      )}
                     </td>
                   )}
                   {esParticular && colVisibles.nombre  && <td className="bita-usuario" data-label="Responsable">{r.nombre || '—'}</td>}
@@ -1027,7 +1108,7 @@ export default function Bitacora() {
                   )}
                   {colVisibles.estatus && (
                     <td data-label="Estatus">
-                      {estatusDeRegistro(r) ? <Badge estatus={estatusDeRegistro(r)} theme="light" /> : '—'}
+                      {estatusDeRegistro(r) ? <Badge estatus={estatusDeRegistro(r)} theme="light" className="bita-status-badge" /> : '—'}
                     </td>
                   )}
                   {colVisibles.cambioEstatus && (
@@ -1113,6 +1194,21 @@ export default function Bitacora() {
 
       </div>
       </div>
+
+      {hayMenuFlotanteAbierto && createPortal(
+        <button
+          type="button"
+          className="bita-popover-backdrop"
+          aria-label="Cerrar menú"
+          onClick={() => {
+            setMenuColumnasAbierto(false)
+            setUnidadPopoverAbierto(false)
+            setRespPopoverAbierto(false)
+            setEstatusPopoverAbierto(false)
+          }}
+        />,
+        document.body
+      )}
 
       {previewFolio && (
         <ModalPreviewPDF folio={previewFolio} onClose={() => setPreviewFolio(null)} />

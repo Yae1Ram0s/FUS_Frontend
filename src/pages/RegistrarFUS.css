@@ -253,7 +253,26 @@
   background: #ffffff;
 }
 
-.externo-grid input:nth-child(3) { grid-column: span 2; }
+.externo-correo-wrap { grid-column: span 2; display: flex; flex-direction: column; gap: 6px; }
+
+.correo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.correo-chip {
+  border: 1px solid rgba(35, 91, 78, 0.20);
+  background: rgba(255, 255, 255, 0.45);
+  color: #235b4e;
+  font-size: 0.75rem;
+  border-radius: 20px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+}
+
+.correo-chip:hover {
+  background: rgba(35, 91, 78, 0.12);
+  border-color: rgba(35, 91, 78, 0.40);
+  color: #1a4338;
+}
 
 /* Medio + opciones rápidas */
 .medio-wrapper {
@@ -447,10 +466,46 @@
 
 .criterio-item:hover { background: rgba(255, 255, 255, 0.72); }
 
-.criterio-check {
-  font-size: 1rem;
+.criterio-check-svg {
+  position: relative;
   flex-shrink: 0;
-  line-height: 1.3;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.criterio-check-svg svg {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #c8ccd4;
+  stroke-width: 1.5;
+  transition: stroke 0.2s ease;
+}
+
+.criterio-check-svg path {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 0;
+}
+
+.criterio-check-svg polyline {
+  stroke-dasharray: 22;
+  stroke-dashoffset: 66;
+}
+
+.criterio-item:hover .criterio-check-svg svg { stroke: currentColor; }
+
+.criterio-activo .criterio-check-svg svg { stroke: currentColor; }
+
+.criterio-activo .criterio-check-svg path {
+  stroke-dashoffset: 60;
+  transition: all 0.3s linear;
+}
+
+.criterio-activo .criterio-check-svg polyline {
+  stroke-dashoffset: 42;
+  transition: all 0.2s linear;
+  transition-delay: 0.15s;
 }
 
 .criterio-activo {
@@ -527,6 +582,29 @@
 }
 .prioridad-criterios.prioridad-baja .criterios-hint { color: #15803d; }
 
+/* Campo de texto libre — un criterio más, al final del checklist de la
+   prioridad elegida (mismo ancho/alto que un .criterio-item, sin depender
+   de un color de prioridad propio ya que vive dentro de Alta/Media/Baja). */
+.criterio-otro-input {
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.82rem;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.criterio-otro-input:focus {
+  border-color: currentColor;
+  background: #ffffff;
+}
+.criterio-otro-input::placeholder { color: inherit; opacity: 0.55; }
+
 /* Evidencia */
 .reg-row-evidencia { align-items: flex-start; }
 
@@ -557,17 +635,43 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 7px 7px 7px 12px;
   border: 1px solid rgba(35, 91, 78, 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.40);
+}
+.ev-existente-item:hover { background: rgba(255, 255, 255, 0.75); }
+
+.ev-existente-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
   color: #235b4e;
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
-.ev-existente-item:hover { background: rgba(255, 255, 255, 0.75); }
+.ev-existente-link:hover { text-decoration: underline; }
 .ev-item-cargando { opacity: 0.55; cursor: default; }
+
+.ev-existente-quitar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(185, 28, 28, 0.85);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.ev-existente-quitar:hover { background: #b91c1c; }
 
 /* Grid de previews */
 .ev-preview-list {
@@ -731,7 +835,6 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(35,91,78,0.30), inset rgba(255,255,255,0.20) 0 6px 0px -5px;
-  transition: all 200ms ease-in-out;
 }
 
 .btn-primary:hover:not(:disabled)  { background: rgba(28, 70, 60, 0.96); box-shadow: 0 4px 16px rgba(35,91,78,0.40), inset rgba(255,255,255,0.20) 0 6px 0px -5px; }
@@ -748,11 +851,95 @@
   font-weight: 500;
   cursor: pointer;
   box-shadow: none;
-  transition: all 200ms ease-in-out;
 }
 
 .btn-secondary:hover  { background: rgba(255, 255, 255, 0.85); border-color: rgba(35, 91, 78, 0.50); }
 .btn-secondary:active { background: rgba(255, 255, 255, 0.40); }
+
+/* ── Vidrio esmerilado: aro animado + brillo diagonal al pasar el cursor,
+   sobre los mismos botones y colores de arriba (nada nuevo que mantener
+   aparte — es aditivo, en CSS plano, sin cambiar el <button> ni sus
+   clases). Aísla su propio stacking context (position+isolation) para que
+   los pseudo-elementos no se salgan del botón ni tapen el texto. */
+@property --btn-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: -75deg;
+}
+
+.btn-primary,
+.btn-secondary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: transform 200ms cubic-bezier(0.25, 1, 0.5, 1), background 200ms ease-in-out, box-shadow 200ms ease-in-out, border-color 200ms ease-in-out;
+}
+
+/* Aro: conic-gradient recortado a solo el borde (mask exclude), oculto en
+   reposo y girando mientras se desvanece hacia adentro al enfocar/pasar el
+   cursor. */
+.btn-primary::before,
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--btn-angle) at 50% 50%,
+    rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 12% 38%,
+    rgba(255, 255, 255, 0.85) 50%, rgba(255, 255, 255, 0) 62% 88%,
+    rgba(255, 255, 255, 0.85));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease, --btn-angle 700ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Brillo: franja diagonal en mezcla "screen" que barre el botón — arranca
+   fuera a la derecha y entra al pasar el cursor. */
+.btn-primary::after,
+.btn-secondary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 48% 52%, transparent 70%);
+  background-size: 220% 220%;
+  background-position: 130% 50%;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transition: background-position 550ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0) scale(0.975);
+}
+
+.btn-primary:hover:not(:disabled)::before,
+.btn-secondary:hover:not(:disabled)::before {
+  opacity: 1;
+  --btn-angle: -255deg;
+}
+.btn-primary:hover:not(:disabled)::after,
+.btn-secondary:hover:not(:disabled)::after {
+  background-position: -30% 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary, .btn-secondary,
+  .btn-primary::before, .btn-secondary::before,
+  .btn-primary::after, .btn-secondary::after {
+    transition-duration: 1ms;
+  }
+}
 
 /* ══════════════════════════════════════
    RESPONSIVO
@@ -762,7 +949,7 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   .reg-content { padding: 1.5rem; max-width: 720px; }
   .externo-grid { grid-template-columns: 1fr 1fr; }
-  .externo-grid input:nth-child(3) { grid-column: span 2; }
+  .externo-correo-wrap { grid-column: span 2; }
 }
 
 @media (max-width: 768px) {
@@ -804,7 +991,7 @@
   }
 
   .externo-grid { grid-template-columns: 1fr; }
-  .externo-grid input:nth-child(3) { grid-column: span 1; }
+  .externo-correo-wrap { grid-column: span 1; }
 
   .reg-actions {
     flex-direction: column-reverse;

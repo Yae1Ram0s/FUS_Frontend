@@ -13,6 +13,11 @@ import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
 
+// Todo lo que no sea "Concluido" — mismo criterio que DashboardROL1, usado
+// para que el KPI "Prioridad alta" (que solo cuenta lo aún sin concluir) y
+// el filtro al que lleva el clic muestren exactamente el mismo conjunto.
+const ESTADOS_NO_CONCLUIDO = ['Recibido', 'En_seguimiento', 'Pendiente_validacion', 'Rechazado']
+
 const ICON_INBOX = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
@@ -100,8 +105,10 @@ function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
       <div className={`kpi2-glow kpi2-glow--${color}`} />
       <div className={`kpi2-icon kpi2-icon--${color}`}>{icon}</div>
       {onClick && <span className="kpi2-link">{ICON_CORNER}</span>}
-      <div className="kpi2-label">{label}</div>
-      <div className="kpi2-sub">{sub}</div>
+      <div className="kpi2-copy">
+        <div className="kpi2-label">{label}</div>
+        <div className="kpi2-sub">{sub}</div>
+      </div>
       <div className="kpi2-value">{count}</div>
     </div>
   )
@@ -143,18 +150,18 @@ export default function DashboardROL2() {
     reintentar()
   }, [reintentar, ultimaNotifFolio, ultimaNotifId])
 
-  // "FUS atendidos esta semana" y "Productividad del día" dependen de en qué
-  // día/semana cae `ahora` — sin esto, una sesión que se queda abierta y
-  // cruza medianoche (o el lunes) sigue mostrando los mensajes calculados
-  // con el día/semana viejos hasta que llegue una notificación. Se refresca
-  // solo (sin esperar un evento) cada minuto para que siempre reflejen la
-  // situación actual.
+  // "FUS atendidos esta semana" depende de en qué semana cae `ahora`.
+  // Una sesión abierta se refresca periódicamente para mantener el periodo
+  // correcto aunque cruce el inicio de una semana nueva.
   useEffect(() => {
     const id = setInterval(reintentar, 60_000)
     return () => clearInterval(id)
   }, [reintentar])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
+  const irAConsultarPrioridad = (prioridad) => navigate(
+    `/rol2/solicitudes?modo=lista&prioridad=${encodeURIComponent(prioridad)}&filtro=${encodeURIComponent(ESTADOS_NO_CONCLUIDO.join(','))}`
+  )
   const irAlFus = (folio) => navigate(`/rol2/solicitudes?folio=${encodeURIComponent(folio)}`)
 
   /* ── KPIs ── */
@@ -172,10 +179,10 @@ export default function DashboardROL2() {
 
   const kpisGlass = [
     { icon: ICON_STACK,    label: 'Mis FUS',        sub: 'Asignados',   value: misFus,        color: 'blue',  onClick: () => irAConsultar('') },
-    { icon: ICON_INBOX,    label: 'Pendientes',     sub: 'Por atender', value: misPendientes,  color: 'amber', onClick: () => irAConsultar('Recibido') },
-    { icon: ICON_ACTIVITY, label: 'En proceso',     sub: 'Atendiendo',  value: enProceso,      color: 'blue',  onClick: () => irAConsultar('En_seguimiento') },
-    { icon: ICON_CHECK,    label: 'Finalizados',    sub: 'Completados', value: finalizadas,    color: 'green', onClick: () => irAConsultar('Concluido') },
-    { icon: ICON_FLAG,     label: 'Prioridad alta', sub: 'Sin concluir', value: prioridadAlta, color: 'red',   onClick: () => irAConsultar('') },
+    { icon: ICON_INBOX,    label: 'Recibidos',      sub: 'Por atender', value: misPendientes,  color: 'amber', onClick: () => irAConsultar('Recibido') },
+    { icon: ICON_ACTIVITY, label: 'En seguimiento', sub: 'Atendiendo',  value: enProceso,      color: 'blue',  onClick: () => irAConsultar('En_seguimiento') },
+    { icon: ICON_CHECK,    label: 'Concluidos',     sub: 'Completados', value: finalizadas,    color: 'green', onClick: () => irAConsultar('Concluido') },
+    { icon: ICON_FLAG,     label: 'Prioridad alta', sub: 'Sin concluir', value: prioridadAlta, color: 'red',   onClick: () => irAConsultarPrioridad('Alta') },
   ]
 
   /* ── Próximos vencimientos — reales, ordenados por urgencia ── */
@@ -255,27 +262,6 @@ export default function DashboardROL2() {
     return `${Math.round(horas / 24)} día${Math.round(horas / 24) === 1 ? '' : 's'}`
   }
 
-  /* ── Productividad del día — concluidos hoy vs. lo que debía atenderse hoy
-     (concluidos hoy + activos con fecha límite hoy o ya vencida). Derivado de
-     los mismos datos ya cargados, sin endpoint nuevo. ── */
-  const inicioHoy = new Date(ahora); inicioHoy.setHours(0, 0, 0, 0)
-  const finHoy = new Date(inicioHoy); finHoy.setDate(finHoy.getDate() + 1)
-  const concluidosHoy = turnados.filter(t => {
-    if (t.estatusTitular !== 'Concluido' || !t.idFus?.fechaConclusion) return false
-    const fc = new Date(t.idFus.fechaConclusion)
-    return fc >= inicioHoy && fc < finHoy
-  }).length
-  const pendientesVencenHoyOAntes = noConcluidos.filter(t => t.idFus?.fechaLimite && new Date(t.idFus.fechaLimite) < finHoy).length
-  const totalHoy = concluidosHoy + pendientesVencenHoyOAntes
-  const productividadPct = totalHoy > 0 ? Math.round((concluidosHoy / totalHoy) * 100) : 0
-  // Sin nada que atender hoy, 0% se lee como "vas mal" cuando en realidad no
-  // hay pendientes — "Sigue así" en ese caso también da a entender que ya se
-  // hizo algo hoy.
-  const notaProductividad = totalHoy === 0 ? 'Sin pendientes por hoy'
-    : productividadPct >= 50 ? 'Buen progreso' : 'Sigue así'
-  const DONUT_R = 62, DONUT_CIRC = 2 * Math.PI * DONUT_R
-  const donutOffset = DONUT_CIRC * (1 - productividadPct / 100)
-
   if (cargando && turnados.length === 0) {
     return <AppLayout><div className="dash-bg"><Spinner overlay={false} fill label="Cargando dashboard…" /></div></AppLayout>
   }
@@ -321,38 +307,11 @@ export default function DashboardROL2() {
               {kpisGlass.map((k, i) => <Kpi2Card key={k.label} {...k} index={i} />)}
             </div>
 
+            {/* Próximo FUS por atender + FUS atendidos esta semana, uno al lado
+                del otro — dash2-grid-bottom es 2 columnas en desktop y colapsa
+                a 1 en móvil (ver @media en DashboardROL1.css), así que este
+                acomodo lado a lado queda solo para PC sin CSS aparte. */}
             <div className="dash2-grid-bottom">
-              <div className="dash2-card">
-                <div className="dash2-card-title">Próximos vencimientos</div>
-                <p className="dash-subtitle">FUS que requieren tu atención</p>
-                {proximosVencimientos.length === 0 ? (
-                  <p className="dash-empty">Ninguna de tus solicitudes activas tiene fecha límite próxima.</p>
-                ) : (
-                  <>
-                    {proximosVencimientos.map(v => (
-                      <div
-                        key={v.id}
-                        className="venc-item venc-item-clickable"
-                        onClick={() => irAlFus(v.folio)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={e => e.key === 'Enter' && irAlFus(v.folio)}
-                      >
-                        <div className={`venc-icon venc-icon--${v.tipo}`}>{v.icon}</div>
-                        <div className="venc-texto">
-                          <div className="venc-folio">{v.folio}</div>
-                          <div className="venc-fecha">{v.asunto}</div>
-                        </div>
-                        <span className={`venc-badge venc-badge--${v.tipo}`}>{v.badge}</span>
-                      </div>
-                    ))}
-                    <div className="ver-todos" onClick={() => setMostrarVencimientos(true)}>
-                      Ver todos mis vencimientos {ICON_ARROW_RIGHT}
-                    </div>
-                  </>
-                )}
-              </div>
-
               <div className="dash2-card proximo-card">
                 <div className="dash-subtitle" style={{ marginBottom: 2 }}>Próximo FUS por atender</div>
                 <p className="dash-subtitle" style={{ marginBottom: 16 }}>Tu siguiente prioridad</p>
@@ -384,9 +343,7 @@ export default function DashboardROL2() {
                   </>
                 )}
               </div>
-            </div>
 
-            <div className="dash2-grid-bottom">
               <div className="dash2-card">
                 <div className="dash2-card-title">
                   FUS atendidos esta semana
@@ -413,25 +370,38 @@ export default function DashboardROL2() {
                 </ResponsiveContainer>
                 <div className="dash2-chart-foot">{haySemanaActividad && ICON_TREND_UP} {notaSemana}</div>
               </div>
+            </div>
 
-              <div className="dash2-card prod-card">
-                <div className="prod-card-head">
-                  <div className="dash2-card-title">Productividad del día</div>
-                  <p className="dash-subtitle">Tu avance del día</p>
-                </div>
-                <div className="donut-wrap">
-                  <svg width="150" height="150" viewBox="0 0 150 150">
-                    <circle cx="75" cy="75" r={DONUT_R} fill="none" stroke="rgba(0,0,0,.08)" strokeWidth="14" />
-                    <circle
-                      cx="75" cy="75" r={DONUT_R} fill="none" stroke="#2f7a4f" strokeWidth="14"
-                      strokeDasharray={DONUT_CIRC} strokeDashoffset={donutOffset} strokeLinecap="round"
-                      transform="rotate(-90 75 75)"
-                    />
-                  </svg>
-                  <div className="donut-pct">{productividadPct}%</div>
-                </div>
-                <div className="prod-count">{concluidosHoy} de {totalHoy} <span>FUS atendidos</span></div>
-                <div className="prod-note">{totalHoy > 0 && ICON_TREND_UP} {notaProductividad}</div>
+            <div className="dash2-grid-bottom dash2-grid-bottom-single">
+              <div className="dash2-card">
+                <div className="dash2-card-title">Próximos vencimientos</div>
+                <p className="dash-subtitle">FUS que requieren tu atención</p>
+                {proximosVencimientos.length === 0 ? (
+                  <p className="dash-empty">Ninguna de tus solicitudes activas tiene fecha límite próxima.</p>
+                ) : (
+                  <>
+                    {proximosVencimientos.map(v => (
+                      <div
+                        key={v.id}
+                        className="venc-item venc-item-clickable"
+                        onClick={() => irAlFus(v.folio)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={e => e.key === 'Enter' && irAlFus(v.folio)}
+                      >
+                        <div className={`venc-icon venc-icon--${v.tipo}`}>{v.icon}</div>
+                        <div className="venc-texto">
+                          <div className="venc-folio">{v.folio}</div>
+                          <div className="venc-fecha">{v.asunto}</div>
+                        </div>
+                        <span className={`venc-badge venc-badge--${v.tipo}`}>{v.badge}</span>
+                      </div>
+                    ))}
+                    <div className="ver-todos" onClick={() => setMostrarVencimientos(true)}>
+                      Ver todos mis vencimientos {ICON_ARROW_RIGHT}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

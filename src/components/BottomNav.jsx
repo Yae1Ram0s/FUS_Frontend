@@ -111,6 +111,15 @@ const NAV_COMISIONADO = [
 /* Rol 4 (asistente de ROL1): mismas pantallas principales que ROL1. */
 const NAV_EQUIPO_PARTICULAR = NAV_ROL1
 
+const ICON_SALUD = <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+const NAV_ADMIN = [
+  { path: '/admin/inicio', label: 'Inicio', icon: ICON_INICIO },
+  { path: '/admin/usuarios', label: 'Usuarios', icon: ICON_USUARIOS },
+  { path: '/admin/salud', label: 'Salud', icon: ICON_SALUD },
+  { path: '/admin/auditoria', label: 'Auditoría', icon: ICON_BITACORA },
+  { path: '/admin/otp', label: 'OTP', icon: ICON_SALUD },
+]
+
 /* ── 5º ícono: con un solo ítem, el botón navega directo a él (mismo ícono,
    ej. ROL2/Comisionado → Bitácora); con varios, se vuelve un botón "+" que
    despliega un popover con todos (ROL1: Bitácora, Reportes, Usuarios). ── */
@@ -150,12 +159,14 @@ export default function BottomNav() {
     return () => document.removeEventListener('mousedown', handle)
   }, [open])
 
-  const items = !user ? [] : user.rol === 'ROL2' ? NAV_ROL2
+  const items = !user ? [] : user.rol === 'ADMIN' ? NAV_ADMIN
+    : user.rol === 'ROL2' ? NAV_ROL2
     : user.rol === 'COMISIONADO' ? NAV_COMISIONADO
     : user.rol === 'EQUIPO_PARTICULAR' ? NAV_EQUIPO_PARTICULAR
     : NAV_ROL1
 
-  const menuItems = !user ? [] : user.rol === 'ROL2' ? MENU_ROL2
+  const menuItems = !user ? [] : user.rol === 'ADMIN' ? []
+    : user.rol === 'ROL2' ? MENU_ROL2
     : user.rol === 'COMISIONADO' ? MENU_COMISIONADO
     : user.rol === 'EQUIPO_PARTICULAR' ? MENU_EQUIPO_PARTICULAR
     : MENU_ROL1
@@ -201,7 +212,7 @@ export default function BottomNav() {
   // a él (mismo ícono que ese ítem, ej. Bitácora para ROL2/Comisionado). El
   // botón "+"/popover solo aparece cuando de verdad hay varias opciones.
   const tieneVarios = menuItems.length > 1
-  const itemUnico = !tieneVarios ? menuItems[0] : null
+  const itemUnico = menuItems.length === 1 ? menuItems[0] : null
 
   const ir = (item) => {
     if (item.consultar) {
@@ -250,7 +261,7 @@ export default function BottomNav() {
         </button>
       ))}
 
-      <button
+      {menuItems.length > 0 && <button
         ref={el => { itemRefs.current[items.length] = el }}
         className={`bn-item bn-more${menuActive ? ' bn-item-active' : ''}`}
         onClick={alClicMas}
@@ -260,7 +271,7 @@ export default function BottomNav() {
       >
         <span className="bn-icon">{itemUnico ? itemUnico.icon : ICON_MAS}</span>
         <span className="bn-label">{itemUnico ? itemUnico.label : 'Más'}</span>
-      </button>
+      </button>}
 
       {tieneVarios && open && (
         <div className="bn-popover" role="menu" aria-label="Bitácora y más opciones">

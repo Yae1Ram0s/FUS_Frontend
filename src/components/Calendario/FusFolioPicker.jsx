@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/api'
 import './FusFolioPicker.css'
@@ -36,7 +37,18 @@ function PreviewContent({ item }) {
 
 export default function FusFolioPicker({ value, onChange, onSelect, disabled }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const esROL2 = user?.rol === 'ROL2'
+  const esComisionado = user?.rol === 'COMISIONADO'
+  // De solo lectura (no se puede editar la actividad) pero con un FUS ya
+  // vinculado: en vez de un chip muerto, el clic lleva a ese FUS — Rol 2 y
+  // Comisionado no tenían forma de llegar a él desde aquí.
+  const soloVerFus = disabled && Boolean(value)
+  const irAlFus = (e) => {
+    e.stopPropagation()
+    const base = esROL2 ? '/rol2/solicitudes' : esComisionado ? '/comisionado/fus-comisionados' : '/rol1/consultar-fus'
+    navigate(`${base}?folio=${encodeURIComponent(value)}`)
+  }
 
   const [abierto, setAbierto]       = useState(false)
   const [query, setQuery]           = useState('')
@@ -156,13 +168,17 @@ export default function FusFolioPicker({ value, onChange, onSelect, disabled }) 
   return (
     <div className="fusfp-wrap" ref={wrapRef}>
       <div
-        className={`cal-pill-input fusfp-trigger${disabled ? ' fusfp-trigger-disabled' : ''}`}
-        role="combobox"
-        aria-expanded={abierto}
-        aria-haspopup="listbox"
-        tabIndex={disabled ? -1 : 0}
-        onClick={abrir}
-        onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrir() } }}
+        className={`cal-pill-input fusfp-trigger${disabled ? ' fusfp-trigger-disabled' : ''}${soloVerFus ? ' fusfp-trigger-link' : ''}`}
+        role={soloVerFus ? 'link' : 'combobox'}
+        aria-expanded={soloVerFus ? undefined : abierto}
+        aria-haspopup={soloVerFus ? undefined : 'listbox'}
+        tabIndex={disabled && !soloVerFus ? -1 : 0}
+        onClick={soloVerFus ? irAlFus : abrir}
+        onKeyDown={e => {
+          if (e.key !== 'Enter' && e.key !== ' ') return
+          if (soloVerFus) { e.preventDefault(); irAlFus(e) }
+          else if (!disabled) { e.preventDefault(); abrir() }
+        }}
       >
         {value ? (
           <span className="fusfp-chip">

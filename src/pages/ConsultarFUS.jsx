@@ -18,6 +18,11 @@ import './ConsultarFUS.css'
 
 const PAGE_SIZE = 30
 
+// Mismo conjunto que usa el KPI "Prioridad alta" del Dashboard (DashboardROL1.jsx)
+// para armar su link — se repite aquí solo para reconocer ese combo en
+// "Filtros activos" (ver chipsActivos) y no como fuente de verdad del filtro.
+const ESTADOS_NO_CONCLUIDO = ['Registrado', 'Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado']
+
 function combinarPaginasFUS(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
   const ids = new Set(estadoAnterior.items.map(item => item.id))
@@ -240,12 +245,24 @@ export default function ConsultarFUS() {
     return FILTRO_LABEL_ROL1[clave] || estatusROL1.find(e => e.clave === clave)?.nombre || clave
   }
 
+  // El KPI "Prioridad alta" navega con un combo de estatus "sin concluir" +
+  // prioridad — ese combo es un detalle interno del filtro, no algo que el
+  // usuario armó a mano, así que aquí solo se muestra el chip de Prioridad
+  // (no uno por cada estatus del combo).
+  const filtroEsBundleSinConcluir = Boolean(prioridadFiltro)
+    && filtro.length === ESTADOS_NO_CONCLUIDO.length
+    && ESTADOS_NO_CONCLUIDO.every(e => filtro.includes(e))
+
   /* Resumen de "filtros activos" + Limpiar todo (búsqueda + estatus +
      prioridad) — mismo diseño que ya usa Bitácora. */
   const chipsActivos = [
     ...(busqueda ? [{ key: 'busqueda', label: `Búsqueda: "${busqueda}"`, onQuitar: () => setBusqueda('') }] : []),
-    ...filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) })),
-    ...(prioridadFiltro ? [{ key: 'prioridad', label: `Prioridad: ${prioridadFiltro}`, onQuitar: () => setPrioridadFiltro('') }] : []),
+    ...(filtroEsBundleSinConcluir ? [] : filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) }))),
+    ...(prioridadFiltro ? [{
+      key: 'prioridad',
+      label: `Prioridad: ${prioridadFiltro}`,
+      onQuitar: () => { setPrioridadFiltro(''); if (filtroEsBundleSinConcluir) setFiltro([]) },
+    }] : []),
   ]
   const limpiarTodosFiltros = () => {
     setBusqueda('')

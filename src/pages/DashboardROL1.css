@@ -580,10 +580,19 @@
 .kpi2-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
 .kpi2-sub { font-size: 11px; color: #86868b; margin-top: 2px; margin-bottom: 12px; }
 .kpi2-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: transform 0.3s ease; }
+.kpi2-copy {
+  display: grid;
+  grid-template-rows: minmax(2.15em, auto) 1.35em;
+  align-content: start;
+  margin-bottom: 12px;
+}
+.kpi2-copy .kpi2-label,
+.kpi2-copy .kpi2-sub { margin-bottom: 0; }
 .kpi2-card:hover .kpi2-value { transform: scale(1.05); }
 
 .dash2-grid-tendencia { display: grid; grid-template-columns: 1fr 260px; gap: 14px; }
 .dash2-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dash2-grid-bottom-single { grid-template-columns: minmax(0, 1fr); }
 
 .dash2-card {
   background: var(--dash2-card-bg);
@@ -724,8 +733,13 @@
 }
 
 /* "Próximo FUS por atender" — tarjeta destacada, tinte rosado translúcido */
-.proximo-card { background: linear-gradient(160deg, rgba(253, 241, 240, 0.85), rgba(251, 230, 228, 0.75)); }
-.proximo-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.proximo-card { position: relative; background: linear-gradient(160deg, rgba(253, 241, 240, 0.85), rgba(251, 230, 228, 0.75)); }
+/* El badge de prioridad ya no comparte fila con el folio (justify-content
+   space-between chocaba con folios largos, ej. "ANAM/PARTICULAR/FUS/0044/2026")
+   — vive aparte, anclado a la esquina superior derecha de la tarjeta
+   (.proximo-badge, position:absolute); este padding-right solo reserva el
+   espacio para que el folio no quede debajo de él. */
+.proximo-top { display: flex; align-items: center; margin-bottom: 16px; padding-right: 128px; }
 .proximo-folio { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
 .proximo-folio-link {
   appearance: none;
@@ -748,9 +762,14 @@
   border-radius: 4px;
 }
 .proximo-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
   display: inline-flex; align-items: center; gap: 5px;
   background: #ffffff; color: #a32d2d; font-size: 11.5px; font-weight: 700;
   padding: 5px 12px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(163, 45, 45, 0.20);
+  z-index: 1;
 }
 .proximo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
 .proximo-l { font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
@@ -763,15 +782,6 @@
   transition: background 150ms ease;
 }
 .proximo-btn:hover { background: #163527; }
-
-/* "Productividad del día" — donut SVG puro */
-.prod-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.prod-card-head { width: 100%; text-align: left; }
-.donut-wrap { position: relative; width: 150px; height: 150px; margin: 8px 0 4px; }
-.donut-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #1d1d1f; }
-.prod-count { font-size: 14px; font-weight: 700; margin-top: 8px; color: #1d1d1f; }
-.prod-count span { color: #86868b; font-weight: 500; }
-.prod-note { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #2f7a4f; }
 
 @media (max-width: 1100px) {
   .kpi2-row { grid-template-columns: repeat(3, 1fr); }
@@ -817,11 +827,9 @@
   /* "Próximo FUS por atender" (ROL2) — grid de 3 columnas no cabe en móvil */
   .proximo-grid { grid-template-columns: 1fr; gap: 10px; }
   .proximo-folio { font-size: 17px; }
+  .proximo-top { padding-right: 108px; }
+  .proximo-badge { top: 16px; right: 18px; }
 
-  /* "Productividad del día" (ROL2) — donut un poco más chico */
-  .donut-wrap { width: 130px; height: 130px; }
-  .donut-wrap svg { width: 130px; height: 130px; }
-  .donut-pct { font-size: 22px; }
 }
 
 /* ══════════════════════════════════════
@@ -841,6 +849,7 @@
   .kpi2-icon svg { width: 14px; height: 14px; }
   .kpi2-label { font-size: 12px; }
   .kpi2-sub { font-size: 10px; margin-bottom: 8px; }
+  .kpi2-copy { margin-bottom: 8px; }
   .kpi2-value { font-size: 19px; }
   .kpi2-link { top: 11px; right: 11px; }
 
@@ -856,19 +865,14 @@
   .venc-fecha { font-size: 10px; }
   .venc-badge { font-size: 9px; padding: 3px 8px; }
 
-  .proximo-top { margin-bottom: 12px; }
+  .proximo-top { margin-bottom: 12px; padding-right: 92px; }
   .proximo-folio { font-size: 15px; }
-  .proximo-badge { font-size: 10px; padding: 4px 10px; }
+  .proximo-badge { top: 13px; right: 14px; font-size: 10px; padding: 4px 10px; }
   .proximo-grid { gap: 8px; margin-bottom: 14px; }
   .proximo-l { font-size: 10px; }
   .proximo-v { font-size: 12px; }
   .proximo-btn { font-size: 12.5px; padding: 11px; }
 
-  .donut-wrap { width: 108px; height: 108px; }
-  .donut-wrap svg { width: 108px; height: 108px; }
-  .donut-pct { font-size: 18px; }
-  .prod-count { font-size: 12.5px; }
-  .prod-note { font-size: 11px; }
 }
 
 /* ══════════════════════════════════════
@@ -878,11 +882,4 @@
   .kpi2-card { flex-basis: 92px; padding: 10px; }
   .kpi2-value { font-size: 17px; }
 
-  /* Con folio + badge de prioridad ya no caben cómodo en una fila a este
-     ancho — se apilan para que "Prioridad alta" no se corte. */
-  .proximo-top { flex-direction: column; align-items: flex-start; gap: 6px; }
-
-  .donut-wrap { width: 96px; height: 96px; }
-  .donut-wrap svg { width: 96px; height: 96px; }
-  .donut-pct { font-size: 16px; }
 }

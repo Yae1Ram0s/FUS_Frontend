@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import api from '../../api/api'
+import api, { mensajeErrorConexion } from '../../api/api'
+import { useConexionInternet } from '../../hooks/useConexionInternet'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { formatearFechaHora } from '../../utils/fechas'
 import './ModalTurnar.css'
@@ -36,6 +38,7 @@ const cargarBorrador = id => {
     return {
       texto: borrador.texto || '',
       selMedio: borrador.selMedio || '',
+      medioEspecificacion: borrador.medioEspecificacion || '',
       lista: Array.isArray(borrador.lista) ? borrador.lista : [],
     }
   } catch {
@@ -51,6 +54,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
   const [busqueda, setBusqueda] = useState('')
   const [mostrarResultados, setMostrarResultados] = useState(false)
   const [selMedio, setSelMedio] = useState(borradorInicial.selMedio || '')
+  const [medioEspecificacion, setMedioEspecificacion] = useState(borradorInicial.medioEspecificacion || '')
   const [texto, setTexto] = useState(borradorInicial.texto || '')
   const [lista, setLista] = useState(borradorInicial.lista || [])
   const [loading, setLoading] = useState(false)
@@ -58,10 +62,36 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
   const [error, setError] = useState('')
   const [borradorGuardado, setBorradorGuardado] = useState(false)
   const envioEnCursoRef = useRef(false)
+  const enLinea = useConexionInternet()
   const buscadorRef = useRef(null)
+  const busquedaWrapRef = useRef(null)
   const borradorKey = `scs_turnar_borrador_${fus.id}`
 
   useModalBehavior(onClose, { closeEnabled: !loading })
+
+  // Autoguardado — antes solo se guardaba si el usuario hacía clic en
+  // "Guardar borrador"; si la conexión se caía a mitad de escribir (sin haber
+  // hecho ese clic), los destinatarios/instrucciones se perdían al cerrar el
+  // modal. No depende de red, así que sigue funcionando aunque la API esté
+  // caída — mismo criterio que el borrador de Registrar FUS.
+  const borradorDeb = useDebouncedValue({ lista, selMedio, medioEspecificacion, texto }, 500)
+  useEffect(() => {
+    if (!borradorDeb.lista.length && !borradorDeb.selMedio && !borradorDeb.texto.trim()) return
+    sessionStorage.setItem(borradorKey, JSON.stringify(borradorDeb))
+  }, [borradorDeb, borradorKey])
+
+  // El listado de resultados solo se cerraba al elegir un destinatario — un
+  // clic afuera (ej. para ir directo a "Instrucciones") lo dejaba abierto y
+  // tapando el resto del formulario.
+  useEffect(() => {
+    if (!mostrarResultados) return
+    const cerrar = e => {
+      if (busquedaWrapRef.current?.contains(e.target)) return
+      setMostrarResultados(false)
+    }
+    document.addEventListener('mousedown', cerrar)
+    return () => document.removeEventListener('mousedown', cerrar)
+  }, [mostrarResultados])
 
   useEffect(() => {
     let activo = true
@@ -105,10 +135,13 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
   const quitar = id => setLista(actual => actual.filter(item => String(item.id) !== String(id)))
 
   const guardarBorrador = () => {
-    sessionStorage.setItem(borradorKey, JSON.stringify({ lista, selMedio, texto }))
+    sessionStorage.setItem(borradorKey, JSON.stringify({ lista, selMedio, medioEspecificacion, texto }))
     setBorradorGuardado(true)
     window.setTimeout(() => setBorradorGuardado(false), 2200)
   }
+
+  const medioSeleccionado = medios.find(medio => String(medio.id) === String(selMedio))
+  const esMedioOtro = medioSeleccionado?.nombreMedio === 'Otro'
 
   const handleTurnar = async () => {
     if (!lista.length) {
@@ -117,6 +150,10 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
     }
     if (!selMedio) {
       setError('Selecciona un medio de envío.')
+      return
+    }
+    if (esMedioOtro && !medioEspecificacion.trim()) {
+      setError('Especifica el medio de envío.')
       return
     }
     if (!texto.trim()) {
@@ -133,12 +170,13 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
           idDestinatario: item.id,
           idMedio: Number(selMedio),
         })),
+        medioEspecificacion: esMedioOtro ? medioEspecificacion.trim() : '',
         solicitudTexto: texto.trim(),
       })
       sessionStorage.removeItem(borradorKey)
       onDone()
     } catch (err) {
-      setError(err.response?.data?.detail || 'No se pudo turnar. Intenta nuevamente.')
+      setError(mensajeErrorConexion(err, 'No se pudo turnar. Intenta nuevamente.'))
     } finally {
       envioEnCursoRef.current = false
       setLoading(false)
@@ -169,7 +207,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
               1. Asignación
             </h3>
 
-            <div className="turnar-search-wrap">
+            <div className="turnar-search-wrap" ref={busquedaWrapRef}>
               <svg className="turnar-search-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
@@ -193,7 +231,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
                   {resultados.length ? resultados.map(usuario => (
                     <button key={usuario.id} type="button" onClick={() => agregar(usuario)}>
                       <span className="turnar-mini-avatar">{iniciales(usuario)}</span>
-                      <span><strong>{usuario.nombre}</strong><small>{usuario.email}</small></span>
+                      <span><strong>{usuario.nombre}</strong><small>{usuario.unidadAdministrativa || 'Sin unidad asignada'}</small></span>
                     </button>
                   )) : <p>Sin destinatarios disponibles.</p>}
                 </div>
@@ -206,7 +244,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
                   <span className="turnar-avatar">{iniciales(usuario)}</span>
                   <div>
                     <strong>{usuario.nombre}</strong>
-                    <span>{usuario.email}</span>
+                    <span>{usuario.unidadAdministrativa || 'Sin unidad asignada'}</span>
                   </div>
                   <button type="button" onClick={() => quitar(usuario.id)} disabled={loading} aria-label={`Quitar a ${usuario.nombre}`}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round">
@@ -241,10 +279,31 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
 
             <label className="turnar-field">
               <span>Medio de envío</span>
-              <select value={selMedio} onChange={event => { setSelMedio(event.target.value); setError('') }} disabled={loading || catalogosCargando}>
+              <select
+                value={selMedio}
+                onChange={event => {
+                  setSelMedio(event.target.value)
+                  setError('')
+                  // Al cambiar de "Otro" a un medio del catálogo, no se
+                  // arrastra una especificación que ya no aplica.
+                  const nuevo = medios.find(medio => String(medio.id) === event.target.value)
+                  if (nuevo?.nombreMedio !== 'Otro') setMedioEspecificacion('')
+                }}
+                disabled={loading || catalogosCargando}
+              >
                 <option value="">Selecciona un medio</option>
                 {medios.map(medio => <option key={medio.id} value={medio.id}>{medio.nombreMedio}</option>)}
               </select>
+              {esMedioOtro && (
+                <input
+                  type="text"
+                  value={medioEspecificacion}
+                  onChange={event => { setMedioEspecificacion(event.target.value); setError('') }}
+                  placeholder="Especifica el medio de envío…"
+                  disabled={loading}
+                  autoFocus
+                />
+              )}
             </label>
 
             <label className="turnar-field">
@@ -269,13 +328,14 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
           </button>
 
           {error && <p className="turnar-error" role="alert">{error}</p>}
+          {!enLinea && <p className="turnar-error" role="alert">Sin conexión a internet — no se puede turnar en este momento.</p>}
         </div>
 
         <footer className="turnar-footer">
           <button type="button" className="com-btn-ghost" onClick={onClose} disabled={loading}>Cancelar</button>
-          <button type="button" className="com-btn-verde turnar-submit" onClick={handleTurnar} disabled={loading || catalogosCargando}>
+          <button type="button" className="com-btn-verde turnar-submit" onClick={handleTurnar} disabled={loading || catalogosCargando || !enLinea}>
             {loading && <span className="btn-spinner" />}
-            {loading ? 'Turnando…' : 'Turnar solicitud'}
+            {loading ? 'Turnando…' : !enLinea ? 'Sin conexión' : 'Turnar solicitud'}
             {!loading && (
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>

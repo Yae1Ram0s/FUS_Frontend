@@ -152,8 +152,9 @@ export default function Login() {
     setEmail(limpio)
     try {
       const { data } = await api.post('/auth/verificar-correo/', { email: limpio })
-      setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
-      if (data.estado !== 'existente') activarEsperaReenvio(limpio)
+      // Primer ingreso: directo a crear contraseña — el paso de código por
+      // correo queda suspendido por ahora (ver EstablecerContrasenaView).
+      setStep(data.estado === 'existente' ? STEP_PASS : STEP_NEWPASS)
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al verificar el correo.')
     } finally {
@@ -185,9 +186,7 @@ export default function Login() {
         setPassword('')
         try {
           const { data } = await api.post('/auth/verificar-correo/', { email: email.trim().toLowerCase() })
-          setStep(data.estado === 'existente' ? STEP_PASS : STEP_OTP)
-          if (data.estado !== 'existente') activarEsperaReenvio(email.trim().toLowerCase())
-          setReenvioMsg(data.estado === 'existente' ? '' : 'Tu cuenta aún no estaba activada — te enviamos un código para crearla.')
+          setStep(data.estado === 'existente' ? STEP_PASS : STEP_NEWPASS)
         } catch (err2) {
           setError(err2.response?.data?.detail || err.response.data.detail)
         }
@@ -299,44 +298,31 @@ export default function Login() {
       <form className="login-form" onSubmit={handleEmail} noValidate>
         <div className="lf-group">
           <label htmlFor="login-email">Correo Institucional</label>
-          {esMovil ? (
-            <div className="lf-email-mobile-wrap">
-              <input
-                id="login-email"
-                type="text"
-                inputMode="email"
-                placeholder="usuario@anam.gob.mx"
-                value={email.toLowerCase().endsWith(DOMINIO_INSTITUCIONAL)
-                  ? email.slice(0, -DOMINIO_INSTITUCIONAL.length)
-                  : email.split('@')[0]}
-                onChange={e => {
-                  const nombre = e.target.value.toLowerCase().split('@')[0].replace(/\s/g, '')
-                  setEmail(nombre ? `${nombre}${DOMINIO_INSTITUCIONAL}` : '')
-                }}
-                required
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck="false"
-                autoFocus
-              />
-              {email && <span aria-hidden="true">{DOMINIO_INSTITUCIONAL}</span>}
-            </div>
-          ) : (
+          {/* Mismo campo dividido (usuario + dominio fijo) en PC y móvil —
+              antes solo aparecía en móvil; en desktop había que teclear el
+              "@anam.gob.mx" a mano. */}
+          <div className="lf-email-mobile-wrap">
             <input
               id="login-email"
-              type="email"
-              placeholder=" "
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              inputMode="email"
+              placeholder="usuario@anam.gob.mx"
+              value={email.toLowerCase().endsWith(DOMINIO_INSTITUCIONAL)
+                ? email.slice(0, -DOMINIO_INSTITUCIONAL.length)
+                : email.split('@')[0]}
+              onChange={e => {
+                const nombre = e.target.value.toLowerCase().split('@')[0].replace(/\s/g, '')
+                setEmail(nombre ? `${nombre}${DOMINIO_INSTITUCIONAL}` : '')
+              }}
               required
-              autoComplete="email"
+              autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck="false"
               autoFocus
             />
-          )}
+            {email && <span aria-hidden="true">{DOMINIO_INSTITUCIONAL}</span>}
+          </div>
         </div>
         {error && <p className="login-error" role="alert">{error}</p>}
         <button className="btn-entrar" type="submit" disabled={loading || !email.trim()}>
@@ -353,6 +339,14 @@ export default function Login() {
             Cambiar
           </button>
         </div>
+        {/* Input oculto (no display:none/visibility:hidden — algunos
+            gestores de contraseñas los ignoran) con autoComplete="username":
+            el correo se pidió en el paso anterior, en otro <form>, así que
+            sin esto el navegador no tiene con qué asociar la contraseña de
+            este formulario y no ofrece guardar el par correo+contraseña en
+            su gestor (cifrado por el SO, no accesible por JS/XSS) — la
+            forma segura de "recordar la contraseña". */}
+        <input type="email" name="username" autoComplete="username" value={email} readOnly hidden tabIndex={-1} aria-hidden="true" />
         <div className="lf-group">
           <label htmlFor="login-pass">Contraseña</label>
           <div className="lf-pass-wrap">
@@ -450,6 +444,10 @@ export default function Login() {
         <p className="lf-step-info">
           {isRecovery ? 'Elige tu nueva contraseña.' : 'Elige una contraseña segura para activar tu cuenta.'}
         </p>
+        {/* Mismo motivo que en el paso de contraseña: sin un campo de
+            usuario en este <form>, el navegador no puede ofrecer guardar
+            (o actualizar) la contraseña en su gestor. */}
+        <input type="email" name="username" autoComplete="username" value={email} readOnly hidden tabIndex={-1} aria-hidden="true" />
         <div className="lf-group">
           <label htmlFor="login-np">{isRecovery ? 'Nueva contraseña' : 'Contraseña'}</label>
           <div className="lf-pass-wrap">
@@ -460,6 +458,7 @@ export default function Login() {
               value={newPass}
               onChange={e => setNewPass(e.target.value)}
               required
+              autoComplete="new-password"
               autoFocus
             />
             <button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
@@ -476,6 +475,7 @@ export default function Login() {
             value={confirmPass}
             onChange={e => setConfirmPass(e.target.value)}
             required
+            autoComplete="new-password"
           />
         </div>
         {error && <p className="login-error" role="alert">{error}</p>}

@@ -19,6 +19,7 @@ export function guardarBorrador(email, form) {
       medioEspecificacion: form.medioEspecificacion,
       prioridad:           form.prioridad,
       criterios:           form.criterios,
+      otroCriterio:        form.otroCriterio,
       fechaLimite:         form.fechaLimite,
       solicitante_nombre:  form.solicitante_nombre,
       solicitante_tel:     form.solicitante_tel,

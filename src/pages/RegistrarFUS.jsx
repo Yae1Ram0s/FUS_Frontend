@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { useConexionInternet } from '../hooks/useConexionInternet'
 import { validarEvidencias } from '../utils/archivos'
 import { guardarBorrador, leerBorrador, borrarBorrador, tieneContenido } from '../utils/borradorFUS'
 import './RegistrarFUS.css'
@@ -56,6 +57,11 @@ const formVacio = () => ({
   medioEspecificacion: '',
   prioridad:           '',
   criterios:           [],
+  // Criterio libre, aparte de la lista fija de arriba — vive dentro de la
+  // prioridad elegida (Alta/Media/Baja), no como una prioridad propia: así
+  // el FUS siempre queda con una prioridad real con la que se puede filtrar,
+  // en vez de un "Otro" suelto sin prioridad asignada.
+  otroCriterio:        '',
   fechaLimite:         '',
   solicitante_nombre:  '',
   solicitante_tel:     '',
@@ -63,23 +69,47 @@ const formVacio = () => ({
   evidencias:          [],
 })
 
-/* ── Enlace a evidencia ya guardada (descarga autenticada) ── */
-function EvidenciaExistenteLink({ ev }) {
+// Filtra a minúsculas y solo caracteres válidos en un correo (evita
+// emojis/espacios/símbolos que un email real no admite) mientras se escribe.
+const sanitizarCorreo = (valor) => valor.toLowerCase().replace(/[^a-z0-9.@_%+-]/g, '')
+
+// Pone en mayúscula la primera letra de cada palabra (al inicio y después
+// de cada espacio) mientras se escribe el nombre.
+const capitalizarPalabras = (valor) => valor.replace(/(^|\s)(\p{L})/gu, (_, sep, letra) => sep + letra.toUpperCase())
+
+// Pone en mayúscula solo la primera letra del texto (para párrafos como
+// Descripción/Contexto, donde capitalizar cada palabra sería excesivo).
+const capitalizarInicio = (valor) => valor.charAt(0).toUpperCase() + valor.slice(1)
+
+/* ── Evidencia ya guardada (descarga autenticada) + opción de eliminarla ── */
+function EvidenciaExistenteLink({ ev, onEliminar }) {
   const url = useEvidenciaUrl(ev.id)
   return (
-    <a
-      href={url || undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`ev-existente-item${url ? '' : ' ev-item-cargando'}`}
-      onClick={e => { if (!url) e.preventDefault() }}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      {ev.nombreArchivo}
-    </a>
+    <div className="ev-existente-item">
+      <a
+        href={url || undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`ev-existente-link${url ? '' : ' ev-item-cargando'}`}
+        onClick={e => { if (!url) e.preventDefault() }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {ev.nombreArchivo}
+      </a>
+      <button
+        type="button"
+        className="ev-existente-quitar"
+        onClick={onEliminar}
+        title="Eliminar evidencia"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
   )
 }
 
@@ -96,8 +126,10 @@ export default function RegistrarFUS() {
   const [exito,   setExito]   = useState('')
   const [cargandoFus, setCargandoFus] = useState(!!editId)
   const [evidenciasExistentes, setEvidenciasExistentes] = useState([])
+  const [evidenciasEliminarIds, setEvidenciasEliminarIds] = useState([])
   const [limpiado, setLimpiado] = useState(false)
   const envioEnCursoRef = useRef(false)
+  const enLinea = useConexionInternet()
 
   // Un FUS en edición no usa borrador local (ya vive guardado en el
   // servidor) — el borrador es solo para una solicitud nueva a medio llenar.
@@ -109,8 +141,11 @@ export default function RegistrarFUS() {
   ))
 
   const [form, setForm] = useState(() => (
+    // Se combina sobre formVacio() (no solo el borrador) para que un
+    // borrador guardado antes de agregar un campo nuevo (ej. otroCriterio)
+    // no deje ese campo en `undefined`.
     !editId && tieneContenido(borradorInicial)
-      ? { ...borradorInicial, evidencias: [] }
+      ? { ...formVacio(), ...borradorInicial, evidencias: [] }
       : formVacio()
   ))
 
@@ -131,13 +166,21 @@ export default function RegistrarFUS() {
     setCargandoFus(true)
     api.get(`/fus/${editId}/`).then(r => {
       const f = r.data
+      // El criterio libre ("Otro") se guardó mezclado con los de la lista
+      // fija (todos en el mismo campo `criterios`, separados por "|") — al
+      // cargar se separa: lo que coincide con la lista fija de esa
+      // prioridad vuelve a los checkboxes, y lo que no coincide (el texto
+      // que la persona escribió) vuelve al campo de texto libre.
+      const guardados = f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : []
+      const listaFija = PRIORIDAD_INFO[f.prioridad]?.criterios || []
       setForm({
         descripcion:         f.descripcion || '',
         contexto:            f.contexto || '',
         idMedioRecepcion:    f.idMedioRecepcion?.id || '',
         medioEspecificacion: f.medioEspecificacion || '',
         prioridad:           f.prioridad || '',
-        criterios:           f.criterios ? f.criterios.split('|').map(c => c.trim()).filter(Boolean) : [],
+        criterios:           guardados.filter(c => listaFija.includes(c)),
+        otroCriterio:        guardados.find(c => !listaFija.includes(c)) || '',
         fechaLimite:         toDatetimeLocal(f.fechaLimite),
         solicitante_nombre:  f.nombreExterno || '',
         solicitante_tel:     f.telefonoExterno || '',
@@ -145,6 +188,7 @@ export default function RegistrarFUS() {
         evidencias:          [],
       })
       setEvidenciasExistentes(f.evidencias || [])
+      setEvidenciasEliminarIds([])
     }).catch(() => {
       setError('No se pudo cargar la solicitud a editar.')
     }).finally(() => setCargandoFus(false))
@@ -180,7 +224,7 @@ export default function RegistrarFUS() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [] }))
+  const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [], otroCriterio: '' }))
 
   const prioridadOrden = ['Alta', 'Media', 'Baja']
   const prioridadIndex = prioridadOrden.indexOf(form.prioridad)
@@ -210,6 +254,14 @@ export default function RegistrarFUS() {
       if (item?.preview) URL.revokeObjectURL(item.preview)
       return { ...f, evidencias: f.evidencias.filter((_, i) => i !== idx) }
     })
+  }
+
+  // No borra en el servidor de inmediato: solo la quita de la vista y la
+  // marca para eliminar al guardar, igual que las evidencias nuevas no se
+  // suben hasta el submit — así "Cancelar" deja la solicitud intacta.
+  const quitarEvidenciaExistente = (id) => {
+    setEvidenciasExistentes(lista => lista.filter(ev => ev.id !== id))
+    setEvidenciasEliminarIds(ids => [...ids, id])
   }
 
   const setComentarioEvidencia = (idx, texto) => {
@@ -253,19 +305,29 @@ export default function RegistrarFUS() {
     envioEnCursoRef.current = true
     setError(''); setLoading(true)
     try {
+      // El criterio libre se manda como uno más dentro de la misma lista de
+      // criterios de la prioridad elegida (no aparte) — así el FUS siempre
+      // queda con una prioridad real (Alta/Media/Baja) filtrable, y el
+      // texto libre es solo un criterio adicional dentro de ella.
+      const criteriosFinal = form.otroCriterio.trim()
+        ? [...form.criterios, form.otroCriterio.trim()]
+        : form.criterios
       const fd = new FormData()
       fd.append('descripcion',          form.descripcion)
       fd.append('contexto',             form.contexto)
       fd.append('idMedioRecepcion',     form.idMedioRecepcion)
       fd.append('medioEspecificacion',  medioSeleccionado?.nombreMedio === 'Otro' ? form.medioEspecificacion.trim() : '')
       fd.append('prioridad',            form.prioridad)
-      fd.append('criterios',            form.criterios.join(' | '))
+      fd.append('criterios',            criteriosFinal.join(' | '))
       fd.append('fechaLimite', form.fechaLimite)
       fd.append('nombreExterno',    form.solicitante_nombre)
       fd.append('telefonoExterno', form.solicitante_tel)
       fd.append('correoExterno',   form.solicitante_correo)
       form.evidencias.forEach(ev => fd.append('evidencias', ev.file))
       fd.append('comentariosEvidencias', JSON.stringify(form.evidencias.map(ev => ev.comentario || '')))
+      if (editId && evidenciasEliminarIds.length) {
+        fd.append('evidenciasEliminar', JSON.stringify(evidenciasEliminarIds))
+      }
 
       // La instancia de `api` fija Content-Type: application/json por defecto
       // (api/api.js) — sin overridearlo aquí, axios ve ese header ya puesto y
@@ -276,7 +338,9 @@ export default function RegistrarFUS() {
       // crearse nunca, aunque el formulario mostrara éxito. Pasar
       // Content-Type: undefined borra el header heredado y deja que el
       // navegador genere el "multipart/form-data; boundary=..." real.
-      const config = { headers: { 'Content-Type': undefined } }
+      // timeout más alto que el default de `api` (20s) — con evidencias
+      // adjuntas y conexión lenta, 20s no alcanza para terminar la subida.
+      const config = { headers: { 'Content-Type': undefined }, timeout: 60000 }
       const { data } = editId
         ? await api.patch(`/fus/${editId}/`, fd, config)
         : await api.post('/fus/', fd, config)
@@ -446,7 +510,7 @@ export default function RegistrarFUS() {
                   rows={4}
                   placeholder="Describe detalladamente la solicitud (mínimo 20 caracteres)"
                   value={form.descripcion}
-                  onChange={e => set('descripcion', e.target.value)}
+                  onChange={e => set('descripcion', capitalizarInicio(e.target.value))}
                   required
                 />
               </div>
@@ -458,7 +522,7 @@ export default function RegistrarFUS() {
                   rows={3}
                   placeholder="Antecedentes o información adicional relevante (opcional)"
                   value={form.contexto}
-                  onChange={e => set('contexto', e.target.value)}
+                  onChange={e => set('contexto', capitalizarInicio(e.target.value))}
                 />
               </div>
             </fieldset>
@@ -472,7 +536,7 @@ export default function RegistrarFUS() {
                   <input
                     placeholder="Nombre completo"
                     value={form.solicitante_nombre}
-                    onChange={e => set('solicitante_nombre', e.target.value)}
+                    onChange={e => set('solicitante_nombre', capitalizarPalabras(e.target.value))}
                   />
                   <input
                     type="tel"
@@ -481,11 +545,26 @@ export default function RegistrarFUS() {
                     value={form.solicitante_tel}
                     onChange={e => set('solicitante_tel', e.target.value.replace(/\D/g, ''))}
                   />
-                  <input
-                    placeholder="Correo electrónico"
-                    value={form.solicitante_correo}
-                    onChange={e => set('solicitante_correo', e.target.value)}
-                  />
+                  <div className="externo-correo-wrap">
+                    <input
+                      type="email"
+                      placeholder="Correo electrónico"
+                      value={form.solicitante_correo}
+                      onChange={e => set('solicitante_correo', sanitizarCorreo(e.target.value))}
+                    />
+                    <div className="correo-chips">
+                      {['@gmail.com', '@hotmail.com', '@outlook.com', '@anam.gob.mx'].map(dominio => (
+                        <button
+                          key={dominio}
+                          type="button"
+                          className="correo-chip"
+                          onClick={() => set('solicitante_correo', `${form.solicitante_correo.split('@')[0]}${dominio}`)}
+                        >
+                          {dominio}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </fieldset>
@@ -498,7 +577,9 @@ export default function RegistrarFUS() {
                 <div className="evidencia-col">
                   {evidenciasExistentes.length > 0 && (
                     <div className="ev-existentes-list">
-                      {evidenciasExistentes.map(ev => <EvidenciaExistenteLink key={ev.id} ev={ev} />)}
+                      {evidenciasExistentes.map(ev => (
+                        <EvidenciaExistenteLink key={ev.id} ev={ev} onEliminar={() => quitarEvidenciaExistente(ev.id)} />
+                      ))}
                     </div>
                   )}
                   <label className="file-btn">
@@ -590,11 +671,23 @@ export default function RegistrarFUS() {
                             className={`criterio-item${activo ? ' criterio-activo' : ''}`}
                             onClick={() => toggleCriterio(texto)}
                           >
-                            <span className="criterio-check">{activo ? '☑' : '☐'}</span>
+                            <span className="criterio-check-svg" aria-hidden="true">
+                              <svg viewBox="0 0 18 18">
+                                <path d="M 1 9 L 1 9 C 1 4 4 1 9 1 L 9 1 C 14 1 17 4 17 9 L 17 9 C 17 14 14 17 9 17 L 9 17 C 4 17 1 14 1 9 Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                              </svg>
+                            </span>
                             {texto}
                           </button>
                         )
                       })}
+                      <input
+                        type="text"
+                        className="criterio-otro-input"
+                        value={form.otroCriterio}
+                        onChange={e => set('otroCriterio', e.target.value)}
+                        placeholder="Otro criterio (opcional)…"
+                      />
                     </div>
                   )}
                 </div>
@@ -612,14 +705,15 @@ export default function RegistrarFUS() {
             </fieldset>
 
             {error && <p className="reg-error" role="alert">{error}</p>}
+            {!enLinea && <p className="reg-error" role="alert">Sin conexión a internet — no se puede enviar en este momento.</p>}
 
             <div className="reg-actions">
               <button type="button" className="btn-secondary" onClick={cancelar} disabled={loading || !hayAlgoQueLimpiar}>
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <button type="submit" className="btn-primary" disabled={loading || !enLinea}>
                 {loading && <span className="btn-spinner" />}
-                {loading ? 'Guardando…' : (editId ? 'Guardar cambios' : 'Guardar solicitud')}
+                {loading ? 'Guardando…' : !enLinea ? 'Sin conexión' : (editId ? 'Guardar cambios' : 'Guardar solicitud')}
               </button>
             </div>
           </form>}
