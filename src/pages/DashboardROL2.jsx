@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -8,7 +9,6 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
@@ -120,21 +120,20 @@ export default function DashboardROL2() {
   const nombre = user?.nombre || user?.email || 'Usuario'
   const [mostrarVencimientos, setMostrarVencimientos] = useState(false)
 
-  const cargarDashboard = useCallback(
-    async ({ signal }) => ({
-      turnados: await fetchAll('/turnados/mis-turnados/', {}, signal),
-      // Se recalcula con cada carga para mantener vigentes los tiempos relativos.
-      ahora: Date.now(),
-    }),
-    [],
-  )
   const {
-    data: dashboard,
-    loading: cargando,
+    // ahora:0 solo se usa antes de la primera carga, mientras turnados sigue
+    // vacío y la pantalla muestra el Spinner — su valor real es irrelevante.
+    data: dashboard = { turnados: [], ahora: 0 },
+    isFetching: cargando,
     error: errorCarga,
-    reload: reintentar,
-  } = useAsyncResource(cargarDashboard, {
-    initialData: () => ({ turnados: [], ahora: Date.now() }),
+    refetch: reintentar,
+  } = useQuery({
+    queryKey: ['dashboardRol2'],
+    // ahora se recalcula con cada carga para mantener vigentes los tiempos
+    // relativos; refetchInterval reemplaza el setInterval manual de abajo
+    // que existía solo para mantener correcto el corte de semana.
+    queryFn: async ({ signal }) => ({ turnados: await fetchAll('/turnados/mis-turnados/', {}, signal), ahora: Date.now() }),
+    refetchInterval: 60_000,
   })
   const { turnados, ahora } = dashboard
 
@@ -149,14 +148,6 @@ export default function DashboardROL2() {
     if (!ultimaNotifFolio) return
     reintentar()
   }, [reintentar, ultimaNotifFolio, ultimaNotifId])
-
-  // "FUS atendidos esta semana" depende de en qué semana cae `ahora`.
-  // Una sesión abierta se refresca periódicamente para mantener el periodo
-  // correcto aunque cruce el inicio de una semana nueva.
-  useEffect(() => {
-    const id = setInterval(reintentar, 60_000)
-    return () => clearInterval(id)
-  }, [reintentar])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
   const irAConsultarPrioridad = (prioridad) => navigate(

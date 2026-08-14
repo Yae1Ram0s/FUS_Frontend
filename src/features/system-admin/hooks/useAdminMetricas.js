@@ -1,16 +1,15 @@
-import { useCallback, useEffect } from 'react'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
+import { useQuery } from '@tanstack/react-query'
 import { obtenerMetricasAdmin } from '../api/adminApi'
 
 export default function useAdminMetricas(dias = 30, intervaloMs = 30000) {
-  const fetcher = useCallback(({ signal }) => obtenerMetricasAdmin({ dias }, { signal }), [dias])
-  const resource = useAsyncResource(fetcher, { initialData: {}, maxAutoRetries: 0 })
-  const { reload } = resource
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') reload()
-    }, intervaloMs)
-    return () => window.clearInterval(timer)
-  }, [intervaloMs, reload])
-  return resource
+  const { data = {}, isFetching: loading, error, refetch: reload } = useQuery({
+    queryKey: ['admin', 'metricas', dias],
+    queryFn: ({ signal }) => obtenerMetricasAdmin({ dias }, { signal }),
+    // Reemplaza el setInterval + chequeo manual de document.visibilityState
+    // que había antes — refetchIntervalInBackground:false hace exactamente
+    // eso mismo (pausar en pestaña no visible) de forma nativa.
+    refetchInterval: intervaloMs,
+    refetchIntervalInBackground: false,
+  })
+  return { data, loading, error, reload }
 }

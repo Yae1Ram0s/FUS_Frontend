@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -10,7 +11,7 @@ import ModalDescargarBitacora from '../components/ModalDescargarBitacora'
 import FechaInput from '../components/FechaInput'
 import Badge from '../components/Badge'
 import { useAuth } from '../context/AuthContext'
-import { useAsyncResource } from '../hooks/useAsyncResource'
+import { useToast } from '../context/ToastContext'
 import { descargar } from '../utils/descargarArchivo'
 import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './Bitacora.css'
@@ -129,6 +130,8 @@ function CheckboxAnimado({ checked, onChange }) {
 
 export default function Bitacora() {
   const { user } = useAuth()
+  const toast = useToast()
+  const queryClient = useQueryClient()
   const rol       = user?.rol || 'ROL1'
   // El equipo del particular comparte la vista operativa de su ROL1, aunque
   // el backend siempre limita los registros a los FUS de ese titular.
@@ -483,11 +486,16 @@ export default function Bitacora() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar, para resolver las etiquetas de los filtros que llegaron por la URL
   }, [])
 
-  const [solicitud, setSolicitud] = useState({ page: 1, append: false, version: 0 })
+  const [cargandoMas, setCargandoMas] = useState(false)
 
-  const cargarPagina = useCallback(async ({ signal }) => {
+  // Firma de "qué se está pidiendo": al ser parte de la queryKey, cambiar
+  // cualquier filtro u orden aísla la consulta en su propia entrada de
+  // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
+  // que antes reiniciaba la paginación al cambiar filtros.
+  const queryKey = ['bitacora', { fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir }]
+  const construirParams = useCallback((page) => {
     const params = new URLSearchParams()
-    params.set('page', solicitud.page)
+    params.set('page', page)
     params.set('page_size', PAGE_SIZE)
     if (fBusquedaDeb)         params.set('q',           fBusquedaDeb)
     fEstatus.forEach(e => params.append('estatus_fus', e))
@@ -497,33 +505,37 @@ export default function Bitacora() {
     if (fHasta)               params.set('fecha_hasta', fHasta)
     if (fPrioridad)           params.set('prioridad', fPrioridad)
     if (sortCol)              params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
-
-    const respuesta = await api.get(`/bitacora/?${params.toString()}`, { signal })
-    return {
-      items: respuesta.data.results || [],
-      total: respuesta.data.total || 0,
-      page: solicitud.page,
-      append: solicitud.append,
-    }
-  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir, solicitud])
+    return params
+  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir])
 
   const {
-    data: resultado,
+    data: resultado = { items: [], total: 0, page: 1, append: false },
     error: errorCarga,
-    loading: cargando,
-  } = useAsyncResource(cargarPagina, {
-    initialData: { items: [], total: 0, page: 1, append: false },
-    mergeData: combinarPaginasBitacora,
+    isFetching: cargando,
+    refetch: recargar,
+  } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const respuesta = await api.get(`/bitacora/?${construirParams(1).toString()}`, { signal })
+      return { items: respuesta.data.results || [], total: respuesta.data.total || 0, page: 1, append: false }
+    },
   })
   const registros = resultado.items
   const total = resultado.total
   const pagina = resultado.page
+
   const cargar = (pag = 1, append = false) => {
-    setSolicitud(actual => ({ page: pag, append, version: actual.version + 1 }))
+    if (!append) { recargar(); return }
+    if (cargandoMas) return
+    setCargandoMas(true)
+    api.get(`/bitacora/?${construirParams(pag).toString()}`)
+      .then(respuesta => {
+        const paginaNueva = { items: respuesta.data.results || [], total: respuesta.data.total || 0, page: pag, append: true }
+        queryClient.setQueryData(queryKey, prev => combinarPaginasBitacora(prev, paginaNueva))
+      })
+      .catch(() => toast.error('No se pudieron cargar más registros.'))
+      .finally(() => setCargandoMas(false))
   }
-
-
-  useEffect(() => { cargar(1) }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir])
 
   // Refleja los filtros/orden vigentes en la URL (reemplazando la entrada
   // actual del historial, no apilando una nueva en cada tecleo) — así la
@@ -1186,9 +1198,9 @@ export default function Bitacora() {
         </div>
 
         {registros.length < total && (
-          <button className="bita-mas" onClick={() => cargar(pagina + 1, true)} disabled={cargando}>
-            {cargando && <span className="btn-spinner" />}
-            {cargando ? 'Cargando…' : `Cargar más (${registros.length} de ${total})`}
+          <button className="bita-mas" onClick={() => cargar(pagina + 1, true)} disabled={cargando || cargandoMas}>
+            {(cargando || cargandoMas) && <span className="btn-spinner" />}
+            {(cargando || cargandoMas) ? 'Cargando…' : `Cargar más (${registros.length} de ${total})`}
           </button>
         )}
 

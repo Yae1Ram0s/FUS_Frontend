@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
@@ -17,7 +18,6 @@ import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -59,7 +59,7 @@ function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
 function tipoTagSeguimiento(s) {
   if (s.esRechazo) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
   const texto = s.descripcionActividad || ''
-  if (texto.startsWith('Rechazado por el Particular:')) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
+  if (texto.startsWith('Rechazado por ')) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
   if (texto === 'Concluido por el Particular.') return { label: 'Concluido', clase: 'fc-tag-verde' }
   if (texto.startsWith('Atendido:')) return { label: 'Atendido', clase: 'fc-tag-azul' }
   return { label: 'Respuesta', clase: 'fc-tag-verde' }
@@ -85,17 +85,16 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
   const [accionTexto, setAccionTexto] = useState('')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState('')
-  const cargarSeguimientos = useCallback(
-    ({ signal }) => api
+  const {
+    data: lista = [],
+    error: errorCarga,
+    refetch: cargar,
+  } = useQuery({
+    queryKey: ['turnadoSeguimientos', turnadoId],
+    queryFn: ({ signal }) => api
       .get(`/turnados/${turnadoId}/seguimientos/`, { signal })
       .then(respuesta => respuesta.data),
-    [turnadoId],
-  )
-  const {
-    data: lista,
-    error: errorCarga,
-    reload: cargar,
-  } = useAsyncResource(cargarSeguimientos, { initialData: [] })
+  })
 
   // En vivo: cualquier notificación de este FUS (ej. un rechazo del
   // Particular, que se fusiona en este mismo listado) refresca el feed sin
@@ -560,6 +559,7 @@ export default function SolicitudesTurnadas() {
 
   const { estatus: estatusROL2 } = useEstatus('TITULAR')
   const notifCtx = useNotificaciones()
+  const toast = useToast()
 
   const [busqueda,     setBusqueda]     = useState('')
   // Varios chips de estatus a la vez (mismo criterio que ConsultarFUS): lista
@@ -573,29 +573,50 @@ export default function SolicitudesTurnadas() {
   const [turnadoPausado, setTurnadoPausado] = useState(null)
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [highlightId,  setHighlightId]  = useState(null)
-  const reordenadoRef = useRef(false)
-  const [solicitud, setSolicitud] = useState({ page: 1, append: false, version: 0 })
+  const [cargandoMas, setCargandoMas] = useState(false)
+  const queryClient = useQueryClient()
   const busquedaDeb = useDebouncedValue(busqueda, 300)
 
-  const cargarPagina = useCallback(async ({ signal }) => {
-    const params = { page: solicitud.page, page_size: PAGE_SIZE }
-    if (folioParam)                           params.folio = folioParam
-    if (!folioParam && filtro.length)    params.estatusTitular = filtro.join(',')
+  // Firma de "qué se está pidiendo": al ser parte de la queryKey, cambiar
+  // cualquiera de estos valores aísla la consulta en su propia entrada de
+  // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
+  // que antes reiniciaba la paginación al cambiar filtros.
+  const queryKey = ['turnadosListado', { folioParam, filtro, prioridadFiltro, busquedaDeb }]
+  const construirParams = useCallback((page) => {
+    const params = { page, page_size: PAGE_SIZE }
+    if (folioParam)                     params.folio = folioParam
+    if (!folioParam && filtro.length)   params.estatusTitular = filtro.join(',')
     if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
     if (!folioParam && busquedaDeb)     params.search = busquedaDeb
-    const respuesta = await api.get('/turnados/mis-turnados/', { params, signal })
-    const items = respuesta.data.results || []
-    const match = folioParam
-      ? items.find(turnado => turnado.idFus?.folio === folioParam)
-      : null
-    return {
-      items: match ? [match, ...items.filter(turnado => turnado.id !== match.id)] : items,
-      total: respuesta.data.total || 0,
-      page: solicitud.page,
-      append: solicitud.append,
-      match,
-    }
-  }, [busquedaDeb, filtro, folioParam, prioridadFiltro, solicitud])
+    return params
+  }, [busquedaDeb, filtro, folioParam, prioridadFiltro])
+
+  const {
+    data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
+    error: errorCarga,
+    isFetching: cargando,
+    refetch: recargar,
+  } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const respuesta = await api.get('/turnados/mis-turnados/', { params: construirParams(1), signal })
+      const items = respuesta.data.results || []
+      const match = folioParam
+        ? items.find(turnado => turnado.idFus?.folio === folioParam)
+        : null
+      return {
+        items: match ? [match, ...items.filter(turnado => turnado.id !== match.id)] : items,
+        total: respuesta.data.total || 0,
+        page: 1,
+        append: false,
+        match,
+      }
+    },
+  })
+
+  const lista = resultado.items
+  const pagina = resultado.page
+  const totalItems = resultado.total
 
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
@@ -604,7 +625,6 @@ export default function SolicitudesTurnadas() {
       setBusqueda('')
       setSeleccionado(resultado.match)
       setHighlightId(resultado.match.id)
-      reordenadoRef.current = true
       setSearchParams({}, { replace: true })
       return
     }
@@ -613,41 +633,37 @@ export default function SolicitudesTurnadas() {
       return resultado.items.find(turnado => turnado.id === anterior.id) || anterior
     })
   }, [setSearchParams])
+  // Equivalente al onSuccess que useAsyncResource ya no ofrece con useQuery
+  // (v5) — se ejecuta con cada carga real (inicial, refetch, cargar más).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reemplaza el onSuccess ya removido de useQuery en v5
+  useEffect(() => { procesarCargaExitosa(resultado) }, [resultado, procesarCargaExitosa])
 
-  const {
-    data: resultado,
-    error: errorCarga,
-    loading: cargando,
-    setData: setResultado,
-  } = useAsyncResource(cargarPagina, {
-    initialData: { items: [], total: 0, page: 1, append: false, match: null },
-    mergeData: combinarPaginasTurnadas,
-    onSuccess: procesarCargaExitosa,
-  })
-
-  const lista = resultado.items
-  const pagina = resultado.page
-  const totalItems = resultado.total
-  const recargar = () => setSolicitud(actual => ({ page: 1, append: false, version: actual.version + 1 }))
-  const cargarMas = () => setSolicitud(actual => ({ page: pagina + 1, append: true, version: actual.version + 1 }))
-
-  useEffect(() => {
-     
-    if (reordenadoRef.current) {
-      reordenadoRef.current = false
-      return
+  const cargarMas = async () => {
+    if (cargandoMas) return
+    setCargandoMas(true)
+    try {
+      const siguientePagina = pagina + 1
+      const respuesta = await api.get('/turnados/mis-turnados/', { params: construirParams(siguientePagina) })
+      const paginaNueva = {
+        items: respuesta.data.results || [],
+        total: respuesta.data.total || 0,
+        page: siguientePagina,
+        append: true,
+        match: null,
+      }
+      queryClient.setQueryData(queryKey, prev => combinarPaginasTurnadas(prev, paginaNueva))
+    } catch {
+      toast.error('No se pudieron cargar más solicitudes.')
+    } finally {
+      setCargandoMas(false)
     }
-     
-    recargar()
-     
-  }, [filtro, prioridadFiltro, busquedaDeb, folioParam])
+  }
 
   /* Refrescar automáticamente cuando llega un nuevo turnado por WebSocket */
   useEffect(() => {
     if (!notifCtx?.turnadoKey) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
     recargar()
-     
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `recargar` (refetch) se recrea cada render; `notifCtx?.turnadoKey` ya identifica el evento externo
   }, [notifCtx?.turnadoKey])
 
   /* En vivo: si llega por WebSocket un aviso de SLA por vencer, el turnado
@@ -657,8 +673,7 @@ export default function SolicitudesTurnadas() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif || notif.tipo !== 'SLA_POR_VENCER') return
-     
-    setResultado(prev => {
+    queryClient.setQueryData(queryKey, prev => {
       const idx = prev.items.findIndex(t => t.idFus?.folio === notif.fusFolio)
       if (idx === -1) return prev
       const item = { ...prev.items[idx], idFus: { ...prev.items[idx].idFus, slaPorVencer: true } }
@@ -679,9 +694,8 @@ export default function SolicitudesTurnadas() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif?.fusFolio || notif.tipo === 'SLA_POR_VENCER' || notif.tipo === 'TURNADO') return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
     recargar()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cargar` se recrea cada render; `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs`
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs`
   }, [ultimaNotifId])
 
   const toggleFiltro = f => setFiltro(prev => (
@@ -882,9 +896,9 @@ export default function SolicitudesTurnadas() {
                 />
               ))}
               {lista.length < totalItems && (
-                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando}>
-                  {cargando && <span className="btn-spinner" />}
-                  {cargando ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
+                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando || cargandoMas}>
+                  {(cargando || cargandoMas) && <span className="btn-spinner" />}
+                  {(cargando || cargandoMas) ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
                 </button>
               )}
             </div>

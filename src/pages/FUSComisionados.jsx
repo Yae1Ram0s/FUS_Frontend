@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
@@ -7,9 +8,9 @@ import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoCom
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import api from '../api/api'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { useToast } from '../context/ToastContext'
 import { formatearFechaHora } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
 // Reusa el layout de lista+detalle (.st-*, .seccion, .sec-*, .dt-panel,
@@ -225,30 +226,40 @@ export default function FUSComisionados() {
 
   const [busqueda,     setBusqueda]     = useState('')
   const [seleccionado, setSeleccionado] = useState(null)
-  const [solicitud, setSolicitud] = useState({
-    page: 1,
-    append: false,
-    version: 0,
-  })
+  const [cargandoMas, setCargandoMas] = useState(false)
+  const toast = useToast()
+  const queryClient = useQueryClient()
   const busquedaDeb = useDebouncedValue(busqueda, 300)
-  const cargarPagina = useCallback(async ({ signal }) => {
-    const params = { page: solicitud.page, page_size: PAGE_SIZE }
+
+  // Cambiar la búsqueda o el folio aísla la consulta en su propia entrada de
+  // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
+  // que antes reiniciaba la paginación al cambiar el filtro.
+  const queryKey = ['fusComisionadosListado', { folioParam, busquedaDeb }]
+  const construirParams = useCallback((page) => {
+    const params = { page, page_size: PAGE_SIZE }
     if (folioParam) params.search = folioParam
     else if (busquedaDeb) params.search = busquedaDeb
-    const response = await api.get('/fus/mis-comisionados/', {
-      params,
-      signal,
-    })
-    const items = response.data.results || []
-    const match = folioParam ? items.find(fus => fus.folio === folioParam) : null
-    return {
-      items,
-      total: response.data.total || 0,
-      page: solicitud.page,
-      append: solicitud.append,
-      match,
-    }
-  }, [busquedaDeb, folioParam, solicitud])
+    return params
+  }, [busquedaDeb, folioParam])
+
+  const {
+    data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
+    isFetching: cargando,
+    error: errorCarga,
+    refetch: recargar,
+  } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const response = await api.get('/fus/mis-comisionados/', { params: construirParams(1), signal })
+      const items = response.data.results || []
+      const match = folioParam ? items.find(fus => fus.folio === folioParam) : null
+      return { items, total: response.data.total || 0, page: 1, append: false, match }
+    },
+  })
+  const lista = resultado.items
+  const totalItems = resultado.total
+  const pagina = resultado.page
+
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
       setBusqueda('')
@@ -256,27 +267,9 @@ export default function FUSComisionados() {
       setSearchParams({}, { replace: true })
     }
   }, [setSearchParams])
-  const {
-    data: resultado,
-    loading: cargando,
-    error: errorCarga,
-  } = useAsyncResource(cargarPagina, {
-    initialData: { items: [], total: 0, page: 1, append: false, match: null },
-    mergeData: combinarPaginas,
-    onSuccess: procesarCargaExitosa,
-  })
-  const lista = resultado.items
-  const totalItems = resultado.total
-  const pagina = resultado.page
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia la paginación al cambiar el filtro
-    setSolicitud(actual => ({
-      page: 1,
-      append: false,
-      version: actual.version + 1,
-    }))
-  }, [busquedaDeb])
+  // Equivalente al onSuccess que useAsyncResource ya no ofrece con useQuery (v5).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reemplaza el onSuccess ya removido de useQuery en v5
+  useEffect(() => { procesarCargaExitosa(resultado) }, [resultado, procesarCargaExitosa])
 
   useEffect(() => {
     if (!seleccionado) return
@@ -287,16 +280,20 @@ export default function FUSComisionados() {
     }
   }, [lista, seleccionado])
 
-  const recargar = () => setSolicitud(actual => ({
-    page: 1,
-    append: false,
-    version: actual.version + 1,
-  }))
-  const cargarMas = () => setSolicitud(actual => ({
-    page: pagina + 1,
-    append: true,
-    version: actual.version + 1,
-  }))
+  const cargarMas = async () => {
+    if (cargandoMas) return
+    setCargandoMas(true)
+    try {
+      const siguientePagina = pagina + 1
+      const response = await api.get('/fus/mis-comisionados/', { params: construirParams(siguientePagina) })
+      const paginaNueva = { items: response.data.results || [], total: response.data.total || 0, page: siguientePagina, append: true, match: null }
+      queryClient.setQueryData(queryKey, prev => combinarPaginas(prev, paginaNueva))
+    } catch {
+      toast.error('No se pudieron cargar más solicitudes.')
+    } finally {
+      setCargandoMas(false)
+    }
+  }
 
   /* En vivo: cualquier notificación ligada a un FUS (asignación nueva,
      validación, rechazo, etc.) dispara un refresh silencioso — cubre tanto
@@ -307,7 +304,6 @@ export default function FUSComisionados() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif?.fusFolio) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
     recargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ultimaNotifId identifica el evento que dispara la recarga
   }, [ultimaNotifId])
@@ -369,9 +365,9 @@ export default function FUSComisionados() {
                   onClick={() => { setSeleccionado(f); if (window.innerWidth <= 768) setPanelAbierto(false) }} />
               ))}
               {lista.length < totalItems && (
-                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando}>
-                  {cargando && <span className="btn-spinner" />}
-                  {cargando ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
+                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando || cargandoMas}>
+                  {(cargando || cargandoMas) && <span className="btn-spinner" />}
+                  {(cargando || cargandoMas) ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
                 </button>
               )}
             </div>

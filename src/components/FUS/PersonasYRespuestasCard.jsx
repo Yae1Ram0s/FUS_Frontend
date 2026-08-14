@@ -142,8 +142,8 @@ function PersonaFila({ turnado, user, onCambio }) {
           respuestas={respuestas}
           onClose={() => setModalAbierto(false)}
           turnado={esParticular(user) ? turnado : null}
-          onValidado={(estatusParticular) => {
-            onCambio?.(estatusParticular)
+          onValidado={(resultado) => {
+            onCambio?.(resultado)
             setModalAbierto(false)
           }}
         />

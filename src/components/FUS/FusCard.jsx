@@ -20,7 +20,7 @@ export default function FusCard({ fus, activo, onClick, highlight, onVerHistoria
       <div className="fus-card-top">
         <strong className="fus-folio">{fus.folio}</strong>
         <span className="fus-card-badges">
-          <Badge estatus={fus.estatusParticular} />
+          <Badge estatus={fus.estatusVisual || fus.estatusParticular} />
           {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
         </span>
       </div>

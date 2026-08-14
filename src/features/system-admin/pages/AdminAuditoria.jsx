@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import AppLayout from '../../../components/AppLayout'
 import Spinner from '../../../components/Spinner'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
-import { ACCION_LABELS, mensajeErrorAdmin, obtenerAuditoriaAdmin } from '../api/adminApi'
+import useAdminAuditoria from '../hooks/useAdminAuditoria'
+import { ACCION_LABELS, mensajeErrorAdmin } from '../api/adminApi'
 import '../styles/SystemAdmin.css'
 
 function formatDetalle(detalle) {
@@ -12,8 +12,7 @@ function formatDetalle(detalle) {
 
 export default function AdminAuditoria() {
   const [filtros, setFiltros] = useState({ actor: '', accion: '', page: 1 })
-  const fetcher = useCallback(({ signal }) => obtenerAuditoriaAdmin(filtros, { signal }), [filtros])
-  const { data, loading, error, reload } = useAsyncResource(fetcher, { initialData: { results: [], count: 0 }, maxAutoRetries: 0 })
+  const { data, loading, error, reload } = useAdminAuditoria(filtros)
   const filas = data?.results || []
   const totalPages = data?.totalPages ?? 1
 

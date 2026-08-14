@@ -1,8 +1,10 @@
-import { useCallback } from 'react'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
+import { useQuery } from '@tanstack/react-query'
 import { obtenerResumenAdmin } from '../api/adminApi'
 
 export default function useAdminResumen() {
-  const fetcher = useCallback(({ signal }) => obtenerResumenAdmin({ signal }), [])
-  return useAsyncResource(fetcher, { initialData: {}, maxAutoRetries: 0 })
+  const { data = {}, isFetching: loading, error, refetch: reload } = useQuery({
+    queryKey: ['admin', 'resumen'],
+    queryFn: ({ signal }) => obtenerResumenAdmin({ signal }),
+  })
+  return { data, loading, error, reload }
 }

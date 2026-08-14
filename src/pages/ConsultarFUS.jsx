@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import ModalTimeline from '../components/ModalTimeline'
@@ -12,7 +13,6 @@ import api from '../api/api'
 import { useToast } from '../context/ToastContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useEstatus } from '../hooks/useEstatus'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import './ConsultarFUS.css'
 
@@ -72,25 +72,15 @@ export default function ConsultarFUS() {
   const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [highlightId,  setHighlightId]  = useState(null)
   const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
-  const [solicitud, setSolicitud] = useState({
-    page: 1,
-    append: false,
-    version: 0,
-  })
+  const [cargandoMas, setCargandoMas] = useState(false)
+  const queryClient = useQueryClient()
 
-  // Firma de "qué se está pidiendo" (sin página/append): si cambia entre una
-  // llamada y la siguiente, la página/append que traía `solicitud` quedaron
-  // obsoletos (pertenecen al filtro anterior) y se ignoran para esta
-  // llamada — si no, cambiar de filtro estando en "página 2" mezclaba
-  // resultados de dos conjuntos filtrados distintos.
-  const filtrosKeyRef = useRef('')
-  const cargarPagina = useCallback(async ({ signal }) => {
-    const filtrosKey = JSON.stringify([folioParam, filtro, prioridadFiltro, busquedaAplicada])
-    const filtrosCambiaron = filtrosKeyRef.current !== filtrosKey
-    filtrosKeyRef.current = filtrosKey
-    const page   = filtrosCambiaron ? 1 : solicitud.page
-    const append = filtrosCambiaron ? false : solicitud.append
-
+  // Firma de "qué se está pidiendo" — al ser parte de la queryKey, cambiar
+  // cualquiera de estos valores aísla la consulta en su propia entrada de
+  // caché (siempre arranca en página 1), así que ya no hace falta el guard
+  // manual de "filtros cambiaron" que existía con useAsyncResource.
+  const queryKey = ['fusListado', { folioParam, filtro, prioridadFiltro, busquedaAplicada }]
+  const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
     if (folioParam) {
       // Consulta puntual por folio (clic en notificación/bitácora/dashboard):
@@ -102,24 +92,34 @@ export default function ConsultarFUS() {
       if (prioridadFiltro) params.prioridad = prioridadFiltro
       if (busquedaAplicada) params.search = busquedaAplicada
     }
-    const response = await api.get('/fus/', { params, signal })
-    const items = response.data.results || []
-    const match = folioParam ? (items[0] || null) : null
-    return {
-      items,
-      total: response.data.total || 0,
-      page,
-      append,
-      match,
-      folioNoEncontrado: Boolean(folioParam) && !match,
-    }
-  }, [
-    busquedaAplicada,
-    filtro,
-    folioParam,
-    prioridadFiltro,
-    solicitud,
-  ])
+    return params
+  }, [busquedaAplicada, filtro, folioParam, prioridadFiltro])
+
+  const {
+    data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
+    isFetching: cargando,
+    error: errorCarga,
+    refetch: recargar,
+  } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const response = await api.get('/fus/', { params: construirParams(1), signal })
+      const items = response.data.results || []
+      const match = folioParam ? (items[0] || null) : null
+      return {
+        items,
+        total: response.data.total || 0,
+        page: 1,
+        append: false,
+        match,
+        folioNoEncontrado: Boolean(folioParam) && !match,
+      }
+    },
+  })
+  const lista = resultado.items
+  const totalItems = resultado.total
+  const pagina = resultado.page
+
   const procesarCargaExitosa = useCallback(result => {
     if (result.match) {
       setFiltro([])
@@ -141,35 +141,34 @@ export default function ConsultarFUS() {
       return result.items.find(item => item.id === anterior.id) || anterior
     })
   }, [folioParam, setSearchParams, toast])
-  const {
-    data: resultado,
-    loading: cargando,
-    error: errorCarga,
-    setData: setResultado,
-  } = useAsyncResource(cargarPagina, {
-    initialData: {
-      items: [],
-      total: 0,
-      page: 1,
-      append: false,
-      match: null,
-    },
-    mergeData: combinarPaginasFUS,
-    onSuccess: procesarCargaExitosa,
-  })
-  const lista = resultado.items
-  const totalItems = resultado.total
-  const pagina = resultado.page
-  const recargar = () => setSolicitud(actual => ({
-    page: 1,
-    append: false,
-    version: actual.version + 1,
-  }))
-  const cargarMas = () => setSolicitud(actual => ({
-    page: pagina + 1,
-    append: true,
-    version: actual.version + 1,
-  }))
+  // Equivalente al onSuccess que useAsyncResource ya no ofrece con
+  // useQuery (v5) — se ejecuta con cada carga real (inicial, refetch,
+  // cargar más), incluidos los parches en vivo de abajo, para los que es
+  // inofensivo (ver análisis en la migración a TanStack Query).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reemplaza el onSuccess ya removido de useQuery en v5 (ver comentario arriba)
+  useEffect(() => { procesarCargaExitosa(resultado) }, [resultado, procesarCargaExitosa])
+
+  const cargarMas = async () => {
+    if (cargandoMas) return
+    setCargandoMas(true)
+    try {
+      const siguientePagina = pagina + 1
+      const response = await api.get('/fus/', { params: construirParams(siguientePagina) })
+      const paginaNueva = {
+        items: response.data.results || [],
+        total: response.data.total || 0,
+        page: siguientePagina,
+        append: true,
+        match: null,
+        folioNoEncontrado: false,
+      }
+      queryClient.setQueryData(queryKey, prev => combinarPaginasFUS(prev, paginaNueva))
+    } catch {
+      toast.error('No se pudieron cargar más solicitudes.')
+    } finally {
+      setCargandoMas(false)
+    }
+  }
 
   /* En vivo: si llega por WebSocket un aviso de SLA por vencer, el FUS
      correspondiente (si ya está cargado en la lista) se sube al inicio y
@@ -179,7 +178,7 @@ export default function ConsultarFUS() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif || notif.tipo !== 'SLA_POR_VENCER') return
-    setResultado(prev => {
+    queryClient.setQueryData(queryKey, prev => {
       const idx = prev.items.findIndex(f => f.folio === notif.fusFolio)
       if (idx === -1) return prev
       const item = { ...prev.items[idx], slaPorVencer: true }
@@ -203,7 +202,6 @@ export default function ConsultarFUS() {
   useEffect(() => {
     const notif = notifCtx?.notifs?.[0]
     if (!notif?.fusFolio || notif.tipo === 'SLA_POR_VENCER') return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la bandeja con un evento WebSocket externo
     recargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ultimaNotifId identifica el evento externo
   }, [ultimaNotifId])
@@ -218,7 +216,7 @@ export default function ConsultarFUS() {
     if (!fusId) return
     try {
       const { data: fusActualizado } = await api.get(`/fus/${fusId}/`)
-      setResultado(prev => ({
+      queryClient.setQueryData(queryKey, prev => ({
         ...prev,
         items: [fusActualizado, ...prev.items.filter(item => item.id !== fusActualizado.id)],
       }))
@@ -233,6 +231,14 @@ export default function ConsultarFUS() {
       setSeleccionado(null)
       recargar()
     }
+  }
+
+  const sincronizarFus = fusActualizado => {
+    setSeleccionado(fusActualizado)
+    queryClient.setQueryData(queryKey, prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === fusActualizado.id ? fusActualizado : item),
+    }))
   }
 
   const toggleFiltro = f => setFiltro(prev => (
@@ -434,9 +440,9 @@ export default function ConsultarFUS() {
                 />
               ))}
               {lista.length < totalItems && (
-                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando}>
-                  {cargando && <span className="btn-spinner" />}
-                  {cargando ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
+                <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando || cargandoMas}>
+                  {(cargando || cargandoMas) && <span className="btn-spinner" />}
+                  {(cargando || cargandoMas) ? 'Cargando…' : `Cargar más (${lista.length} de ${totalItems})`}
                 </button>
               )}
             </div>
@@ -450,6 +456,7 @@ export default function ConsultarFUS() {
                 key={`${seleccionado.id}_${seleccionado.estatusParticular}`}
                 fus={seleccionado}
                 onTurnar={f => setTurnarFUS(f)}
+                onFusChange={sincronizarFus}
                 onBack={() => { setSeleccionado(null); setFusPausado(null); setPanelAbierto(true) }}
               />
             : (

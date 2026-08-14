@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
 } from 'recharts'
@@ -9,7 +10,6 @@ import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
@@ -188,20 +188,16 @@ export default function DashboardROL1() {
   const navigate = useNavigate()
   const nombre = user?.nombre || user?.email || 'Usuario'
 
-  const cargarDashboard = useCallback(async ({ signal }) => {
-    const fusData = await fetchAll('/fus/', {}, signal)
-    return { fusData, ahora: Date.now() }
-  }, [])
   const {
-    data: dashboard,
-    loading: cargando,
+    // ahora:0 solo se usa antes de la primera carga, mientras fusData sigue
+    // vacío y la pantalla muestra el Spinner — su valor real es irrelevante.
+    data: dashboard = { fusData: [], ahora: 0 },
+    isFetching: cargando,
     error: errorCarga,
-    reload: reintentar,
-  } = useAsyncResource(cargarDashboard, {
-    initialData: () => ({
-      fusData: [],
-      ahora: Date.now(),
-    }),
+    refetch: reintentar,
+  } = useQuery({
+    queryKey: ['dashboardRol1'],
+    queryFn: async ({ signal }) => ({ fusData: await fetchAll('/fus/', {}, signal), ahora: Date.now() }),
   })
   const { fusData, ahora } = dashboard
 

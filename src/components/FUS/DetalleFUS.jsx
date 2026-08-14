@@ -18,7 +18,7 @@ import { formatMedioRecepcion } from '../../utils/medio'
 import { obtenerIniciales } from '../../utils/personas'
 import { puedeComisionar, puedeGestionarComisionados } from '../../utils/permisos'
 
-export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
+export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onFusChange }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const toast = useToast()
@@ -33,7 +33,10 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
   const ultimaNotifId = notifCtx?.notifs?.[0]?.id
   useEffect(() => {
     if (notifCtx?.notifs?.[0]?.fusFolio !== fusInicial.folio) return
-    api.get(`/fus/${fusInicial.id}/`).then(({ data }) => setFusData(data)).catch(() => {})
+    api.get(`/fus/${fusInicial.id}/`).then(({ data }) => {
+      setFusData(data)
+      onFusChange?.(data)
+    }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
   }, [ultimaNotifId, fusInicial.folio, fusInicial.id])
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
@@ -50,9 +53,16 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack }) {
   // (PersonasYRespuestasCard), el propio actor no recibe notificación (esa
   // le llega a la otra parte) — se actualiza fusData/turnados de una vez con
   // lo que ya regresó el endpoint, sin esperar a un WS que nunca le toca.
-  const alCambiarTurnado = (estatusParticular) => {
-    if (estatusParticular) setFusData(f => ({ ...f, estatusParticular }))
+  const alCambiarTurnado = async () => {
     recargarTurnados()
+    try {
+      const { data } = await api.get(`/fus/${fus.id}/`)
+      setFusData(data)
+      onFusChange?.(data)
+    } catch {
+      // El cambio ya fue confirmado por el endpoint; la notificación o la
+      // siguiente recarga terminará de sincronizar la tarjeta.
+    }
   }
 
   const descargarPdf = (conImagenes, turnadoId) => {

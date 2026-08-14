@@ -1,10 +1,10 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useQuery } from '@tanstack/react-query'
 import api from '../api/api'
 import { formatearFechaHora } from '../utils/fechas'
 import Spinner from './Spinner'
 import { useNotificaciones } from '../context/NotificacionesContext'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useModalBehavior } from '../hooks/useModalBehavior'
 import './Comisionado/Comisionado.css'
 import './ModalTimeline.css'
@@ -32,17 +32,18 @@ export default function ModalTimeline({ folio, onClose }) {
   useModalBehavior(onClose)
   const notifCtx = useNotificaciones()
 
-  const cargarTrazabilidad = useCallback(({ signal }) => {
-    const url = `/fus/trazabilidad/${folio.split('/').map(encodeURIComponent).join('/')}/`
-    return api.get(url, { signal }).then(respuesta => respuesta.data.eventos || [])
-  }, [folio])
-
   const {
-    data: eventos,
+    data: eventos = [],
     error,
-    loading: cargando,
-    reload: recargarTrazabilidad,
-  } = useAsyncResource(cargarTrazabilidad, { initialData: [] })
+    isFetching: cargando,
+    refetch: recargarTrazabilidad,
+  } = useQuery({
+    queryKey: ['fusTrazabilidad', folio],
+    queryFn: ({ signal }) => {
+      const url = `/fus/trazabilidad/${folio.split('/').map(encodeURIComponent).join('/')}/`
+      return api.get(url, { signal }).then(respuesta => respuesta.data.eventos || [])
+    },
+  })
 
   // En vivo: si llega por WebSocket una notificación de este mismo folio
   // (turnado, respuesta, cambio de estado, conclusión), se refresca sola —

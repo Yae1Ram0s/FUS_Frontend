@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient }            from './queryClient'
 import { AuthProvider }          from './context/AuthContext'
 import { NotificacionesProvider } from './context/NotificacionesContext'
 import { ToastProvider }          from './context/ToastContext'
@@ -49,6 +51,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NotificacionesProvider>
             <ToastProvider>
@@ -106,6 +109,7 @@ export default function App() {
             </ToastProvider>
           </NotificacionesProvider>
         </AuthProvider>
+        </QueryClientProvider>
       </ErrorBoundary>
     </BrowserRouter>
   )

@@ -1,6 +1,6 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import api from '../../api/api'
-import { useAsyncResource } from '../../hooks/useAsyncResource'
 import { useNotificaciones } from '../../context/NotificacionesContext'
 import { formatearFecha, formatearHora } from '../../utils/fechas'
 import Spinner from '../Spinner'
@@ -19,20 +19,19 @@ const TIPO_SEGUIMIENTO_INFO = {
    comisionado, que sigue siendo el único que puede agregar. Se muestra en
    el detalle de FUS en cuanto hay un comisionado asignado. */
 export default function SeguimientoComisionadoFeed({ fusId, folio }) {
-  const cargarSeguimiento = useCallback(
-    ({ signal }) => api
+  const {
+    data: lista = [],
+    isFetching: cargando,
+    error: errorCarga,
+    refetch: cargar,
+  } = useQuery({
+    queryKey: ['fusSeguimiento', fusId],
+    queryFn: ({ signal }) => api
       .get(`/fus/${fusId}/seguimiento/`, { signal })
       .then(response => (
         Array.isArray(response.data) ? response.data : []
       )),
-    [fusId],
-  )
-  const {
-    data: lista,
-    loading: cargando,
-    error: errorCarga,
-    reload: cargar,
-  } = useAsyncResource(cargarSeguimiento, { initialData: [] })
+  })
 
   // En vivo: cualquier notificación de este FUS (nueva respuesta, atendido,
   // rechazo...) refresca el feed sin esperar a que se remonte el panel.

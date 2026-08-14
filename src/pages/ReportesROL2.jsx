@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
@@ -8,7 +9,6 @@ import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './DashboardROL1.css'
 import './Reportes.css'
@@ -218,13 +218,20 @@ export default function ReportesROL2() {
     ...(tipoPeriodo === 'Mes' && compararCon ? { comparar_con: compararCon } : {}),
   }
 
-  const cargarOpciones = useCallback(({ signal }) => api.get('/reportes/titular/opciones/', { signal }).then(r => r.data), [])
-  const { data: opciones } = useAsyncResource(cargarOpciones, { initialData: { estados: [] } })
+  const { data: opciones = { estados: [] } } = useQuery({
+    queryKey: ['reportesTitularOpciones'],
+    queryFn: ({ signal }) => api.get('/reportes/titular/opciones/', { signal }).then(r => r.data),
+  })
 
-  const aplicadosKey = JSON.stringify(aplicados)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- se depende de `aplicadosKey`, no de `aplicados` (objeto nuevo cada render), a propósito
-  const cargar = useCallback(({ signal }) => api.get('/reportes/titular/resumen/', { params: aplicados, signal }).then(r => r.data), [aplicadosKey])
-  const { data, loading, error, reload } = useAsyncResource(cargar)
+  const {
+    data,
+    isFetching: loading,
+    error,
+    refetch: reload,
+  } = useQuery({
+    queryKey: ['reportesTitularResumen', aplicados],
+    queryFn: ({ signal }) => api.get('/reportes/titular/resumen/', { params: aplicados, signal }).then(r => r.data),
+  })
 
   // En vivo: cualquier notificación ligada a un FUS recalcula el reporte —
   // mismo patrón que el resto de las pantallas (dashboards, Reportes ROL1).

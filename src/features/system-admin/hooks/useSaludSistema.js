@@ -1,12 +1,26 @@
 import { useCallback } from 'react'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { obtenerSaludSistema } from '../api/adminApi'
 
+const QUERY_KEY = ['admin', 'salud']
+
 export default function useSaludSistema() {
-  const fetcher = useCallback(({ signal }) => obtenerSaludSistema({ signal }), [])
-  const resource = useAsyncResource(fetcher, { initialData: {}, maxAutoRetries: 0 })
+  const queryClient = useQueryClient()
+  const { data = {}, isFetching: loading, error, refetch: reload } = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: ({ signal }) => obtenerSaludSistema({ signal }),
+  })
+
+  const setData = useCallback(
+    updater => queryClient.setQueryData(QUERY_KEY, updater),
+    [queryClient],
+  )
+
   const comprobarAhora = useCallback(async () => {
-    resource.setData(await obtenerSaludSistema({ forzar: true }))
-  }, [resource])
-  return { ...resource, comprobarAhora }
+    const fresca = await obtenerSaludSistema({ forzar: true })
+    setData(fresca)
+    return fresca
+  }, [setData])
+
+  return { data, loading, error, reload, setData, comprobarAhora }
 }

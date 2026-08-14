@@ -1,10 +1,10 @@
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import api from '../api/api'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useCountUp } from '../hooks/useCountUp'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import '../components/Comisionado/Comisionado.css'
@@ -112,21 +112,25 @@ export default function PanelAdmin() {
 
   const busquedaDeb = useDebouncedValue(busqueda, 300)
 
-  const cargarCorreos = useCallback(async ({ signal }) => {
-    const params = {}
-    if (busquedaDeb) params.search = busquedaDeb
-    if (filtroRol)    params.rol    = filtroRol
-    if (filtroActivo) params.activo = filtroActivo
-    const respuesta = await api.get('/auth/correos-autorizados/', { params, signal })
-    return Array.isArray(respuesta.data) ? respuesta.data : []
-  }, [busquedaDeb, filtroRol, filtroActivo])
-
+  const filtrosCorreos = { search: busquedaDeb, rol: filtroRol, activo: filtroActivo }
   const {
-    data: correos,
+    data: correos = [],
     error: errorConsulta,
-    loading: cargando,
-    reload: cargar,
-  } = useAsyncResource(cargarCorreos, { initialData: [] })
+    isFetching: cargando,
+    refetch: cargar,
+  } = useQuery({
+    queryKey: ['correosAutorizados', filtrosCorreos],
+    queryFn: async ({ signal }) => {
+      const params = {}
+      if (busquedaDeb) params.search = busquedaDeb
+      if (filtroRol)    params.rol    = filtroRol
+      if (filtroActivo) params.activo = filtroActivo
+      const respuesta = await api.get('/auth/correos-autorizados/', { params, signal })
+      return Array.isArray(respuesta.data) ? respuesta.data : []
+    },
+    // Conserva la tabla anterior visible mientras carga el nuevo filtro.
+    placeholderData: keepPreviousData,
+  })
   const errorCarga = errorOperacion || (
     errorConsulta?.response?.data?.detail
     || (errorConsulta ? 'No se pudo cargar la lista. Verifica tu sesión.' : '')

@@ -1,11 +1,11 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useQuery } from '@tanstack/react-query'
 import api from '../api/api'
 import { formatearFecha, formatearFechaHora } from '../utils/fechas'
 import { obtenerIniciales } from '../utils/personas'
 import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import Spinner from './Spinner'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { useModalBehavior } from '../hooks/useModalBehavior'
 import './Comisionado/Comisionado.css'
 import './ModalDetalleFUS.css'
@@ -15,17 +15,16 @@ const fmtFechaSolo = formatearFecha
 
 export default function ModalDetalleFUS({ folio, onClose }) {
   useModalBehavior(onClose)
-  const cargarDetalle = useCallback(
-    ({ signal }) => api
-      .get(`/fus/detalle-auditoria/${folio.split('/').map(encodeURIComponent).join('/')}/`, { signal })
-      .then(respuesta => respuesta.data),
-    [folio],
-  )
   const {
     data: detalle,
     error,
-    loading: cargando,
-  } = useAsyncResource(cargarDetalle)
+    isFetching: cargando,
+  } = useQuery({
+    queryKey: ['fusDetalleAuditoria', folio],
+    queryFn: ({ signal }) => api
+      .get(`/fus/detalle-auditoria/${folio.split('/').map(encodeURIComponent).join('/')}/`, { signal })
+      .then(respuesta => respuesta.data),
+  })
 
   // Bloquea el scroll del contenedor de la página mientras el modal está abierto.
   useEffect(() => {

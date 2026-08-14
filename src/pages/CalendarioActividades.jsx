@@ -1,11 +1,11 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import FusFolioPicker from '../components/Calendario/FusFolioPicker'
 import FechaInput from '../components/FechaInput'
 import './CalendarioActividades.css'
@@ -23,6 +23,8 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 const HORAS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`)
 const ALTURA_HORA = 56
 const ALTURA_HORA_DIA = 60
+
+const ACTIVIDADES_QUERY_KEY = ['actividades']
 
 function combinarActividades(anteriores, nuevas) {
   const ids = new Set(anteriores.map(actividad => actividad.id))
@@ -383,33 +385,49 @@ export default function CalendarioActividades() {
   }
   useEffect(() => () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current) }, [])
 
-  const cargarMeses = useCallback(async ({ signal }) => {
+  const queryClient = useQueryClient()
+  // `actividades` vive en la caché de TanStack Query bajo una única clave
+  // estable (no una por mes/vista) para que sobreviva a navegar fuera del
+  // calendario y volver. La carga real es imperativa (ver `cargar` abajo):
+  // solo pide los meses que aún faltan según `mesesCargadosRef` y mezcla el
+  // resultado en la caché por id — por eso useQuery va con `enabled: false`
+  // (nunca dispara su propio fetch) y solo se usa para leer/reaccionar a lo
+  // que `queryClient.setQueryData` va escribiendo.
+  const { data: actividades = [] } = useQuery({
+    queryKey: ACTIVIDADES_QUERY_KEY,
+    queryFn: () => queryClient.getQueryData(ACTIVIDADES_QUERY_KEY) ?? [],
+    enabled: false,
+    initialData: [],
+  })
+  const [cargando, setCargando] = useState(true)
+  const [errorCarga, setErrorCarga] = useState(null)
+
+  const cargar = useCallback(async () => {
     const meses = mesesNecesarios(vista, current)
     const faltantes = meses.filter(m => !mesesCargadosRef.current.has(m))
-    if (faltantes.length === 0) return []
-    const respuestas = await Promise.all(
-      faltantes.map(mes => api.get('/actividades/', {
-        params: { mes },
-        signal,
-      })),
-    )
-    faltantes.forEach(mes => mesesCargadosRef.current.add(mes))
-    return respuestas.flatMap(response => response.data || [])
-  }, [current, vista])
-  const {
-    data: actividades,
-    loading: cargando,
-    error: errorCarga,
-    reload: cargar,
-    setData: setActividades,
-  } = useAsyncResource(cargarMeses, {
-    initialData: [],
-    mergeData: combinarActividades,
-  })
+    if (faltantes.length === 0) { setCargando(false); return }
+    setCargando(true)
+    try {
+      const respuestas = await Promise.all(
+        faltantes.map(mes => api.get('/actividades/', { params: { mes } })),
+      )
+      faltantes.forEach(mes => mesesCargadosRef.current.add(mes))
+      const nuevas = respuestas.flatMap(response => response.data || [])
+      queryClient.setQueryData(ACTIVIDADES_QUERY_KEY, prev => combinarActividades(prev || [], nuevas))
+      setErrorCarga(null)
+    } catch (e) {
+      setErrorCarga(e)
+    } finally {
+      setCargando(false)
+    }
+  }, [current, vista, queryClient])
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- inicia la carga de los meses que falten para la vista actual
+  useEffect(() => { cargar() }, [cargar])
 
   const refrescar = () => {
     mesesCargadosRef.current = new Set()
-    setActividades([])
+    queryClient.setQueryData(ACTIVIDADES_QUERY_KEY, [])
     cargar()
   }
 
@@ -419,6 +437,7 @@ export default function CalendarioActividades() {
   useEffect(() => {
     if (!notifCtx?.turnadoKey) return
     mesesCargadosRef.current = new Set()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la caché con un evento WebSocket externo
     cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cargar` se recrea cada render; solo debe dispararse al llegar un turnado nuevo
   }, [notifCtx?.turnadoKey])

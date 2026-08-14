@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import AppLayout from '../../../components/AppLayout'
 import Spinner from '../../../components/Spinner'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
-import { mensajeErrorAdmin, obtenerOtpAdmin } from '../api/adminApi'
+import useAdminOTP from '../hooks/useAdminOTP'
+import { mensajeErrorAdmin } from '../api/adminApi'
 import '../styles/SystemAdmin.css'
 
 const ETIQUETAS = { ENVIADO: 'Enviado', ERROR: 'Error', SIN_CONFIRMACION: 'Sin confirmación' }
 
 export default function AdminOTP() {
   const [filtros, setFiltros] = useState({ search: '', estado: '', page: 1 })
-  const fetcher = useCallback(({ signal }) => obtenerOtpAdmin(filtros, { signal }), [filtros])
-  const { data, loading, error, reload } = useAsyncResource(fetcher, { initialData: { results: [], resumen: {} }, maxAutoRetries: 0 })
+  const { data, loading, error, reload } = useAdminOTP(filtros)
   const filas = data?.results || []
   const resumen = data?.resumen || {}
-  useEffect(() => { const id = window.setInterval(reload, 30000); return () => window.clearInterval(id) }, [reload])
   const campo = (nombre, valor) => setFiltros(actual => ({ ...actual, [nombre]: valor, page: 1 }))
 
   return <AppLayout mainClass="sa-main app-main-scroll"><div className="sa-page">

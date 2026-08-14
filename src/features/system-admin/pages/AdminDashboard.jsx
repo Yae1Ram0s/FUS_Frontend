@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import AppLayout from '../../../components/AppLayout'
 import Spinner from '../../../components/Spinner'
 import AdminKpiCard from '../components/AdminKpiCard'
@@ -10,8 +10,9 @@ import { GraficaDistribucion, GraficaTendenciaSupervision } from '../components/
 import useAdminResumen from '../hooks/useAdminResumen'
 import useAdminMetricas from '../hooks/useAdminMetricas'
 import useSaludSistema from '../hooks/useSaludSistema'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
-import { ACCION_LABELS, mapearSalud, mensajeErrorAdmin, obtenerAuditoriaAdmin, obtenerSerieAuditoria } from '../api/adminApi'
+import useAuditoriaReciente from '../hooks/useAuditoriaReciente'
+import useSerieAuditoria from '../hooks/useSerieAuditoria'
+import { ACCION_LABELS, mapearSalud, mensajeErrorAdmin } from '../api/adminApi'
 import '../styles/SystemAdmin.css'
 
 export default function AdminDashboard() {
@@ -20,10 +21,8 @@ export default function AdminDashboard() {
   const { data: resumen = {}, loading, error, reload } = useAdminResumen()
   const { data: metricas = {}, loading: cargandoMetricas, reload: reloadMetricas } = useAdminMetricas(dias)
   const { data: salud = {}, reload: reloadSalud } = useSaludSistema()
-  const auditoriaFetcher = useCallback(({ signal }) => obtenerAuditoriaAdmin({ pageSize: 5 }, { signal }), [])
-  const { data: auditoria, reload: reloadAuditoria } = useAsyncResource(auditoriaFetcher, { initialData: { results: [] }, maxAutoRetries: 0 })
-  const serieFetcher = useCallback(({ signal }) => obtenerSerieAuditoria({ dias: 14 }, { signal }), [])
-  const { data: serieActividad, reload: reloadSerie } = useAsyncResource(serieFetcher, { initialData: [], maxAutoRetries: 0 })
+  const { data: auditoria, reload: reloadAuditoria } = useAuditoriaReciente(5)
+  const { data: serieActividad, reload: reloadSerie } = useSerieAuditoria(14)
   const usuarios = resumen.usuarios || {}; const seguridad = resumen.seguridad || {}; const kpis = metricas.kpis || {}
   const servicios = mapearSalud(salud); const actividad = auditoria?.results || []
   const red = metricas.red || {}

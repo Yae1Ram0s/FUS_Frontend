@@ -23,7 +23,7 @@ const TIPO_POR_DEFECTO = { label: 'Respuesta', clase: 'fc-tag-verde' }
 function tipoDeRespuesta(respuesta) {
   if (respuesta.tipo) return TIPO_SEGUIMIENTO[respuesta.tipo] || TIPO_POR_DEFECTO
   const texto = respuesta.descripcionActividad || ''
-  if (texto.startsWith('Rechazado por el Particular:')) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
+  if (texto.startsWith('Rechazado por ')) return { label: 'Rechazo', clase: 'fc-tag-rojo' }
   if (texto === 'Concluido por el Particular.') return { label: 'Concluido', clase: 'fc-tag-verde' }
   if (texto.startsWith('Atendido:')) return { label: 'Atendido', clase: 'fc-tag-azul' }
   return TIPO_POR_DEFECTO
@@ -88,7 +88,7 @@ export default function DocumentoRespuestasModal({
     try {
       const { data } = await api.post(`/turnados/${turnado.id}/${accion}/`, datos)
       if (borradorKey) sessionStorage.removeItem(borradorKey)
-      onValidado?.(data.estatusParticular)
+      onValidado?.(data)
     } catch (err) {
       setError(mensajeErrorConexion(err, 'No se pudo completar la acción. Intenta nuevamente.'))
       setEnviando(false)

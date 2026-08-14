@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
@@ -9,7 +10,6 @@ import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { useAsyncResource } from '../hooks/useAsyncResource'
 import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './DashboardROL1.css'
 import './Reportes.css'
@@ -119,6 +119,10 @@ const TOOLTIP_STYLE = {
 }
 
 const hoy = new Date()
+// Referencia estable (no un literal en cada render) para que el useEffect de
+// abajo, que depende de la identidad de `opciones`, no se dispare de más
+// mientras la carga real todavía no llega.
+const OPCIONES_VACIAS = { secciones: [], unidades: [], responsables: [] }
 
 function mesAnterior(valorMesInput) {
   const [anio, mes] = valorMesInput.split('-').map(Number)
@@ -323,23 +327,27 @@ export default function Reportes() {
     ...(tipoPeriodo === 'Mes' && compararCon ? { comparar_con: compararCon } : {}),
   }
 
-  const cargarOpciones = useCallback(({ signal }) => api.get('/reportes/opciones/', { signal }).then(r => r.data), [])
   const seleccionarTodo = useCallback(resultado => setSeleccion(prev => (prev.length ? prev : resultado.secciones.map(s => s.id))), [])
-  const { data: opciones } = useAsyncResource(cargarOpciones, {
-    initialData: { secciones: [], unidades: [], responsables: [] },
-    onSuccess: seleccionarTodo,
+  const { data: opciones = OPCIONES_VACIAS } = useQuery({
+    queryKey: ['reportesOpciones'],
+    queryFn: ({ signal }) => api.get('/reportes/opciones/', { signal }).then(r => r.data),
+  })
+  // useQuery (TanStack Query v5) ya no tiene onSuccess — se reemplaza con un
+  // efecto sobre la identidad de `opciones`, que solo cambia cuando llega una
+  // carga real (ver OPCIONES_VACIAS arriba). `seleccionarTodo` ya es
+  // idempotente (no hace nada si `seleccion` ya tiene contenido).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reemplaza el onSuccess ya removido de useQuery en v5; seleccionarTodo es idempotente
+  useEffect(() => { seleccionarTodo(opciones) }, [opciones, seleccionarTodo])
+
+  const { data, isFetching: loading, error, refetch: reload } = useQuery({
+    queryKey: ['reportesResumen', aplicados],
+    queryFn: ({ signal }) => api.get('/reportes/resumen/', { params: aplicados, signal }).then(r => r.data),
   })
 
-  // `aplicados` es un objeto nuevo cada render (se arma con spreads arriba) —
-  // se memoiza `cargar` comparando por contenido (aplicadosKey) en vez de
-  // por identidad, para no relanzar la petición en cada render sin cambios reales.
-  const aplicadosKey = JSON.stringify(aplicados)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- ver comentario arriba: se depende de `aplicadosKey`, no de `aplicados`, a propósito
-  const cargar = useCallback(({ signal }) => api.get('/reportes/resumen/', { params: aplicados, signal }).then(r => r.data), [aplicadosKey])
-  const { data, loading, error, reload } = useAsyncResource(cargar)
-
-  const cargarGuardados = useCallback(({ signal }) => api.get('/reportes/guardados/', { signal }).then(r => r.data), [])
-  const { data: guardados, reload: recargarGuardados } = useAsyncResource(cargarGuardados, { initialData: [] })
+  const { data: guardados = [], refetch: recargarGuardados } = useQuery({
+    queryKey: ['reportesGuardados'],
+    queryFn: ({ signal }) => api.get('/reportes/guardados/', { signal }).then(r => r.data),
+  })
 
   // En vivo: cualquier notificación ligada a un FUS recalcula el reporte —
   // mismo patrón que los dashboards (ver DashboardROL1.jsx).

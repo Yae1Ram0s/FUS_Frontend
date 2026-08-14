@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import AppLayout from '../../../components/AppLayout'
 import Spinner from '../../../components/Spinner'
 import EstadoServicio from '../components/EstadoServicio'
 import GraficaLatenciaBaseDatos from '../components/GraficaLatenciaBaseDatos'
 import useSaludSistema from '../hooks/useSaludSistema'
-import { useAsyncResource } from '../../../hooks/useAsyncResource'
-import { mapearSalud, mensajeErrorAdmin, obtenerHistorialSalud } from '../api/adminApi'
+import useHistorialSalud from '../hooks/useHistorialSalud'
+import { mapearSalud, mensajeErrorAdmin } from '../api/adminApi'
 import '../styles/SystemAdmin.css'
 
 export default function AdminSalud() {
@@ -13,8 +13,7 @@ export default function AdminSalud() {
   const [comprobando, setComprobando] = useState(false)
   const servicios = mapearSalud(data)
 
-  const historialFetcher = useCallback(({ signal }) => obtenerHistorialSalud({ dias: 14 }, { signal }), [])
-  const { data: historial } = useAsyncResource(historialFetcher, { initialData: [], maxAutoRetries: 0 })
+  const { data: historial } = useHistorialSalud(14)
   const entorno = data.entorno
     ? `${data.entorno.sistema || '—'} · Python ${data.entorno.python || '—'}${data.entorno.debug ? ' · DEBUG' : ''}`
     : 'Sin comprobar'
