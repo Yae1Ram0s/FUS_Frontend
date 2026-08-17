@@ -5,8 +5,14 @@
 .dash-bg {
   position: relative;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Evita que el desplazamiento elástico de Safari despegue el contenido
+     del encabezado y deje ver una franja vacía al llegar al inicio. */
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
   background-color: #ffffff;
   /* Overlay blanco al 86% sobre la pleca: patrón visible ~14%, igual que ConsultarFUS/SolicitudesTurnadas */
   background-image:
@@ -529,6 +535,14 @@
 .kpi2-card {
   position: relative;
   overflow: hidden;
+  /* Safari/iOS puede componer filter + backdrop-filter después del recorte
+     de border-radius. Esta máscara fuerza el contorno redondeado en la capa
+     WebKit y evita que el color de .kpi2-glow escape por las esquinas. */
+  isolation: isolate;
+  clip-path: inset(0 round var(--dash2-radius-lg));
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  -webkit-mask-repeat: no-repeat;
+  backface-visibility: hidden;
   background: var(--dash2-card-bg);
   backdrop-filter: saturate(220%) blur(40px);
   -webkit-backdrop-filter: saturate(220%) blur(40px);
@@ -733,14 +747,59 @@
 }
 
 /* "Próximo FUS por atender" — tarjeta destacada, tinte rosado translúcido */
-.proximo-card { position: relative; background: linear-gradient(160deg, rgba(253, 241, 240, 0.85), rgba(251, 230, 228, 0.75)); }
+.proximo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.72), transparent 40%),
+    linear-gradient(155deg, rgba(255, 249, 248, 0.92), rgba(249, 228, 225, 0.80));
+}
+.proximo-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.proximo-heading-icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #8d3b3b;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(141, 59, 59, 0.08), 0 7px 18px rgba(90, 47, 45, 0.08);
+}
+.proximo-heading-icon svg { width: 19px; height: 19px; }
+.proximo-heading-copy { min-width: 0; }
+.proximo-title { margin-bottom: 2px; color: #1d1d1f; font-size: 16px; font-weight: 750; letter-spacing: -0.015em; }
+.proximo-subtitle { margin: 0; color: #7b7474; font-size: 12px; }
+.proximo-folio-block { flex: 1; min-width: 0; }
+.proximo-folio-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #8a7e7d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
 /* El badge de prioridad ya no comparte fila con el folio (justify-content
    space-between chocaba con folios largos, ej. "ANAM/PARTICULAR/FUS/0044/2026")
    — vive aparte, anclado a la esquina superior derecha de la tarjeta
    (.proximo-badge, position:absolute); este padding-right solo reserva el
    espacio para que el folio no quede debajo de él. */
-.proximo-top { display: flex; align-items: center; margin-bottom: 16px; padding-right: 128px; }
-.proximo-folio { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.proximo-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 15px 16px;
+  border: 1px solid rgba(117, 75, 72, 0.10);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.66);
+}
+.proximo-folio { display: block; max-width: 100%; font-size: 17px; font-weight: 800; line-height: 1.35; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .proximo-folio-link {
   appearance: none;
   border: 0;
@@ -762,22 +821,41 @@
   border-radius: 4px;
 }
 .proximo-badge {
-  position: absolute;
-  top: 24px;
-  right: 24px;
+  position: static;
+  flex: 0 0 auto;
   display: inline-flex; align-items: center; gap: 5px;
   background: #ffffff; color: #a32d2d; font-size: 11.5px; font-weight: 700;
   padding: 5px 12px; border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(163, 45, 45, 0.20);
+  border: 1px solid rgba(163, 45, 45, 0.12);
+  box-shadow: 0 4px 14px rgba(163, 45, 45, 0.12);
   z-index: 1;
 }
-.proximo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-.proximo-l { font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
-.proximo-v { font-size: 13.5px; font-weight: 700; color: #1d1d1f; display: flex; align-items: center; gap: 5px; }
+.proximo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(165px, 0.65fr);
+  grid-template-areas:
+    "unidad tiempo"
+    "asunto asunto";
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.proximo-field {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(117, 75, 72, 0.08);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.50);
+}
+.proximo-field-unidad { grid-area: unidad; }
+.proximo-field-asunto { grid-area: asunto; }
+.proximo-field-tiempo { grid-area: tiempo; }
+.proximo-field-tiempo .proximo-v { color: #8d3434; }
+.proximo-l { font-size: 10px; font-weight: 700; color: #8a7e7d; text-transform: uppercase; letter-spacing: 0.065em; margin-bottom: 4px; }
+.proximo-v { font-size: 13px; line-height: 1.42; font-weight: 650; color: #272324; display: flex; align-items: flex-start; gap: 5px; overflow-wrap: anywhere; }
 .proximo-v svg { flex-shrink: 0; width: 14px; height: 14px; }
 .proximo-btn {
   width: 100%; border: none; background: #1f4a3b; color: #ffffff;
-  font: inherit; font-size: 14px; font-weight: 700; padding: 13px; border-radius: 12px;
+  margin-top: auto; font: inherit; font-size: 14px; font-weight: 700; padding: 13px; border-radius: 14px;
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: background 150ms ease;
 }
@@ -795,17 +873,23 @@
   /* KPI row → carrusel horizontal con snap, en vez de grid */
   .kpi2-row {
     display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     gap: 10px;
-    padding-bottom: 4px;
+    padding: 1px 1px 5px;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
   .kpi2-row::-webkit-scrollbar { display: none; }
   .kpi2-card {
     flex: 0 0 118px;
     scroll-snap-align: start;
+    clip-path: inset(0 round 18px);
     padding: 13px;
   }
   .kpi2-value { font-size: 22px; }
@@ -882,4 +966,129 @@
   .kpi2-card { flex-basis: 92px; padding: 10px; }
   .kpi2-value { font-size: 17px; }
 
+}
+
+/* Tarjeta prioritaria de ROL2: estructura compacta y legible en móvil. */
+@media (max-width: 768px) {
+  .dash2-card.proximo-card {
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.78), transparent 42%),
+      linear-gradient(155deg, rgba(255, 250, 249, 0.94), rgba(250, 231, 228, 0.82));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 14px 34px rgba(94, 54, 52, 0.10);
+  }
+
+  .proximo-heading {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 15px;
+  }
+
+  .proximo-heading-icon {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    color: #8d3b3b;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(141, 59, 59, 0.08), 0 6px 16px rgba(90, 47, 45, 0.08);
+  }
+
+  .proximo-heading-icon svg { width: 18px; height: 18px; }
+  .proximo-heading-copy { min-width: 0; }
+  .proximo-title { margin: 0 0 2px; color: #1d1d1f; font-size: 15px; font-weight: 750; letter-spacing: -0.015em; }
+  .proximo-subtitle { color: #7b7474; font-size: 11.5px; }
+
+  .proximo-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 13px 14px;
+    border: 1px solid rgba(117, 75, 72, 0.10);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.68);
+  }
+
+  .proximo-folio-block { flex: 1; }
+  .proximo-folio-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #8a7e7d;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .proximo-folio {
+    display: block;
+    max-width: 100%;
+    color: #252122;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .proximo-badge {
+    position: static;
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    font-size: 9.5px;
+    box-shadow: none;
+    border: 1px solid rgba(163, 45, 45, 0.13);
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .proximo-badge svg { width: 11px; height: 11px; }
+
+  .proximo-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(108px, 0.72fr);
+    grid-template-areas:
+      "unidad tiempo"
+      "asunto asunto";
+    gap: 8px;
+    margin-bottom: 13px;
+  }
+
+  .proximo-field {
+    padding: 10px 11px;
+    border: 1px solid rgba(117, 75, 72, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.52);
+  }
+  .proximo-field-unidad { grid-area: unidad; }
+  .proximo-field-asunto { grid-area: asunto; }
+  .proximo-field-tiempo { grid-area: tiempo; }
+  .proximo-field-tiempo .proximo-v { color: #8d3434; }
+
+  .proximo-l { margin-bottom: 4px; color: #8a7e7d; font-size: 9px; font-weight: 700; letter-spacing: 0.065em; }
+  .proximo-v { align-items: flex-start; color: #2b2828; font-size: 11.5px; line-height: 1.38; overflow-wrap: anywhere; }
+  .proximo-v svg { margin-top: 1px; }
+
+  .proximo-btn {
+    min-height: 44px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #245b4c, #173f34);
+    font-size: 12.5px;
+    box-shadow: 0 8px 18px rgba(23, 63, 52, 0.18);
+  }
+}
+
+@media (max-width: 360px) {
+  .dash2-card.proximo-card { padding: 15px; border-radius: 21px; }
+  .proximo-top { padding: 11px 12px; }
+  .proximo-grid { grid-template-columns: minmax(0, 1fr) 104px; }
+  .proximo-field { padding: 9px 10px; }
 }

@@ -6,12 +6,14 @@
   display: flex;
   height: 100%;
   overflow: hidden;
-  background-color: rgba(79, 119, 109, 0.9);
-  background-image: url('../assets/pleca.png');
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.86)),
+    url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
-  background-blend-mode: multiply;
+  background-blend-mode: normal, multiply;
 }
 
 /* ── Modo dashboard: ocultar panel izquierdo (PC y móvil) ──
@@ -38,6 +40,7 @@
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   border-right: 1px solid rgba(195, 212, 207, 0.20);
+  border-radius: 0 24px 24px 0;
   box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25), 0 20px 45px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   margin-left: -20px;
@@ -55,6 +58,14 @@
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.st-left .panel-header-left {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .st-left .panel-toggle {
@@ -95,7 +106,26 @@
    toggle de móvil (lista/detalle en pantalla completa) no se toca. Mismo
    criterio que ya usa ConsultarFUS (ROL1). */
 @media (min-width: 769px) {
-  .st-left:not(.panel-cerrado) .panel-toggle { display: none; }
+  .st-left,
+  .st-left.panel-cerrado {
+    width: 530px;
+    margin-left: -20px;
+    padding-left: 20px;
+    transition: none;
+  }
+
+  .st-left .panel-toggle { display: none; }
+
+  .st-left.panel-cerrado .panel-header {
+    justify-content: flex-start;
+    padding: 16px 16px 12px;
+  }
+
+  .st-left .panel-content-oculto {
+    opacity: 1;
+    pointer-events: auto;
+    transition: none;
+  }
 }
 
 .panel-content {
@@ -148,6 +178,7 @@
   box-sizing: border-box;
   transition: all 200ms ease-in-out;
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .st-left .left-search input::placeholder { color: rgba(255, 255, 255, 0.45); }
@@ -227,6 +258,52 @@
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
+}
+
+@media (min-width: 769px) {
+  .st-left .left-search { padding: 12px 7px 8px; }
+  .st-left .search-icon-svg {
+    left: 20px;
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 255, 255, 0.84);
+    filter: drop-shadow(0 1px 2px rgba(8, 35, 28, 0.45));
+  }
+  .st-left .left-search input {
+    min-height: 43px;
+    padding: 10px 14px 10px 42px;
+    border-color: rgba(220, 232, 228, 0.32);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .st-left .left-search input::placeholder { color: rgba(255, 255, 255, 0.62); }
+
+  .st-left .left-filtros {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 7px;
+    padding: 5px 7px 15px;
+  }
+  .st-left .filtro-chip {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 13px;
+    letter-spacing: 0.05em;
+  }
+  .st-left .left-filtros > .filtro-chip:first-child { grid-column: span 2; order: 1; }
+  .st-left .filtro-chip-recibido { grid-column: span 2; order: 1; }
+  .st-left .filtro-chip-en-seguimiento { grid-column: span 3; order: 1; }
+  .st-left .filtro-chip-concluido { grid-column: span 3; order: 1; }
+  .st-left .filtro-chip-vencido { grid-column: span 2; order: 1; }
+  .st-left .filtro-chip-pendiente-validacion { grid-column: span 4; order: 2; }
+  .st-left .filtro-chip-rechazado,
+  .st-left .filtro-chip-porvencer { grid-column: span 3; order: 2; }
+  .st-left .prioridad-filtro-wrap { grid-column: span 2; order: 2; }
+  .st-left .prioridad-filtro-wrap,
+  .st-left .prioridad-filtro-wrap .filtro-chip { width: 100%; }
 }
 
 /* Lista */
@@ -357,7 +434,10 @@
   animation: st-card-notif-highlight 1.6s cubic-bezier(0.22,1,0.36,1) forwards;
 }
 .fus-card-top      { position: relative; min-width: 0; padding-right: 150px; }
-.st-left .fus-folio         { font-size: 0.86rem; font-weight: 700; color: #ffffff !important; word-break: break-all; overflow-wrap: anywhere; }
+/* Mismo criterio que ConsultarFUS.css (.cfus-left .fus-folio): sin
+   word-break:break-all, para que el corte de línea respete los "/" y no
+   parta el año (ej. "2026" en "202" + "6"). */
+.st-left .fus-folio         { font-size: 0.86rem; font-weight: 700; color: #ffffff !important; overflow-wrap: anywhere; }
 .fus-card-top > span { position: absolute; top: 0; right: 0; }
 .fus-card-top-actions { display: inline-flex; align-items: center; gap: 6px; }
 .fus-card-badges      { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
@@ -1465,7 +1545,8 @@
     padding-right: 0 !important;
     max-height: 52vh;
     border-right: none;
-    border-bottom: 1px solid var(--border-default);
+    border-radius: 24px;
+    border-bottom: 1px solid #bea882;
     flex-shrink: 0;
     overflow: hidden;
     transition: max-height 220ms cubic-bezier(0.4,0,0.2,1) !important;
@@ -1503,7 +1584,7 @@
     max-height: 52px !important;
     min-height: 52px;
   }
-  .st-inner.has-detail .st-left .panel-title,
+  .st-inner.has-detail .st-left .panel-header-left,
   .st-inner.has-detail .st-left .panel-content {
     display: none;
   }
@@ -1530,8 +1611,44 @@
     width: 100% !important;
     max-height: 52px !important;
     min-height: 52px;
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid #bea882;
     transition: max-height 220ms 100ms cubic-bezier(0.4,0,0.2,1) !important;
+  }
+
+  .st-left.panel-cerrado .panel-header-left { display: none; }
+
+  .st-left .panel-toggle-icon-closed,
+  .st-left .panel-toggle-icon-open {
+    transform-origin: center;
+  }
+
+  .st-left .panel-toggle-icon-closed {
+    animation: st-arrow-settle-closed 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .st-left .panel-toggle-icon-open {
+    animation: st-arrow-settle-open 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes st-arrow-settle-closed {
+    0%   { transform: rotate(0deg); }
+    60%  { transform: rotate(-105deg); }
+    100% { transform: rotate(-90deg); }
+  }
+
+  @keyframes st-arrow-settle-open {
+    0%   { transform: rotate(0deg); }
+    60%  { transform: rotate(-105deg); }
+    100% { transform: rotate(-90deg); }
+  }
+
+  .st-left:not(.panel-cerrado) .panel-content {
+    animation: st-fade-down 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes st-fade-down {
+    from { opacity: 0; transform: translateY(-14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .st-right {

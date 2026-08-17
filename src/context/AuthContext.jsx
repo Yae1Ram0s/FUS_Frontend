@@ -156,6 +156,18 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
+  const completarCambioContrasena = (data = {}) => {
+    const usuarioActualizado = {
+      ...userRef.current,
+      requiereCambioContrasena: false,
+    }
+    if (data.access) setAccessToken(data.access)
+    localStorage.setItem('scs_user', JSON.stringify(usuarioActualizado))
+    marcarActividad()
+    setUser(usuarioActualizado)
+    return usuarioActualizado
+  }
+
   // `loggingOut`/`loggingIn` viven aquí (no en Header/Login) y el Spinner se
   // pinta junto a {children} — no dentro de una página — porque en cuanto
   // `setUser(...)` se aplica, PrivateRoute/Login redirigen y desmontan esa
@@ -171,7 +183,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithTokens, logout, accessToken, cargando }}>
+    <AuthContext.Provider value={{ user, login, loginWithTokens, completarCambioContrasena, logout, accessToken, cargando }}>
       {loggingOut && <Spinner label="Cerrando sesión…" />}
       {loggingIn && <Spinner label="Iniciando sesión…" />}
       {children}

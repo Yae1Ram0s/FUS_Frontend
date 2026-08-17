@@ -355,7 +355,6 @@ export default function CalendarioActividades() {
   const [usuarios, setUsuarios] = useState([])
   const [modal, setModal]       = useState(null)
   const [toast, setToast]       = useState(null)
-  const [panelAbierto, setPanelAbierto] = useState(() => window.innerWidth > 768)
   const [compacto, setCompacto] = useState(() => window.innerWidth <= 768)
   const [ultraCompacto, setUltraCompacto] = useState(() => window.innerWidth < 640)
   const { user } = useAuth()
@@ -542,17 +541,12 @@ export default function CalendarioActividades() {
     <AppLayout>
       <div className="cal-page">
         {/* ── Sidebar propio del calendario ── */}
-        <div className={`cal-sidebar${!panelAbierto ? ' panel-cerrado' : ''}`}>
+        <div className={`cal-sidebar${compacto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
-            {panelAbierto && <div className="panel-header-left"><h3 className="panel-title">Calendario</h3></div>}
-            <button className="panel-toggle" onClick={() => setPanelAbierto(p => !p)} title={panelAbierto ? 'Cerrar panel' : 'Abrir panel'}>
-              <svg className={panelAbierto ? 'panel-toggle-icon-open' : 'panel-toggle-icon-closed'} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                {panelAbierto ? <polyline points="15 18 9 12 15 6" /> : <polyline points="9 18 15 12 9 6" />}
-              </svg>
-            </button>
+            <div className="panel-header-left"><h3 className="panel-title">Calendario</h3></div>
           </div>
 
-          {panelAbierto && (
+          {!compacto && (
             <div className="cal-sidebar-content">
               <button type="button" className="cal-btn-nueva-sidebar" onClick={() => abrirCrear(current)}>
                 <span className="cal-btn-nueva-icon">+</span>

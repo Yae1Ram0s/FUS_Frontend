@@ -77,7 +77,7 @@ function PersonaFila({ turnado, user, onCambio }) {
 
   return (
     <div className="pyr-fila">
-      <div className="pyr-fila-cabecera">
+      <div className={`pyr-fila-cabecera${estatusVisible === 'Pendiente_validacion' ? ' pyr-fila-cabecera-pendiente' : ''}`}>
         <button
           type="button"
           className="pyr-fila-toggle"
@@ -91,7 +91,13 @@ function PersonaFila({ turnado, user, onCambio }) {
           </div>
         </button>
 
-        {estatusVisible && <Badge estatus={estatusVisible} theme="light" />}
+        {estatusVisible && (
+          <Badge
+            estatus={estatusVisible}
+            theme="light"
+            className={estatusVisible === 'Pendiente_validacion' ? 'pyr-estatus-pendiente' : ''}
+          />
+        )}
 
         <button type="button" className="pyr-btn-respuestas" onClick={() => setModalAbierto(true)}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -115,22 +121,22 @@ function PersonaFila({ turnado, user, onCambio }) {
 
       {expandido && (
         <div className="pyr-expand">
-          <div className="dt-turnado-pop-grid">
-            <DatoPersona label="Cargo / área" value={destinatario.area || 'Sin asignar'} muted={!destinatario.area} />
-            <DatoPersona label="Fecha de asignación" value={fecha} />
+          <div className="dt-turnado-pop-grid pyr-detalles-grid">
+            <DatoPersona className="pyr-detalle-fecha" label="Fecha de asignación" value={fecha} />
+            {turnado.idMedio?.nombreMedio && (
+              <DatoPersona
+                className="pyr-detalle-medio"
+                label="Medio de envío"
+                value={formatMedioRecepcion(turnado.idMedio, turnado.medioEspecificacion)}
+              />
+            )}
+            {destinatario.email && <DatoPersona className="pyr-detalle-correo" label="Correo institucional" value={destinatario.email} />}
           </div>
-          {destinatario.email && <DatoPersona label="Correo institucional" value={destinatario.email} />}
-          {(turnado.idMedio?.nombreMedio || turnado.solicitudTexto) && (
-            <>
-              <div className="dt-turnado-pop-divider" />
-              {turnado.idMedio?.nombreMedio && <DatoPersona label="Medio de envío" value={formatMedioRecepcion(turnado.idMedio, turnado.medioEspecificacion)} />}
-              {turnado.solicitudTexto && (
-                <div className="dt-turnado-pop-row">
-                  <span className="dt-turnado-pop-label">Texto de la solicitud</span>
-                  <p className="dt-turnado-pop-texto">{turnado.solicitudTexto}</p>
-                </div>
-              )}
-            </>
+          {turnado.solicitudTexto && (
+            <div className="dt-turnado-pop-row pyr-detalle-solicitud">
+              <span className="dt-turnado-pop-label">Texto de la solicitud</span>
+              <p className="dt-turnado-pop-texto">{turnado.solicitudTexto}</p>
+            </div>
           )}
         </div>
       )}
@@ -152,9 +158,9 @@ function PersonaFila({ turnado, user, onCambio }) {
   )
 }
 
-function DatoPersona({ label, value, muted = false }) {
+function DatoPersona({ label, value, muted = false, className = '' }) {
   return (
-    <div className="dt-turnado-pop-row">
+    <div className={`dt-turnado-pop-row${className ? ` ${className}` : ''}`}>
       <span className="dt-turnado-pop-label">{label}</span>
       <span className={`dt-turnado-pop-value${muted ? ' dt-turnado-pop-value-muted' : ''}`}>{value}</span>
     </div>

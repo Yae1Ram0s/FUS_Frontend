@@ -7,6 +7,7 @@ export default function PrivateRoute({ roles }) {
   const { user, cargando } = useAuth()
   if (cargando) return <Spinner label="Restaurando sesión…" />
   if (!user) return <Navigate to="/login" replace />
+  if (user.requiereCambioContrasena) return <Navigate to="/login" replace />
   if (roles && !roles.includes(user.rol)) {
     return <Navigate to={rutaInicioPorRol(user.rol)} replace />
   }

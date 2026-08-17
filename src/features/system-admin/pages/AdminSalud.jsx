@@ -13,7 +13,7 @@ export default function AdminSalud() {
   const [comprobando, setComprobando] = useState(false)
   const servicios = mapearSalud(data)
 
-  const { data: historial } = useHistorialSalud(14)
+  const { data: historial, loading: cargandoHistorial } = useHistorialSalud(14)
   const entorno = data.entorno
     ? `${data.entorno.sistema || '—'} · Python ${data.entorno.python || '—'}${data.entorno.debug ? ' · DEBUG' : ''}`
     : 'Sin comprobar'
@@ -61,7 +61,9 @@ export default function AdminSalud() {
         <section className="sa-panel">
           <h2>Latencia de base de datos</h2>
           <p className="dash-subtitle">Últimos 14 días — se llena con `python manage.py registrar_salud_sistema`, agendado periódicamente</p>
-          <GraficaLatenciaBaseDatos historial={historial} />
+          {cargandoHistorial && !historial.length
+            ? <Spinner overlay={false} />
+            : <GraficaLatenciaBaseDatos historial={historial} />}
         </section>
       </div>
     </AppLayout>

@@ -113,6 +113,7 @@
   border-radius: 15px;
   box-shadow: 0 15px 34px rgba(10, 45, 36, .2);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .turnar-results button {
@@ -277,6 +278,7 @@
   border-top: 1px solid rgba(31, 86, 71, .12);
   box-shadow: 0 -8px 22px rgba(10, 45, 36, .05);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Botones compartidos (.com-btn-ghost/.com-btn-verde, definidos en

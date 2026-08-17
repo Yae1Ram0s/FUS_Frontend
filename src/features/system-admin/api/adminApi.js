@@ -30,7 +30,23 @@ export function mapearSalud(salud = {}) {
     servicios.push({ nombre: 'Correo', estado: salud.correo.configurado ? 'operativo' : 'advertencia', detalle: salud.correo.backend })
   }
   if (salud.websocket) {
-    servicios.push({ nombre: 'WebSocket', estado: salud.websocket.configurado ? 'operativo' : 'advertencia', detalle: salud.websocket.backend })
+    const configurado = salud.websocket.configurado
+    servicios.push({
+      nombre: 'WebSocket',
+      estado: configurado ? 'operativo' : 'advertencia',
+      detalle: salud.websocket.backend,
+      codigo: salud.websocket.codigo,
+      diagnostico: salud.websocket.diagnostico || (!configurado
+        ? 'Las notificaciones en tiempo real usan memoria local. Pueden funcionar en un solo proceso, pero no se comparten entre varios procesos.'
+        : undefined),
+      impacto: salud.websocket.impacto || (!configurado
+        ? 'En producción, algunos usuarios podrían no recibir actualizaciones en vivo cuando el backend utiliza más de un proceso.'
+        : undefined),
+      recomendacion: salud.websocket.recomendacion || (!configurado
+        ? 'Configura Redis como capa de canales compartida antes de operar con varios procesos.'
+        : undefined),
+      comprobaciones: salud.websocket.comprobaciones,
+    })
   }
   if (salud.almacenamiento) {
     servicios.push({ nombre: 'Almacenamiento', estado: salud.almacenamiento.ok ? 'operativo' : 'error', detalle: salud.almacenamiento.tipo })

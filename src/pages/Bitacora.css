@@ -84,6 +84,7 @@
   cursor: pointer;
   transition: background 150ms, box-shadow 150ms, color 150ms;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow:
     5px  5px  14px rgba(35,91,78,0.10),
    -3px -3px  10px rgba(255,255,255,0.70);
@@ -1069,6 +1070,7 @@
   cursor: pointer;
   transition: background 150ms, box-shadow 150ms, color 150ms;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow:
     5px  5px  14px rgba(35, 91, 78, 0.10),
    -3px -3px  10px rgba(190, 208, 203, 0.70);
@@ -1457,6 +1459,11 @@
   .bita-filtro-grupo { padding: 10px; }
   .bita-filtro-opciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bita-filtro-opciones .bita-pildora { width: 100%; padding-inline: 8px; }
+  /* Prioridad tiene 3 pastillas (Alta/Media/Baja) — con la grilla genérica
+     de 2 columnas la tercera quedaba sola en su propia fila; en una sola
+     línea entran bien, son palabras cortas como las de Temporalidad. */
+  .bita-filtro-prioridad .bita-filtro-opciones { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bita-filtro-prioridad .bita-pildora { padding-inline: 4px; font-size: .72rem; }
   .bita-filtro-grupo .bita-fechas { grid-template-columns: minmax(0, 1fr); }
 
   .bita-chips:not(.bita-chips-compacta) {
@@ -1724,7 +1731,10 @@
   .bita-popover-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 119;
+    /* Por encima de la barra inferior (BottomNav, z-index:1000) — antes se
+       quedaba detrás y la barra tapaba parte del menú/backdrop, mismo
+       criterio que ya usa el catálogo de Reportes (.rep-catalogo-overlay). */
+    z-index: 1000;
     display: block;
     width: 100%;
     height: 100%;
@@ -1741,7 +1751,7 @@
   .bita-columnas-menu {
     position: fixed !important;
     inset: auto 10px max(10px, env(safe-area-inset-bottom, 0px)) 10px !important;
-    z-index: 130;
+    z-index: 1001;
     width: auto !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -2410,11 +2420,12 @@
     white-space: nowrap;
   }
 
-  /* Los paneles inferiores quedan por encima de la navegación móvil. */
+  /* Ya no se deja hueco para la barra inferior (z-index de arriba la tapa
+     por completo, igual que el catálogo de Reportes) — aquí solo se
+     reduce el alto máximo para pantallas angostas. */
   .bita-unidad-popover,
   .bita-resp-popover,
   .bita-columnas-menu {
-    inset: auto 10px calc(90px + env(safe-area-inset-bottom, 0px)) 10px !important;
     max-height: min(58vh, 430px);
   }
 }
@@ -2510,5 +2521,78 @@
   color: #9a5817 !important;
   background: #fff0dc !important;
   border-color: #f2d3ac !important;
+}
+
+/* Distribución móvil final del panel: pares funcionales en la misma fila.
+   Se declara al final para consolidar las reglas responsivas históricas de
+   esta hoja sin alterar el diseño de escritorio. */
+@media (max-width: 600px) {
+  .bita-filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    column-gap: 10px;
+    row-gap: 14px;
+  }
+
+  .bita-filtro-periodo,
+  .bita-filtro-periodo-solo,
+  .bita-filtros-separador,
+  .bita-filtro-prioridad {
+    grid-column: 1 / -1;
+  }
+
+  .bita-filtro-unidad,
+  .bita-filtro-responsable,
+  .bita-filtro-estatus,
+  .bita-filtro-temporalidad {
+    grid-column: span 1;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .bita-filtro-grupo,
+  .bita-unidad-pill-wrap,
+  .bita-filtro-grupo .bita-pildora-selector {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .bita-filtro-titulo {
+    min-height: 22px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: flex-end;
+    font-size: clamp(.55rem, 2.25vw, .64rem);
+    line-height: 1.1;
+  }
+
+  .bita-filtro-grupo .bita-pildora-selector {
+    padding-inline: 10px;
+    overflow: hidden;
+    font-size: clamp(.67rem, 2.7vw, .76rem);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .bita-filtro-temporalidad .bita-filtro-opciones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    width: 100%;
+  }
+
+  .bita-filtro-temporalidad .bita-pildora {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: clamp(.58rem, 2.35vw, .68rem);
+    white-space: nowrap;
+  }
+
+  .bita-filtros-separador {
+    margin-block: 0;
+  }
 }
 

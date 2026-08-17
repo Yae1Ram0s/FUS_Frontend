@@ -15,9 +15,14 @@ const DOMINIO_INSTITUCIONAL = '@anam.gob.mx'
 const REENVIO_COOLDOWN_MS = 2 * 60 * 1000
 const REENVIO_STORAGE_KEY = 'scs_otp_reenvio'
 
+const usuarioGuardado = () => {
+  try { return JSON.parse(localStorage.getItem('scs_user') || 'null') }
+  catch { return null }
+}
+
 export default function Login() {
-  const [step,        setStep]        = useState(STEP_EMAIL)
-  const [email,       setEmail]       = useState(() => localStorage.getItem('scs_email') || '')
+  const [step,        setStep]        = useState(() => usuarioGuardado()?.requiereCambioContrasena ? STEP_NEWPASS : STEP_EMAIL)
+  const [email,       setEmail]       = useState(() => localStorage.getItem('scs_email') || usuarioGuardado()?.email || '')
   const [password,    setPassword]    = useState('')
   const [otp,         setOtp]         = useState('')
   const [newPass,     setNewPass]     = useState('')
@@ -32,16 +37,17 @@ export default function Login() {
   const [passBloqueadoHasta, setPassBloqueadoHasta] = useState(0)
   const [passBloqueoRestante, setPassBloqueoRestante] = useState(0)
   const [isRecovery,  setIsRecovery]  = useState(false)
+  const [cambioObligatorio, setCambioObligatorio] = useState(() => Boolean(usuarioGuardado()?.requiereCambioContrasena))
   const [recoveryOk,  setRecoveryOk]  = useState(false)
   const [remember,    setRemember]    = useState(() => localStorage.getItem('scs_remember') === 'true')
   const [esMovil,     setEsMovil]     = useState(() => window.matchMedia('(max-width: 768px)').matches)
 
-  const { user, login, loginWithTokens } = useAuth()
+  const { user, login, loginWithTokens, completarCambioContrasena, logout } = useAuth()
   const navigate = useNavigate()
   const { instalado, puedeInstalar, esIOS, instalar } = useInstallPrompt()
 
   useEffect(() => {
-    if (user) navigate(rutaInicioPorRol(user.rol), { replace: true })
+    if (user && !user.requiereCambioContrasena) navigate(rutaInicioPorRol(user.rol), { replace: true })
   }, [user, navigate])
 
   useEffect(() => {
@@ -132,8 +138,9 @@ export default function Login() {
   }
 
   const resetAll = () => {
-    setError(''); setOtp(''); setNewPass(''); setConfirmPass('')
+    setError(''); setOtp(''); setPassword(''); setNewPass(''); setConfirmPass('')
     setIsRecovery(false); setReenvioMsg(''); setRecoveryOk(false)
+    setCambioObligatorio(false)
   }
 
   /* ── Paso 1: verificar correo ── */
@@ -176,6 +183,13 @@ export default function Login() {
       } else {
         localStorage.removeItem('scs_remember')
         localStorage.removeItem('scs_email')
+      }
+      if (u.requiereCambioContrasena) {
+        setCambioObligatorio(true)
+        setNewPass('')
+        setConfirmPass('')
+        setStep(STEP_NEWPASS)
+        return
       }
       redirect(u.rol)
     } catch (err) {
@@ -242,7 +256,22 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      if (isRecovery) {
+      if (cambioObligatorio || user?.requiereCambioContrasena) {
+        if (!password) {
+          setError('Ingresa nuevamente la contraseña temporal.')
+          return
+        }
+        if (password === newPass) {
+          setError('La nueva contraseña debe ser diferente de la contraseña temporal.')
+          return
+        }
+        const { data } = await api.post('/auth/cambiar-contrasena-obligatoria/', {
+          passwordActual: password,
+          passwordNueva: newPass,
+        })
+        const usuarioActualizado = completarCambioContrasena(data)
+        redirect(usuarioActualizado.rol)
+      } else if (isRecovery) {
         await api.post('/auth/restablecer-contrasena/', { email, codigo: otp, password: newPass })
         setRecoveryOk(true)
       } else {
@@ -442,14 +471,32 @@ export default function Login() {
     if (step === STEP_NEWPASS) return (
       <form className={`login-form${isRecovery ? ' login-form-recovery' : ''}`} onSubmit={handleNewPass} noValidate>
         <p className="lf-step-info">
-          {isRecovery ? 'Elige tu nueva contraseña.' : 'Elige una contraseña segura para activar tu cuenta.'}
+          {(cambioObligatorio || user?.requiereCambioContrasena)
+            ? 'Por seguridad, reemplaza la contraseña temporal antes de entrar al sistema.'
+            : isRecovery ? 'Elige tu nueva contraseña.' : 'Elige una contraseña segura para activar tu cuenta.'}
         </p>
         {/* Mismo motivo que en el paso de contraseña: sin un campo de
             usuario en este <form>, el navegador no puede ofrecer guardar
             (o actualizar) la contraseña en su gestor. */}
         <input type="email" name="username" autoComplete="username" value={email} readOnly hidden tabIndex={-1} aria-hidden="true" />
+        {(cambioObligatorio || user?.requiereCambioContrasena) && (
+          <div className="lf-group">
+            <label htmlFor="login-temp-pass">Contraseña temporal</label>
+            <div className="lf-pass-wrap">
+              <input
+                id="login-temp-pass"
+                type={showPass ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                autoFocus={!password}
+              />
+            </div>
+          </div>
+        )}
         <div className="lf-group">
-          <label htmlFor="login-np">{isRecovery ? 'Nueva contraseña' : 'Contraseña'}</label>
+          <label htmlFor="login-np">{(isRecovery || cambioObligatorio || user?.requiereCambioContrasena) ? 'Nueva contraseña' : 'Contraseña'}</label>
           <div className="lf-pass-wrap">
             <input
               id="login-np"
@@ -459,7 +506,7 @@ export default function Login() {
               onChange={e => setNewPass(e.target.value)}
               required
               autoComplete="new-password"
-              autoFocus
+              autoFocus={!(cambioObligatorio || user?.requiereCambioContrasena) || Boolean(password)}
             />
             <button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
               {showPass ? <EyeClose /> : <EyeOpen />}
@@ -481,10 +528,19 @@ export default function Login() {
         {error && <p className="login-error" role="alert">{error}</p>}
         <button className="btn-entrar" type="submit" disabled={loading || !newPass || !confirmPass}>
           {loading
-            ? (isRecovery ? 'Restableciendo…' : 'Creando cuenta…')
-            : (isRecovery ? 'Restablecer contraseña' : 'Crear cuenta y entrar')
+            ? ((isRecovery || cambioObligatorio || user?.requiereCambioContrasena) ? 'Guardando…' : 'Creando cuenta…')
+            : ((cambioObligatorio || user?.requiereCambioContrasena)
+              ? 'Guardar nueva contraseña y entrar'
+              : isRecovery ? 'Restablecer contraseña' : 'Crear cuenta y entrar')
           }
         </button>
+        {(cambioObligatorio || user?.requiereCambioContrasena) && (
+          <div className="lf-actions-row">
+            <button type="button" className="lf-link" onClick={() => logout()}>
+              Usar otra cuenta
+            </button>
+          </div>
+        )}
       </form>
     )
   }
@@ -493,7 +549,9 @@ export default function Login() {
     [STEP_EMAIL]:   '¡Bienvenido/a!',
     [STEP_PASS]:    '¡Bienvenido/a!',
     [STEP_OTP]:     isRecovery ? 'Recuperar contraseña' : 'Verifica tu correo',
-    [STEP_NEWPASS]: isRecovery ? 'Nueva contraseña'     : 'Crea tu contraseña',
+    [STEP_NEWPASS]: (cambioObligatorio || user?.requiereCambioContrasena)
+      ? 'Cambia tu contraseña temporal'
+      : isRecovery ? 'Nueva contraseña' : 'Crea tu contraseña',
   }
 
   const showStepIndicator = (step === STEP_OTP || step === STEP_NEWPASS) && !isRecovery

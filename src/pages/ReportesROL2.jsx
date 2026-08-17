@@ -6,10 +6,10 @@ import {
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import FechaInput from '../components/FechaInput'
+import CatalogoCheckbox from '../components/CatalogoCheckbox'
 import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './DashboardROL1.css'
 import './Reportes.css'
 
@@ -89,6 +89,8 @@ function mesAnterior(valorMesInput) {
   const d = new Date(anio, mes - 2, 1)
   return mesInput(d)
 }
+
+const OPCIONES_VACIAS = { estados: [], prioridades: [] }
 
 const ESTADO_LABELS = {
   Recibido: 'Recibido',
@@ -203,7 +205,7 @@ export default function ReportesROL2() {
   const [compararCon, setCompararCon] = useState(() => mesAnterior(mesInput(hoy)))
   const [personalizado, setPersonalizado] = useState({ fecha_inicio: `${hoy.getFullYear()}-01-01`, fecha_fin: fechaISO(hoy) })
   const [filtrosExtra, setFiltrosExtra] = useState({ estatus: '', prioridad: '' })
-  const [exportando, setExportando] = useState(false)
+  const [exportando, setExportando] = useState('')
 
   const rangoFechas = tipoPeriodo === 'Personalizado'
     ? personalizado
@@ -218,7 +220,7 @@ export default function ReportesROL2() {
     ...(tipoPeriodo === 'Mes' && compararCon ? { comparar_con: compararCon } : {}),
   }
 
-  const { data: opciones = { estados: [] } } = useQuery({
+  const { data: opciones = OPCIONES_VACIAS } = useQuery({
     queryKey: ['reportesTitularOpciones'],
     queryFn: ({ signal }) => api.get('/reportes/titular/opciones/', { signal }).then(r => r.data),
   })
@@ -252,19 +254,19 @@ export default function ReportesROL2() {
     setMesRef(valor)
     setCompararCon(mesAnterior(valor))
   }
-  const actualizarExtra = e => setFiltrosExtra(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  const actualizarExtra = (name, value) => setFiltrosExtra(prev => ({ ...prev, [name]: value }))
 
-  const exportar = async () => {
-    setExportando(true)
+  const exportar = async (formato) => {
+    setExportando(formato)
     try {
-      const response = await api.post('/reportes/titular/exportar/excel/', {}, { params: aplicados, responseType: 'blob' })
+      const response = await api.post(`/reportes/titular/exportar/${formato}/`, {}, { params: aplicados, responseType: 'blob' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(response.data)
-      link.download = 'reporte_titular.xlsx'
+      link.download = `reporte_titular.${formato === 'excel' ? 'xlsx' : formato}`
       link.click()
       URL.revokeObjectURL(link.href)
     } finally {
-      setExportando(false)
+      setExportando('')
     }
   }
 
@@ -315,9 +317,11 @@ export default function ReportesROL2() {
                 </div>
               </div>
               <div className="rep-export">
-                <button type="button" disabled={exportando} onClick={exportar}>
-                  {exportando ? 'Generando…' : 'Descargar Excel'}
-                </button>
+                {['pdf', 'excel'].map(f => (
+                  <button key={f} type="button" disabled={!!exportando} onClick={() => exportar(f)}>
+                    {exportando === f ? 'Generando…' : f.toUpperCase()}
+                  </button>
+                ))}
               </div>
             </header>
 
@@ -345,6 +349,7 @@ export default function ReportesROL2() {
                   </div>
                 </div>
 
+                <div className="rep-filtros-par rep-filtros-par-fechas">
                 {tipoPeriodo === 'Personalizado' ? (
                   <>
                     <label>Desde<FechaInput type="date" value={personalizado.fecha_inicio} onChange={e => setPersonalizado(p => ({ ...p, fecha_inicio: e.target.value }))} /></label>
@@ -357,19 +362,12 @@ export default function ReportesROL2() {
                 {tipoPeriodo === 'Mes' && (
                   <label>Comparar con<input type="month" value={compararCon} onChange={e => setCompararCon(e.target.value)} /></label>
                 )}
+                </div>
 
-                <label>Estado
-                  <select name="estatus" value={filtrosExtra.estatus} onChange={actualizarExtra}>
-                    <option value="">Todos</option>
-                    {opciones.estados.map(e => <option key={e} value={e}>{ESTADO_LABELS[e] || e}</option>)}
-                  </select>
-                </label>
-                <label>Prioridad
-                  <select name="prioridad" value={filtrosExtra.prioridad} onChange={actualizarExtra}>
-                    <option value="">Todas</option>
-                    {PRIORIDAD_NIVELES.map(p => <option key={p.valor}>{p.valor}</option>)}
-                  </select>
-                </label>
+                <div className="rep-filtros-par rep-filtros-par-catalogos rep-filtros-par-estados">
+                  <CatalogoCheckbox className="rep-catalogo-label--estado" label="Estado" options={opciones.estados} value={filtrosExtra.estatus} onChange={value => actualizarExtra('estatus', value)} emptyLabel="Todos" searchable={false} />
+                  <CatalogoCheckbox className="rep-catalogo-label--prioridad" label="Prioridad" options={opciones.prioridades} value={filtrosExtra.prioridad} onChange={value => actualizarExtra('prioridad', value)} emptyLabel="Todas" searchable={false} />
+                </div>
               </div>
             </section>
 

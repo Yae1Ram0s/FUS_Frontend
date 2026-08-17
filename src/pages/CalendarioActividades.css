@@ -4,12 +4,14 @@
   height: 100%;
   overflow: hidden;
   color: #1a2f28;
-  background-color: rgba(79, 119, 109, 0.8);
-  background-image: url('../assets/pleca.png');
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.86)),
+    url('../assets/pleca.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
-  background-blend-mode: multiply;
+  background-blend-mode: normal, multiply;
 }
 
 /* ── Sidebar propio — mismo glassmorphism verde + pleca que ConsultarFUS/SolicitudesTurnadas ── */
@@ -27,6 +29,7 @@
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   border-right: 1px solid rgba(195, 212, 207, 0.20);
+  border-radius: 0 24px 24px 0;
   box-shadow: 6px 0 24px rgba(10, 30, 20, 0.25), 0 20px 45px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -689,6 +692,7 @@ input[type="time"].cal-pill-input {
     padding-left: 0 !important;
     padding-right: 0 !important;
     border-right: none;
+    border-radius: 0;
     border-bottom: 1px solid rgba(195, 212, 207, 0.20);
     max-height: 45vh;
   }
@@ -746,39 +750,91 @@ input[type="time"].cal-pill-input {
     overflow-x: visible;
     gap: 8px;
   }
-  .cal-btn-hoy { padding: 5px 10px; font-size: 11px; }
-  .cal-btn-flecha { width: 26px; height: 26px; font-size: 13px; }
-  .cal-toolbar-titulo { font-size: 14px; margin-left: 2px; }
+  /* Estilo neumórfico suave (Hoy / flechas) tomado del rediseño de calendario móvil */
+  .cal-btn-hoy {
+    padding: 5px 10px;
+    font-size: 11px;
+    border: none;
+    background: linear-gradient(145deg, #fcfbf8, #ece8e0);
+    color: #1a4338;
+    box-shadow: 3px 3px 7px rgba(10, 30, 20, 0.10), -3px -3px 7px rgba(255, 255, 255, 0.9);
+  }
+  .cal-btn-flecha {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    border: none;
+    background: linear-gradient(145deg, #fcfbf8, #ece8e0);
+    color: #235b4e;
+    box-shadow: 2px 2px 5px rgba(10, 30, 20, 0.10), -2px -2px 5px rgba(255, 255, 255, 0.9);
+  }
+  .cal-toolbar-titulo { font-size: 17px; font-weight: 800; letter-spacing: -0.2px; margin-left: 2px; }
 
   .cal-toolbar-nav { width: 100%; }
   .cal-toolbar-right { width: 100%; }
-  .cal-toggle-vista { width: 100%; display: flex; }
-  .cal-toggle-vista button { flex: 1; padding: 7px 9px; font-size: 12px; }
 
-  /* Grilla sin tarjetas: los días flotan, solo líneas horizontales por semana */
-  .cal-grid { gap: 0; grid-template-rows: auto repeat(6, minmax(48px, auto)); }
+  /* Control segmentado tipo "glass pill" */
+  .cal-toggle-vista {
+    width: 100%;
+    display: flex;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 3px rgba(10, 30, 20, 0.10), inset 0 -1px 1px rgba(255, 255, 255, 0.6);
+    padding: 4px;
+    gap: 2px;
+  }
+  .cal-toggle-vista button {
+    flex: 1;
+    padding: 7px 9px;
+    font-size: 12px;
+    border-right: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #1a2f28;
+  }
+  .cal-toggle-vista button.activo {
+    background: linear-gradient(135deg, #1a4338, #235b4e);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(26, 67, 56, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  }
+
+  /* Tarjeta glass: la grilla del mes flota como card sobre el fondo, igual que el resto del rediseño móvil */
+  .cal-grid {
+    gap: 0;
+    grid-template-rows: auto repeat(6, minmax(48px, auto));
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 28px;
+    box-shadow: 0 1px 2px rgba(10, 30, 20, 0.05), 0 24px 48px -16px rgba(30, 50, 45, 0.18);
+    padding: 14px 10px 10px;
+  }
 
   .cal-grid-dia-header {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0;
-    text-transform: none;
-    color: rgba(0, 0, 0, 0.38);
-    padding: 6px 0 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: rgba(35, 91, 78, 0.6);
+    padding: 0 0 10px;
   }
 
   .cal-grid-celda {
     background: transparent;
     box-shadow: none;
-    border-radius: 0;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 4px 2px 6px;
+    border-radius: 12px;
+    border-top: none;
+    padding: 3px 2px 8px;
     align-items: center;
     gap: 3px;
   }
-  .cal-grid-celda:hover { box-shadow: none; background: rgba(35, 91, 78, 0.05); }
+  .cal-grid-celda:hover { box-shadow: none; background: rgba(35, 91, 78, 0.06); }
   .cal-celda-fuera { background: transparent; }
-  .cal-celda-fuera:hover { background: rgba(35, 91, 78, 0.05); }
+  .cal-celda-fuera:hover { background: rgba(35, 91, 78, 0.06); }
   .cal-grid-celda.cell-flash { animation: cal-cell-flash-plano 1000ms ease-out; }
   @keyframes cal-cell-flash-plano {
     0%   { background: rgba(159, 34, 65, 0.14); }
@@ -793,7 +849,12 @@ input[type="time"].cal-pill-input {
     height: 30px;
   }
   /* Hoy: círculo guinda institucional relleno, número en blanco — igual patrón que iOS */
-  .cal-celda-numero-hoy { background: #9F2241; color: #ffffff; font-weight: 600; }
+  .cal-celda-numero-hoy {
+    background: linear-gradient(145deg, #b8395e, #7a1830);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 6px 14px rgba(122, 24, 48, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
   .cal-celda-fuera .cal-celda-numero { color: rgba(0, 0, 0, 0.28); }
 
   .cal-celda-eventos { align-items: center; width: 100%; }
@@ -801,29 +862,33 @@ input[type="time"].cal-pill-input {
     font-size: 8.5px;
     max-width: 100%;
     padding: 1.5px 5px;
-    border-radius: 5px;
+    border-radius: 999px;
+    font-weight: 700;
   }
   .cal-evento-mas { font-size: 8.5px; }
 
-  /* Recuadro verde con las actividades del día tocado en la grilla del mes */
+  /* Tarjeta glass con las actividades del día tocado en la grilla del mes */
   .cal-dia-panel {
     margin-top: 8px;
-    border: 1.5px solid rgba(35, 91, 78, 0.35);
-    background: rgba(35, 91, 78, 0.05);
-    border-radius: 14px;
-    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 28px;
+    padding: 16px 14px;
+    box-shadow: 0 1px 2px rgba(10, 30, 20, 0.05), 0 24px 48px -16px rgba(30, 50, 45, 0.18);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
   }
   .cal-dia-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    color: #235b4e;
+    color: #1a4338;
   }
   .cal-dia-panel-header > span { text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-dia-panel-agregar {
@@ -832,23 +897,23 @@ input[type="time"].cal-pill-input {
     gap: 6px;
     flex-shrink: 0;
     border: none;
-    background: #DDC9A3;
-    color: #1a4338;
+    background: linear-gradient(145deg, #ecdcb2, #DDC9A3);
+    color: #3a2b0e;
     border-radius: 999px;
     padding: 6px 12px 6px 6px;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(10, 30, 20, 0.20);
+    box-shadow: 0 4px 12px rgba(180, 140, 40, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.4);
   }
-  .cal-dia-panel-agregar:active { background: #e8d7b3; }
+  .cal-dia-panel-agregar:active { background: linear-gradient(145deg, #f0e2ba, #e8d7b3); }
   .cal-dia-panel-agregar .cal-btn-nueva-icon { width: 18px; height: 18px; font-size: 13px; }
   .cal-dia-panel-vacio { font-size: 12.5px; color: rgba(0, 0, 0, 0.45); margin: 0; }
   .cal-dia-panel-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 104px;
+    max-height: 124px;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
@@ -870,18 +935,24 @@ input[type="time"].cal-pill-input {
     border-radius: 10px;
   }
   .cal-dia-panel-item {
-    flex: 0 0 48px;
-    min-height: 48px;
+    flex: 0 0 58px;
+    min-height: 58px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 8px;
-    border-radius: 10px;
-    background: #ffffff;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.75);
     cursor: pointer;
   }
-  .cal-dia-panel-dot { width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; }
+  .cal-dia-panel-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(10, 30, 20, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
   .cal-dia-panel-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .cal-dia-panel-titulo {
     font-size: 13px;

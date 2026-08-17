@@ -13,6 +13,7 @@ import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
 import { formatearFechaHora } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
+import { FolioTexto } from '../utils/folio'
 // Reusa el layout de lista+detalle (.st-*, .seccion, .sec-*, .dt-panel,
 // .drow, .fus-card...) tal cual SolicitudesTurnadas — este chunk se carga
 // aparte (lazy-loading por ruta) y no lo hereda solo, así que hay que
@@ -199,7 +200,7 @@ function FUSCard({ f, activo, onClick }) {
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">{f.folio}</strong>
+        <strong className="fus-folio"><FolioTexto folio={f.folio} /></strong>
         <span className="fus-card-top-actions">
           <span className="fus-card-badges">
             <Badge estatus={f.estatusParticular} />

@@ -30,6 +30,7 @@ import {
   formatearHora as fmtHora,
 } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
+import { FolioTexto } from '../utils/folio'
 import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
@@ -87,6 +88,7 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
   const [error,       setError]       = useState('')
   const {
     data: lista = [],
+    isFetching: cargandoLista,
     error: errorCarga,
     refetch: cargar,
   } = useQuery({
@@ -167,7 +169,9 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
         )}
 
         <div className="seg-timeline">
-          {errorCarga && lista.length === 0 ? (
+          {cargandoLista && lista.length === 0 ? (
+            <Spinner overlay={false} />
+          ) : errorCarga && lista.length === 0 ? (
             <div className="seg-error">
               <p className="seg-error-msg">No se pudo cargar el historial de respuestas.</p>
               <button type="button" className="btn-reintentar" onClick={cargar}>Reintentar</button>
@@ -512,7 +516,7 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
     <div className={`fus-card${activo ? ' fus-card-activo' : ''}${highlight ? ' fus-card-highlight' : ''}${fus.slaVencido ? ' fus-card-vencido' : ''}${!fus.slaVencido && fus.slaPorVencer ? ' fus-card-por-vencer' : ''}`} onClick={onClick} role="button" tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}>
       <div className="fus-card-top">
-        <strong className="fus-folio">{fus.folio || `Turnado #${t.id}`}</strong>
+        <strong className="fus-folio">{fus.folio ? <FolioTexto folio={fus.folio} /> : `Turnado #${t.id}`}</strong>
         <span className="fus-card-badges">
           <Badge estatus={t.estatusTitular} />
           {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
@@ -762,7 +766,9 @@ export default function SolicitudesTurnadas() {
         {/* ── Panel izquierdo ── */}
         <div className={`st-left${!panelAbierto ? ' panel-cerrado' : ''}`}>
           <div className="panel-header">
-            {panelAbierto && <h3 className="panel-title">Solicitudes turnadas</h3>}
+            <div className="panel-header-left">
+              <h3 className="panel-title">Solicitudes turnadas</h3>
+            </div>
             <button
               className="panel-toggle"
               onClick={() => {
@@ -788,8 +794,12 @@ export default function SolicitudesTurnadas() {
                 }
               }}
               title={seleccionado ? 'Ver lista de solicitudes' : (panelAbierto ? 'Cerrar panel' : 'Abrir panel')}
+              aria-expanded={panelAbierto}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className={panelAbierto ? 'panel-toggle-icon-open' : 'panel-toggle-icon-closed'}
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              >
                 {panelAbierto
                   ? <polyline points="15 18 9 12 15 6" />
                   : <polyline points="9 18 15 12 9 6" />}

@@ -304,29 +304,37 @@ export default function DashboardROL2() {
                 acomodo lado a lado queda solo para PC sin CSS aparte. */}
             <div className="dash2-grid-bottom">
               <div className="dash2-card proximo-card">
-                <div className="dash-subtitle" style={{ marginBottom: 2 }}>Próximo FUS por atender</div>
-                <p className="dash-subtitle" style={{ marginBottom: 16 }}>Tu siguiente prioridad</p>
+                <div className="proximo-heading">
+                  <div className="proximo-heading-icon" aria-hidden="true">{ICON_HOURGLASS}</div>
+                  <div className="proximo-heading-copy">
+                    <div className="proximo-title">Próximo FUS por atender</div>
+                    <p className="proximo-subtitle">Tu siguiente prioridad</p>
+                  </div>
+                </div>
                 {!proximoFus ? (
                   <p className="dash-empty">No tienes solicitudes activas pendientes.</p>
                 ) : (
                   <>
                     <div className="proximo-top">
-                      <button
-                        type="button"
-                        className="proximo-folio proximo-folio-link"
-                        onClick={() => irAlFus(proximoFus.idFus?.folio)}
-                        aria-label={`Ver detalle de ${proximoFus.idFus?.folio}`}
-                      >
-                        {proximoFus.idFus?.folio}
-                      </button>
+                      <div className="proximo-folio-block">
+                        <span className="proximo-folio-label">Folio</span>
+                        <button
+                          type="button"
+                          className="proximo-folio proximo-folio-link"
+                          onClick={() => irAlFus(proximoFus.idFus?.folio)}
+                          aria-label={`Ver detalle de ${proximoFus.idFus?.folio}`}
+                        >
+                          {proximoFus.idFus?.folio}
+                        </button>
+                      </div>
                       {proximoFus.idFus?.prioridad === 'Alta' && (
                         <span className="proximo-badge">{ICON_FLAG} Prioridad alta</span>
                       )}
                     </div>
                     <div className="proximo-grid">
-                      <div><div className="proximo-l">Unidad</div><div className="proximo-v">{proximoFus.idFus?.direccionComisionado || '—'}</div></div>
-                      <div><div className="proximo-l">Asunto</div><div className="proximo-v">{proximoFus.idFus?.descripcion || '—'}</div></div>
-                      <div><div className="proximo-l">Tiempo restante</div><div className="proximo-v">{ICON_HOURGLASS} {tiempoRestanteTexto(proximoFus.idFus?.fechaLimite)}</div></div>
+                      <div className="proximo-field proximo-field-unidad"><div className="proximo-l">Unidad</div><div className="proximo-v">{proximoFus.idFus?.direccionComisionado || '—'}</div></div>
+                      <div className="proximo-field proximo-field-asunto"><div className="proximo-l">Asunto</div><div className="proximo-v">{proximoFus.idFus?.descripcion || '—'}</div></div>
+                      <div className="proximo-field proximo-field-tiempo"><div className="proximo-l">Tiempo restante</div><div className="proximo-v">{ICON_HOURGLASS} {tiempoRestanteTexto(proximoFus.idFus?.fechaLimite)}</div></div>
                     </div>
                     <button type="button" className="proximo-btn" onClick={() => irAlFus(proximoFus.idFus?.folio)}>
                       Responder ahora {ICON_ARROW_RIGHT}

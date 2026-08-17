@@ -11,6 +11,7 @@
 
 .app-body {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
   position: relative;
@@ -18,6 +19,7 @@
 
 .app-main {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -30,13 +32,17 @@
 @media (max-width: 768px) {
   .app-body {
     overflow: hidden;
-    height: calc(100vh - 56px);
-    height: calc(100dvh - 56px);
+    /* El header móvil mide 62px. Mantener aquí los antiguos 56px hacía que
+       el área desplazable excediera el viewport en Safari. */
+    height: calc(100vh - 62px - env(safe-area-inset-top, 0px));
+    height: calc(100dvh - 62px - env(safe-area-inset-top, 0px));
+    overscroll-behavior: none;
   }
 
   .app-main {
     overflow: hidden;
     overflow-x: hidden;
+    overscroll-behavior: none;
     /* Respiro mínimo — el resto del contenido pasa y se difumina detrás del bottom nav flotante */
     padding-bottom: calc(-35px + env(safe-area-inset-bottom, 0px));
   }

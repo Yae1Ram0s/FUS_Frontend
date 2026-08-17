@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -6,11 +6,11 @@ import {
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
 import FechaInput from '../components/FechaInput'
+import CatalogoCheckbox from '../components/CatalogoCheckbox'
 import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
 import { useCountUp } from '../hooks/useCountUp'
-import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import './DashboardROL1.css'
 import './Reportes.css'
 
@@ -122,7 +122,7 @@ const hoy = new Date()
 // Referencia estable (no un literal en cada render) para que el useEffect de
 // abajo, que depende de la identidad de `opciones`, no se dispare de más
 // mientras la carga real todavía no llega.
-const OPCIONES_VACIAS = { secciones: [], unidades: [], responsables: [] }
+const OPCIONES_VACIAS = { secciones: [], unidades: [], responsables: [], estados: [], prioridades: [] }
 
 function mesAnterior(valorMesInput) {
   const [anio, mes] = valorMesInput.split('-').map(Number)
@@ -294,26 +294,14 @@ export default function Reportes() {
   const [compararCon, setCompararCon] = useState(() => mesAnterior(mesInput(hoy)))
   const [personalizado, setPersonalizado] = useState({ fecha_inicio: `${hoy.getFullYear()}-01-01`, fecha_fin: fechaISO(hoy) })
   const [filtrosExtra, setFiltrosExtra] = useState({ estatus: '', prioridad: '', unidad: '', responsable: '' })
-  const [avanzadoAbierto, setAvanzadoAbierto] = useState(false)
   const [seleccion, setSeleccion] = useState([])
   const [exportando, setExportando] = useState('')
   const [guardarAlExportar, setGuardarAlExportar] = useState(false)
   const [guardadosAbierto, setGuardadosAbierto] = useState(false)
-  const [seccionesAbiertas, setSeccionesAbiertas] = useState(false)
-  const seccionesRef = useRef(null)
 
   // Cerrar el desplegable de "Secciones del reporte" al tocar fuera — un
   // <details>/<summary> nativo no soporta esto (solo se cierra volviendo a
   // hacer clic en el mismo resumen), por eso es un dropdown controlado.
-  useEffect(() => {
-    if (!seccionesAbiertas) return
-    const handle = (e) => {
-      if (seccionesRef.current && !seccionesRef.current.contains(e.target)) setSeccionesAbiertas(false)
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [seccionesAbiertas])
-
   const rangoFechas = tipoPeriodo === 'Personalizado'
     ? personalizado
     : (() => {
@@ -344,7 +332,7 @@ export default function Reportes() {
     queryFn: ({ signal }) => api.get('/reportes/resumen/', { params: aplicados, signal }).then(r => r.data),
   })
 
-  const { data: guardados = [], refetch: recargarGuardados } = useQuery({
+  const { data: guardados = [], isFetching: cargandoGuardados, refetch: recargarGuardados } = useQuery({
     queryKey: ['reportesGuardados'],
     queryFn: ({ signal }) => api.get('/reportes/guardados/', { signal }).then(r => r.data),
   })
@@ -368,9 +356,8 @@ export default function Reportes() {
     setMesRef(valor)
     setCompararCon(mesAnterior(valor))
   }
-  const actualizarExtra = e => setFiltrosExtra(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  const actualizarExtra = (name, value) => setFiltrosExtra(prev => ({ ...prev, [name]: value }))
   const visible = id => seleccion.includes(id)
-  const toggleSeccion = id => setSeleccion(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const exportar = async formato => {
     setExportando(formato)
@@ -501,6 +488,7 @@ export default function Reportes() {
                   </div>
                 </div>
 
+                <div className="rep-filtros-par rep-filtros-par-fechas">
                 {tipoPeriodo === 'Personalizado' ? (
                   <>
                     <label>Desde<FechaInput type="date" value={personalizado.fecha_inicio} onChange={e => setPersonalizado(p => ({ ...p, fecha_inicio: e.target.value }))} /></label>
@@ -513,47 +501,22 @@ export default function Reportes() {
                 {tipoPeriodo === 'Mes' && (
                   <label>Comparar con<input type="month" value={compararCon} onChange={e => setCompararCon(e.target.value)} /></label>
                 )}
+                </div>
               </div>
 
               {/* Fila 2: sobre qué recorte de datos (unidad/responsable) + acceso a avanzados */}
               <div className="rep-filtros-fila">
-                <label>Unidad administrativa
-                  <select name="unidad" value={filtrosExtra.unidad} onChange={actualizarExtra}>
-                    <option value="">Todas</option>
-                    {opciones.unidades.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-                  </select>
-                </label>
-                <label>Responsable
-                  <select name="responsable" value={filtrosExtra.responsable} onChange={actualizarExtra}>
-                    <option value="">Todos</option>
-                    {opciones.responsables.map(x => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className={`rep-btn-avanzado${avanzadoAbierto ? ' rep-btn-avanzado--abierto' : ''}`}
-                  onClick={() => setAvanzadoAbierto(v => !v)}
-                  aria-expanded={avanzadoAbierto}
-                >
-                  Filtros avanzados {ICON_CHEVRON}
-                </button>
+                <div className="rep-filtros-par rep-filtros-par-catalogos">
+                  <CatalogoCheckbox label="Unidad administrativa" options={opciones.unidades} value={filtrosExtra.unidad} onChange={value => actualizarExtra('unidad', value)} emptyLabel="Todas" searchable={false} />
+                  <CatalogoCheckbox label="Responsable" options={opciones.responsables} value={filtrosExtra.responsable} onChange={value => actualizarExtra('responsable', value)} emptyLabel="Todos" />
+                </div>
               </div>
 
-              {/* Fila 3 (opcional): estado/prioridad, guardar al exportar, elegir secciones */}
-              {avanzadoAbierto && (
-                <div className="rep-filtros-fila rep-avanzado">
-                  <label>Estado
-                    <select name="estatus" value={filtrosExtra.estatus} onChange={actualizarExtra}>
-                      <option value="">Todos</option>
-                      {['Registrado', 'Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado', 'Concluido'].map(x => <option key={x}>{x}</option>)}
-                    </select>
-                  </label>
-                  <label>Prioridad
-                    <select name="prioridad" value={filtrosExtra.prioridad} onChange={actualizarExtra}>
-                      <option value="">Todas</option>
-                      {PRIORIDAD_NIVELES.map(p => <option key={p.valor}>{p.valor}</option>)}
-                    </select>
-                  </label>
+              <div className="rep-filtros-fila rep-avanzado">
+                  <div className="rep-filtros-par rep-filtros-par-catalogos rep-filtros-par-estados">
+                    <CatalogoCheckbox className="rep-catalogo-label--estado" label="Estado" options={opciones.estados} value={filtrosExtra.estatus} onChange={value => actualizarExtra('estatus', value)} emptyLabel="Todos" searchable={false} />
+                    <CatalogoCheckbox className="rep-catalogo-label--prioridad" label="Prioridad" options={opciones.prioridades} value={filtrosExtra.prioridad} onChange={value => actualizarExtra('prioridad', value)} emptyLabel="Todas" searchable={false} />
+                  </div>
                   {/* Guardar + Secciones van juntas, en su propia caja: ambas
                       controlan la exportación (no son un filtro de datos como
                       Estado/Prioridad), así que se agrupan como una sola unidad. */}
@@ -562,19 +525,15 @@ export default function Reportes() {
                       <input type="checkbox" checked={guardarAlExportar} onChange={e => setGuardarAlExportar(e.target.checked)} />
                       Guardar copia al exportar
                     </label>
-                    <div className="rep-selector" ref={seccionesRef}>
-                      <button type="button" onClick={() => setSeccionesAbiertas(v => !v)} aria-expanded={seccionesAbiertas}>
-                        Secciones del reporte ({seleccion.length})
-                      </button>
-                      {seccionesAbiertas && (
-                        <div>{opciones.secciones.map(s => (
-                          <label key={s.id}><input type="checkbox" checked={visible(s.id)} onChange={() => toggleSeccion(s.id)} />{s.nombre}</label>
-                        ))}</div>
-                      )}
-                    </div>
+                    <CatalogoCheckbox
+                      label="Seleccionar reportes"
+                      options={opciones.secciones}
+                      value={seleccion.join(',')}
+                      onChange={value => setSeleccion(value ? value.split(',') : [])}
+                      emptyLabel="Ninguna sección"
+                    />
                   </div>
-                </div>
-              )}
+              </div>
                 </section>
 
                 {loading && !data && <Spinner overlay={false} fill label="Calculando indicadores…" />}
@@ -687,6 +646,8 @@ export default function Reportes() {
                   </h3>
                   {!guardadosAbierto ? (
                     <p className="rep-side-text rep-side-text--pad">Accede a tus reportes generados anteriormente.</p>
+                  ) : cargandoGuardados && guardados.length === 0 ? (
+                    <Spinner overlay={false} />
                   ) : guardados.length === 0 ? (
                     <p className="dash-empty rep-side-empty">Aún no has guardado ningún reporte.</p>
                   ) : (

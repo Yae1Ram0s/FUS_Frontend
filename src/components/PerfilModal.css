@@ -7,6 +7,7 @@
   padding: 20px;
   background: rgba(8, 28, 23, 0.14);
   backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   animation: perfil-overlay-in 160ms ease-out;
 }
 
@@ -169,6 +170,7 @@
     padding: 14px;
     background: rgba(8, 28, 23, 0.42);
     backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
   .perfil-modal {
     position: relative;

@@ -10,6 +10,9 @@
 .sa-panel-sub h3 { margin: 0 0 6px; font-size: .85rem; color: #55555a; }
 .sa-services { display: flex; flex-direction: column; }
 
+/* Detalle seguro y accionable de advertencias de salud. */
+.sa-service{display:block;padding:0}.sa-service__summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:14px}.sa-service__identity{min-width:0}.sa-service__status{display:flex;align-items:center;gap:10px}.sa-service__toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(31,100,82,.2);border-radius:12px;padding:8px 11px;background:rgba(255,255,255,.72);color:#1b5c4c;font-weight:800;cursor:pointer}.sa-service__toggle:hover{background:#fff}.sa-service__diagnostic{margin:0 14px 14px 36px;padding:16px;border:1px solid rgba(198,138,27,.25);border-radius:18px;background:linear-gradient(135deg,rgba(255,245,218,.76),rgba(255,255,255,.82));box-shadow:inset 3px 0 0 #c68a1b}.sa-service__diagnostic-heading{display:flex;gap:11px;align-items:flex-start}.sa-service__diagnostic-heading>span{display:grid;place-items:center;width:25px;height:25px;flex:0 0 auto;border-radius:50%;background:#c68a1b;color:#fff;font-weight:900}.sa-service__diagnostic p{margin:4px 0 0;line-height:1.5;color:#425a53}.sa-service__diagnostic-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}.sa-service__diagnostic-grid>div{padding:12px;border-radius:13px;background:rgba(255,255,255,.7)}.sa-service__diagnostic-grid small,.sa-service__checks dt{font-size:.68rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#7b641f}.sa-service__checks{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}.sa-service__checks>div{padding:8px 10px;border:1px solid rgba(31,100,82,.12);border-radius:11px;background:rgba(255,255,255,.64)}.sa-service__checks dt,.sa-service__checks dd{margin:0}.sa-service__checks dd{margin-top:2px;font-size:.78rem;color:#314a43}.sa-service__code{margin-top:11px}.sa-service--error .sa-service__diagnostic{border-color:rgba(201,66,66,.25);background:linear-gradient(135deg,rgba(253,228,228,.8),rgba(255,255,255,.82));box-shadow:inset 3px 0 0 #c94242}
+
 .sa-donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .sa-donut-figure { position: relative; width: 148px; height: 148px; flex-shrink: 0; }
 .sa-donut-ring {
@@ -33,9 +36,11 @@
   .sa-heading-actions{width:100%;flex-direction:column;align-items:stretch}.sa-window{justify-content:space-between}.sa-window button{flex:1}.sa-panel-title{gap:10px}.sa-freshness{font-size:.68rem}
   .sa-donut-wrap { flex-direction: column; align-items: stretch; }
   .sa-donut-figure { margin: 0 auto; }
+  .sa-service__summary{grid-template-columns:auto minmax(0,1fr) auto}.sa-service__status{align-items:flex-end;flex-direction:column;gap:3px}.sa-service__toggle{grid-column:2/-1;justify-self:end}.sa-service__diagnostic{margin:0 10px 12px;padding:14px}.sa-service__diagnostic-grid{grid-template-columns:1fr}
 }
 
 .sa-dashboard-tabs{position:sticky;top:8px;z-index:8;display:flex;gap:6px;width:max-content;max-width:100%;padding:5px;margin:0 auto 18px;border:1px solid rgba(31,86,71,.12);border-radius:18px;background:rgba(244,250,248,.86);box-shadow:0 10px 24px rgba(18,55,46,.09);backdrop-filter:blur(18px)}
+.sa-dashboard-tabs{-webkit-backdrop-filter:blur(18px)}
 .sa-dashboard-tabs button{border:0;border-radius:13px;padding:10px 18px;background:transparent;color:#536a63;font-weight:800;cursor:pointer}.sa-dashboard-tabs button.is-active{background:#1f6452;color:white}.sa-kpis--network{grid-template-columns:repeat(3,minmax(170px,1fr))}.sa-network-note{margin-top:18px}.sa-network-note p{max-width:900px;color:#5f746d;line-height:1.55}.sa-activity-list{margin-top:18px;max-height:330px;overflow:auto}
 @media(min-width:901px){.sa-main{padding:24px clamp(22px,2.2vw,42px)}.sa-page{width:100%;max-width:none;margin:0}.sa-heading{width:100%;box-sizing:border-box}.sa-kpis{grid-template-columns:repeat(5,minmax(150px,1fr))}.sa-kpi{min-height:132px}.sa-monitor-panel,.sa-grid{width:100%;box-sizing:border-box}}
 @media(min-width:1700px){.sa-kpis{grid-template-columns:repeat(5,minmax(180px,1fr))}.sa-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}}

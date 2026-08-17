@@ -1,5 +1,6 @@
 import Badge from '../Badge'
 import { formatearFechaHora } from '../../utils/fechas'
+import { FolioTexto } from '../../utils/folio'
 
 export default function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
   const handleKeyDown = event => {
@@ -18,7 +19,7 @@ export default function FusCard({ fus, activo, onClick, highlight, onVerHistoria
       onKeyDown={handleKeyDown}
     >
       <div className="fus-card-top">
-        <strong className="fus-folio">{fus.folio}</strong>
+        <strong className="fus-folio"><FolioTexto folio={fus.folio} /></strong>
         <span className="fus-card-badges">
           <Badge estatus={fus.estatusVisual || fus.estatusParticular} />
           {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
