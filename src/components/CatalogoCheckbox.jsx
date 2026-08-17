@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-export default function CatalogoCheckbox({ label, options, value, onChange, emptyLabel = 'Todos', searchable = true, className = '' }) {
+export default function CatalogoCheckbox({ label, options = [], value, onChange, emptyLabel = 'Todos', searchable = true, className = '' }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
   const ref = useRef(null)
   const selected = value ? value.split(',').filter(Boolean) : []
-  const normalized = options.map(item => typeof item === 'string' ? { id: item, nombre: item } : item)
+  // El backend puede desplegarse unos minutos después que el frontend o
+  // responder con el esquema anterior, sin alguno de los catálogos nuevos.
+  // Un catálogo ausente debe mostrarse vacío, no derribar toda la aplicación.
+  const normalized = (Array.isArray(options) ? options : [])
+    .filter(Boolean)
+    .map(item => typeof item === 'string' ? { id: item, nombre: item } : item)
   const visible = normalized.filter(item => `${item.nombre} ${item.descripcion || ''}`.toLowerCase().includes(search.toLowerCase()))
 
   useEffect(() => {

@@ -315,7 +315,10 @@ export default function Reportes() {
     ...(tipoPeriodo === 'Mes' && compararCon ? { comparar_con: compararCon } : {}),
   }
 
-  const seleccionarTodo = useCallback(resultado => setSeleccion(prev => (prev.length ? prev : resultado.secciones.map(s => s.id))), [])
+  const seleccionarTodo = useCallback(resultado => {
+    const secciones = Array.isArray(resultado?.secciones) ? resultado.secciones : []
+    setSeleccion(prev => (prev.length ? prev : secciones.map(s => s.id)))
+  }, [])
   const { data: opciones = OPCIONES_VACIAS } = useQuery({
     queryKey: ['reportesOpciones'],
     queryFn: ({ signal }) => api.get('/reportes/opciones/', { signal }).then(r => r.data),
@@ -421,8 +424,8 @@ export default function Reportes() {
 
   // Cada delta se calcula una sola vez aquí (antes se recalculaba 2-3 veces
   // por dato al repetir deltaPct()/deltaDias() directamente en el JSX).
-  const respuestaDelta = anterior ? deltaDias(resumen.tiempo_promedio_respuesta, anterior.tiempo_promedio_respuesta) : null
-  const conclusionDelta = anterior ? deltaDias(resumen.tiempo_promedio_conclusion, anterior.tiempo_promedio_conclusion) : null
+  const respuestaDelta = anterior && resumen ? deltaDias(resumen.tiempo_promedio_respuesta, anterior.tiempo_promedio_respuesta) : null
+  const conclusionDelta = anterior && resumen ? deltaDias(resumen.tiempo_promedio_conclusion, anterior.tiempo_promedio_conclusion) : null
   const deltaTotal = deltaPct('total')
   const deltaConcluidos = deltaPct('concluidos')
   const deltaPendientes = deltaPct('pendientes')
