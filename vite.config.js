@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   build: {
     sourcemap: true,
+    // Vite 8.0.16 elimina la declaración estándar `backdrop-filter` al
+    // minificar cuando también existe el prefijo WebKit. El servidor de
+    // desarrollo no pasa por esa transformación, por eso localhost sí
+    // mostraba el glassmorphism y el artefacto de Vercel no. Conservar el
+    // CSS mantiene ambas declaraciones para Chromium y Safari.
+    cssMinify: false,
   },
   server: {
     host: '127.0.0.1',
