@@ -1,32 +1,45 @@
 import { useState } from 'react'
-import Spinner from '../Spinner'
 import DocumentoRespuestasModal from './DocumentoRespuestasModal'
 import { obtenerIniciales } from '../../utils/personas'
 import { esParticular } from '../../utils/permisos'
 import { formatMedioRecepcion } from '../../utils/medio'
 import Badge from '../Badge'
 
-export default function PersonasYRespuestasCard({ turnados, cargando, user, onCambio }) {
-  if (cargando && !turnados.length) {
-    return (
-      <div className="det-section">
-        <Spinner overlay={false} fill />
+// Misma composición avatar + dos líneas que PersonaFila de abajo (solo que
+// con placeholders en vez de datos reales) — así el loading no "salta" de
+// forma distinta a como se ve el contenido ya cargado.
+function PersonaFilaSkeleton() {
+  return (
+    <div className="pyr-fila-cabecera pyr-skeleton-fila">
+      <span className="pyr-skeleton pyr-skeleton-avatar" />
+      <div className="dt-turnado-info">
+        <span className="pyr-skeleton pyr-skeleton-linea pyr-skeleton-linea-nombre" />
+        <span className="pyr-skeleton pyr-skeleton-linea pyr-skeleton-linea-direccion" />
       </div>
-    )
-  }
-  if (!turnados.length) return null
+    </div>
+  )
+}
+
+export default function PersonasYRespuestasCard({ turnados, cargando, user, onCambio }) {
+  // Cargando la primera vez (sin datos previos aún): el título y la
+  // descripción se quedan fijos — solo la fila de cada persona (avatar,
+  // estatus, "Ver respuestas") se reemplaza por su skeleton.
+  const cargandoInicial = cargando && !turnados.length
+  if (!cargandoInicial && !turnados.length) return null
 
   return (
     <div className="det-section">
       <div className="pyr-legend-row">
         <span className="det-section-legend">Personas y respuestas</span>
-        <span className="pyr-badge">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          {turnados.length} {turnados.length === 1 ? 'persona' : 'personas'}
-        </span>
+        {!cargandoInicial && (
+          <span className="pyr-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            {turnados.length} {turnados.length === 1 ? 'persona' : 'personas'}
+          </span>
+        )}
       </div>
 
       <p className="pyr-intro">
@@ -34,9 +47,11 @@ export default function PersonasYRespuestasCard({ turnados, cargando, user, onCa
       </p>
 
       <div className="pyr-lista">
-        {turnados.map(turnado => (
-          <PersonaFila key={turnado.id} turnado={turnado} user={user} onCambio={onCambio} />
-        ))}
+        {cargandoInicial
+          ? [0, 1].map(i => <PersonaFilaSkeleton key={i} />)
+          : turnados.map(turnado => (
+              <PersonaFila key={turnado.id} turnado={turnado} user={user} onCambio={onCambio} />
+            ))}
       </div>
     </div>
   )

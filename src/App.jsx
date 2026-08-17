@@ -56,7 +56,8 @@ export default function App() {
           <NotificacionesProvider>
             <ToastProvider>
               <BannerSinConexion />
-              <Suspense fallback={<Spinner label="Cargando módulo…" />}>
+              {/* Mismo texto que PrivateRoute.jsx a propósito — ver comentario ahí. */}
+              <Suspense fallback={<Spinner label="Cargando…" />}>
                 <Routes>
                 {/* Pública */}
                 <Route path="/login" element={<Login />} />

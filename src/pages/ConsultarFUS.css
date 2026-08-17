@@ -1187,6 +1187,26 @@
   font-family: inherit;
 }
 
+/* Skeleton de carga (PersonaFilaSkeleton) — mismo shimmer que .com-skeleton-row
+   (Comisionado.css), pero recortado a la silueta avatar+nombre+área de una
+   fila real en vez de un bloque plano. */
+.pyr-skeleton-fila { cursor: default; }
+.pyr-skeleton {
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(35, 91, 78, 0.08) 25%, rgba(35, 91, 78, 0.16) 37%, rgba(35, 91, 78, 0.08) 63%);
+  background-size: 400% 100%;
+  animation: pyr-shimmer 1.4s ease infinite;
+}
+.pyr-skeleton-avatar { width: 34px; height: 34px; flex-shrink: 0; }
+.pyr-skeleton-fila .dt-turnado-info { gap: 6px; }
+.pyr-skeleton-linea { height: 10px; }
+.pyr-skeleton-linea-nombre { width: 112px; }
+.pyr-skeleton-linea-direccion { width: 150px; }
+@keyframes pyr-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
 .pyr-chevron-btn {
   display: flex;
   align-items: center;
@@ -2053,6 +2073,7 @@
   .dt-turnado-nombre { font-size: .80rem; }
   .dt-turnado-direccion { font-size: .70rem; }
   .pyr-expand { padding-left: 38px; }
+  .pyr-skeleton-avatar { width: 30px; height: 30px; }
 }
 
 @media (max-width: 360px) {
