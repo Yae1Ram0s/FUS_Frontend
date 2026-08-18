@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBehavior } from '../hooks/useModalBehavior'
+import { useAnalytics } from '../analytics'
 import './Comisionado/Comisionado.css'
 import './ModalDescargarPDF.css'
 
@@ -11,11 +12,16 @@ export default function ModalDescargarPDF({ onCancelar, onConfirmar, turnados = 
   const [conImagenes, setConImagenes] = useState(true)
   const [turnadoId, setTurnadoId] = useState('')
   const [cargando, setCargando] = useState(false)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_DESCARGAR_PDF', accion: 'EXPORT' })
   useModalBehavior(onCancelar, { closeEnabled: !cargando })
 
   const confirmar = () => {
     setCargando(true)
-    Promise.resolve(onConfirmar(conImagenes, turnadoId)).finally(() => setCargando(false))
+    const taskId = startTask()
+    Promise.resolve(onConfirmar(conImagenes, turnadoId))
+      .then(() => completeTask(taskId))
+      .catch(err => { failTask(taskId); throw err })
+      .finally(() => setCargando(false))
   }
 
   return createPortal(

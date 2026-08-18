@@ -6,6 +6,7 @@ import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useAnalytics } from '../analytics'
 import { useEvidenciaUrl } from '../hooks/useEvidenciaUrl'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useConexionInternet } from '../hooks/useConexionInternet'
@@ -130,6 +131,7 @@ export default function RegistrarFUS() {
   const [limpiado, setLimpiado] = useState(false)
   const envioEnCursoRef = useRef(false)
   const enLinea = useConexionInternet()
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'REGISTRAR_FUS_FORM' })
 
   // Un FUS en edición no usa borrador local (ya vive guardado en el
   // servidor) — el borrador es solo para una solicitud nueva a medio llenar.
@@ -304,6 +306,7 @@ export default function RegistrarFUS() {
 
     envioEnCursoRef.current = true
     setError(''); setLoading(true)
+    const taskId = startTask({ accion: editId ? 'UPDATE' : 'CREATE' })
     try {
       // El criterio libre se manda como uno más dentro de la misma lista de
       // criterios de la prioridad elegida (no aparte) — así el FUS siempre
@@ -347,6 +350,7 @@ export default function RegistrarFUS() {
       if (!editId) borrarBorrador(user?.email)
       const mensajeExito = editId ? 'Solicitud actualizada correctamente.' : 'Solicitud registrada correctamente.'
       setExito(mensajeExito)
+      completeTask(taskId)
       toast.success(mensajeExito)
       setTimeout(() => navigate(
         `/rol1/consultar-fus?folio=${encodeURIComponent(data.folio)}`,
@@ -363,6 +367,7 @@ export default function RegistrarFUS() {
           ? 'No se pudo guardar la solicitud. Intenta nuevamente.'
           : 'Se perdió la conexión. Lo que llevas llenado sigue guardado en este formulario — intenta de nuevo cuando vuelva la conexión.')
       setError(mensaje)
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       envioEnCursoRef.current = false
       setLoading(false)
     }
@@ -442,7 +447,7 @@ export default function RegistrarFUS() {
         <div className={`reg-form-card${limpiado ? ' reg-form-card-limpiado' : ''}`}>
           {avisoBorrador && <p className="reg-aviso-borrador" role="status">{avisoBorrador}</p>}
           {cargandoFus && <Spinner overlay={false} fill />}
-          {!cargandoFus && !exito && <form className="reg-form" onSubmit={handleSubmit} noValidate>
+          {!cargandoFus && !exito && <form className="reg-form" data-analytics-form="REGISTRAR_FUS_FORM" onSubmit={handleSubmit} noValidate>
 
             <fieldset className="reg-fieldset">
               <legend className="reg-legend">Datos generales</legend>

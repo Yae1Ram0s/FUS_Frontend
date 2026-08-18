@@ -141,9 +141,11 @@ const NAV_COMISIONADO = [
 
 const ICON_SALUD = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
 const ICON_USUARIOS = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M16 3.2a4 4 0 0 1 0 7.6M23 21v-2a4 4 0 0 0-3-3.9"/></svg>
+const ICON_USO_SISTEMA = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19H2"/></svg>
 const NAV_ADMIN = [
   { path: '/admin/inicio', label: 'Inicio', icon: ICON_INICIO },
   { path: '/admin/usuarios', label: 'Usuarios y accesos', icon: ICON_USUARIOS },
+  { path: '/admin/uso', label: 'Uso del sistema', icon: ICON_USO_SISTEMA },
   { path: '/admin/salud', label: 'Salud del sistema', icon: ICON_SALUD },
   { path: '/admin/auditoria', label: 'Auditoría', icon: ICON_BITACORA },
   { path: '/admin/otp', label: 'Códigos OTP', icon: ICON_SALUD },

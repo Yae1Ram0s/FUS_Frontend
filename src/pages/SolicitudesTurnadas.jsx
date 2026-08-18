@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
@@ -13,7 +13,6 @@ import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
-import FiltrosActivosChips from '../components/FiltrosActivosChips'
 import FechaInput from '../components/FechaInput'
 import api from '../api/api'
 import { useEstatus } from '../hooks/useEstatus'
@@ -21,6 +20,7 @@ import { useNotificaciones } from '../context/NotificacionesContext'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
+import { useAnalytics } from '../analytics'
 import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
 import { obtenerIniciales } from '../utils/personas'
 import { PRIORIDAD_NIVELES } from '../utils/prioridades'
@@ -35,10 +35,17 @@ import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
 
-// Mismo conjunto que usa el KPI "Prioridad alta" del Dashboard (DashboardROL2.jsx)
-// para armar su link — se repite aquí solo para reconocer ese combo en
-// "Filtros activos" (ver chipsActivos) y no como fuente de verdad del filtro.
-const ESTADOS_NO_CONCLUIDO = ['Recibido', 'En_seguimiento', 'Pendiente_validacion', 'Rechazado']
+// Mismo criterio que MisTurnadosView (backend) para el parámetro
+// `estatusTitular` — se replica aquí para filtrar en el cliente sobre los
+// turnados ya cargados en caché, sin volver a pedirle al servidor la misma
+// lista cada vez que se cambia de chip (Vencido/PorVencer son temporalidad
+// del FUS, no un estatus; Rechazado/Pendiente_validacion viven en
+// FUS.estatusParticular, no en Turnado.estatusTitular).
+function coincideFiltroTurnado(t, clave) {
+  if (clave === 'Vencido' || clave === 'PorVencer') return t.idFus?.estadoTemporalidad === clave
+  if (clave === 'Rechazado' || clave === 'Pendiente_validacion') return t.idFus?.estatusParticular === clave
+  return t.estatusTitular === clave
+}
 
 function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
@@ -66,6 +73,16 @@ function tipoTagSeguimiento(s) {
   return { label: 'Respuesta', clase: 'fc-tag-verde' }
 }
 
+// RechazarPersonaTurnadoView (backend) guarda el rechazo como un Seguimiento
+// normal con el nombre de quien rechazó embebido en el propio texto
+// ("Rechazado por {nombre}: {motivo}", sin campo `esRechazo` ni autor propio)
+// — se separa aquí para mostrar a ESA persona (no al Titular dueño del
+// panel, que es lo que salía por defecto) y no repetir el nombre dos veces.
+function parseRechazoTexto(texto) {
+  const m = /^Rechazado por (.+?): ([\s\S]*)$/.exec(texto || '')
+  return m ? { nombre: m[1], motivo: m[2] } : null
+}
+
 /* ── Sección Respuestas y Seguimiento ── */
 function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
   // Fuente única de verdad: turnado.estatusTitular (ya se refresca via
@@ -86,6 +103,7 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
   const [accionTexto, setAccionTexto] = useState('')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState('')
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'TURNADO_SEGUIMIENTO', accion: 'CREATE' })
   const {
     data: lista = [],
     isFetching: cargandoLista,
@@ -117,12 +135,14 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
       return
     }
     setError(''); setLoading(true)
+    const taskId = startTask()
     try {
       const r = await api.post(`/turnados/${turnadoId}/seguimientos/`, {
         fechaActividad: fecha,
         descripcionActividad: actividad,
         accionTexto,
       })
+      completeTask(taskId)
       setFecha(hoy); setActividad(''); setAccionTexto('')
       cargar()
       // El backend regresa el estatus vigente del turnado/FUS tras esta
@@ -130,6 +150,7 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
       // (AccionesValidacion) aparezca de inmediato, sin refrescar la página.
       onRegistrado?.(r.data.estatusParticular, r.data.estatusTitular)
     } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
     } finally { setLoading(false) }
   }
@@ -178,32 +199,38 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
             </div>
           ) : lista.length === 0 ? (
             <p className="seg-empty">Sin respuestas registradas aún</p>
-          ) : lista.map((s, i) => (
-            <div key={s.id} className="seg-tl-item">
-              <div className="seg-tl-track">
-                <div className="seg-tl-dot" />
-                {i < lista.length - 1 && <div className="seg-tl-connector" />}
-              </div>
-              <div className="seg-tl-content">
-                <div className="seg-tl-meta">
-                  <span className={`fc-tag ${tipoTagSeguimiento(s).clase}`}>
-                    {tipoTagSeguimiento(s).label}
-                  </span>
-                  <span className="seg-tl-fecha">
-                    {!s.esRechazo && user?.nombre ? `${user.nombre} · ` : ''}
-                    {fmtFechaCorta(s.fechaActividad)}
-                    {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
-                  </span>
+          ) : lista.map((s, i) => {
+            const rechazo = !s.esRechazo ? parseRechazoTexto(s.descripcionActividad) : null
+            const esRechazo = s.esRechazo || Boolean(rechazo)
+            return (
+              <div key={s.id} className="seg-tl-item">
+                <div className="seg-tl-track">
+                  <div className="seg-tl-dot" />
+                  {i < lista.length - 1 && <div className="seg-tl-connector" />}
                 </div>
-                {s.descripcionActividad && (
-                  <p className={s.esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>{s.descripcionActividad}</p>
-                )}
-                {s.accionTexto && (
-                  <p className="seg-tl-accion">→ {s.accionTexto}</p>
-                )}
+                <div className="seg-tl-content">
+                  <div className="seg-tl-meta">
+                    <span className={`fc-tag ${tipoTagSeguimiento(s).clase}`}>
+                      {tipoTagSeguimiento(s).label}
+                    </span>
+                    <span className="seg-tl-fecha">
+                      {rechazo ? `${rechazo.nombre} · ` : !s.esRechazo && user?.nombre ? `${user.nombre} · ` : ''}
+                      {fmtFechaCorta(s.fechaActividad)}
+                      {s.fechaRegistro && <span className="seg-tl-hora"> · {fmtHora(s.fechaRegistro)}</span>}
+                    </span>
+                  </div>
+                  {s.descripcionActividad && (
+                    <p className={esRechazo ? 'seg-tl-actividad seg-tl-rechazo' : 'seg-tl-actividad'}>
+                      {rechazo ? rechazo.motivo : s.descripcionActividad}
+                    </p>
+                  )}
+                  {s.accionTexto && (
+                    <p className="seg-tl-accion">→ {s.accionTexto}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {!soloLectura && (
@@ -216,10 +243,11 @@ function Seguimientos({ turnadoId, folio, estatusTurnado, onRegistrado }) {
             <button className="btn-agregar" onClick={agregar} disabled={loading}>
               {loading
                 ? <span className="btn-spinner" />
-                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/>
                   </svg>}
-              {loading ? 'Guardando…' : 'Agregar'}
+              {loading ? 'Guardando…' : 'Agregar seguimiento'}
             </button>
           </div>
         )}
@@ -261,11 +289,14 @@ function EvidenciaList({ evidencias }) {
    catálogo Alta/Media/Baja lo abre un <select> nativo superpuesto e
    invisible, así en móvil se ve el picker propio del dispositivo (100%
    responsivo, no hay nada que mantener). Reusa PRIORIDAD_NIVELES. ── */
-function PrioridadFiltroChip({ valor, onChange }) {
+// `conteos` (opcional): { Alta: n, Media: n, Baja: n } — cuántos de los ya
+// cargados coinciden con cada nivel, para mostrarlo junto a la etiqueta.
+function PrioridadFiltroChip({ valor, onChange, conteos }) {
   return (
     <div className="prioridad-filtro-wrap">
       <button type="button" className={`filtro-chip filtro-chip-alta${valor ? ' filtro-chip-active' : ''}`} tabIndex={-1}>
         {valor ? `Prioridad: ${valor}` : 'Prioridad'}
+        {conteos && <span className="filtro-chip-count">{valor ? (conteos[valor] || 0) : Object.values(conteos).reduce((a, b) => a + b, 0)}</span>}
       </button>
       <select
         className="prioridad-filtro-select"
@@ -275,7 +306,9 @@ function PrioridadFiltroChip({ valor, onChange }) {
       >
         <option value="">Prioridad</option>
         {PRIORIDAD_NIVELES.map(p => (
-          <option key={p.valor} value={p.valor}>{p.valor}</option>
+          <option key={p.valor} value={p.valor}>
+            {conteos ? `${p.valor} (${conteos[p.valor] || 0})` : p.valor}
+          </option>
         ))}
       </select>
     </div>
@@ -291,6 +324,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const [modalAtendido, setModalAtendido] = useState(false)
   const toast = useToast()
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'TURNADO_ATENDIDO', accion: 'UPDATE' })
   const fus = fusData
   const turnado = turnadoData
 
@@ -459,7 +493,10 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
       {!fus.idComisionado && turnado.estatusTitular === 'En_seguimiento' && (
         <div className="dt-actions">
           <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>
-            Atendido
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Enviar para validación
           </button>
           {modalAtendido && (
             <ConfirmModal
@@ -469,11 +506,18 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
               colorBoton="verde"
               onClose={() => setModalAtendido(false)}
               onConfirmar={async () => {
-                const { data } = await api.post(`/turnados/${turnado.id}/atendido/`)
-                setTurnadoData(t => ({ ...t, estatusTitular: data.estatusTitular }))
-                if (data.estatusParticular) setFusData(f => ({ ...f, estatusParticular: data.estatusParticular }))
-                setModalAtendido(false)
-                toast.success('Tu parte se marcó como atendida.')
+                const taskId = startTask()
+                try {
+                  const { data } = await api.post(`/turnados/${turnado.id}/atendido/`)
+                  completeTask(taskId)
+                  setTurnadoData(t => ({ ...t, estatusTitular: data.estatusTitular }))
+                  if (data.estatusParticular) setFusData(f => ({ ...f, estatusParticular: data.estatusParticular }))
+                  setModalAtendido(false)
+                  toast.success('Tu parte se marcó como atendida.')
+                } catch (err) {
+                  failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
+                  throw err
+                }
               }}
             />
           )}
@@ -584,16 +628,17 @@ export default function SolicitudesTurnadas() {
   // Firma de "qué se está pidiendo": al ser parte de la queryKey, cambiar
   // cualquiera de estos valores aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
-  // que antes reiniciaba la paginación al cambiar filtros.
-  const queryKey = ['turnadosListado', { folioParam, filtro, prioridadFiltro, busquedaDeb }]
+  // que antes reiniciaba la paginación al cambiar filtros. Estatus y
+  // prioridad YA NO viajan aquí (ver `listaFiltrada` más abajo): se filtran
+  // en el cliente sobre lo que ya está en caché, así que cambiar de chip no
+  // dispara una petición nueva al backend.
+  const queryKey = ['turnadosListado', { folioParam, busquedaDeb }]
   const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
-    if (folioParam)                     params.folio = folioParam
-    if (!folioParam && filtro.length)   params.estatusTitular = filtro.join(',')
-    if (!folioParam && prioridadFiltro) params.prioridad = prioridadFiltro
-    if (!folioParam && busquedaDeb)     params.search = busquedaDeb
+    if (folioParam)                 params.folio = folioParam
+    if (!folioParam && busquedaDeb) params.search = busquedaDeb
     return params
-  }, [busquedaDeb, filtro, folioParam, prioridadFiltro])
+  }, [busquedaDeb, folioParam])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
@@ -621,6 +666,37 @@ export default function SolicitudesTurnadas() {
   const lista = resultado.items
   const pagina = resultado.page
   const totalItems = resultado.total
+
+  // Filtrado 100% en el cliente sobre lo ya cargado en caché — cambiar de
+  // chip (estatus o prioridad) ya no dispara ninguna petición al backend,
+  // solo recalcula esta lista derivada. Se salta cuando hay folioParam: ese
+  // caso siempre debe mostrar el único turnado pedido, sin importar el
+  // filtro que haya quedado seleccionado.
+  const listaFiltrada = useMemo(() => {
+    if (folioParam) return lista
+    let base = lista
+    if (filtro.length) base = base.filter(t => filtro.some(f => coincideFiltroTurnado(t, f)))
+    if (prioridadFiltro) base = base.filter(t => t.idFus?.prioridad === prioridadFiltro)
+    return base
+  }, [lista, filtro, prioridadFiltro, folioParam])
+
+  // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
+  // chip — para mostrar el número junto a la etiqueta y que se note de
+  // inmediato cuántos resultados trae cada filtro, sin tener que aplicarlo.
+  const conteoEstatus = useMemo(() => {
+    const claves = ['Pendiente_validacion', 'Rechazado', 'Vencido', 'PorVencer', ...estatusROL2.map(e => e.clave)]
+    const mapa = {}
+    for (const clave of claves) {
+      mapa[clave] = lista.filter(t => coincideFiltroTurnado(t, clave)).length
+    }
+    return mapa
+  }, [lista, estatusROL2])
+  const conteoPrioridad = useMemo(() => (
+    PRIORIDAD_NIVELES.reduce((acc, p) => {
+      acc[p.valor] = lista.filter(t => t.idFus?.prioridad === p.valor).length
+      return acc
+    }, {})
+  ), [lista])
 
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
@@ -702,44 +778,11 @@ export default function SolicitudesTurnadas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs`
   }, [ultimaNotifId])
 
+  // Selección única: elegir un chip reemplaza cualquier selección previa;
+  // volver a tocar el que ya está activo lo quita (vuelve a "Todos").
   const toggleFiltro = f => setFiltro(prev => (
-    prev.includes(f) ? prev.filter(v => v !== f) : [...prev, f]
+    prev.length === 1 && prev[0] === f ? [] : [f]
   ))
-
-  const LABEL_ESTATUS_EXTRA = {
-    Pendiente_validacion: 'Pendiente de validación',
-    Rechazado: 'Rechazados',
-    Vencido: 'Vencido',
-    PorVencer: 'Por vencer',
-  }
-  const labelEstatusFiltro = clave => (
-    LABEL_ESTATUS_EXTRA[clave] || estatusROL2.find(e => e.clave === clave)?.nombre || clave
-  )
-
-  // El KPI "Prioridad alta" navega con un combo de estatus "sin concluir" +
-  // prioridad — ese combo es un detalle interno del filtro, no algo que el
-  // usuario armó a mano, así que aquí solo se muestra el chip de Prioridad
-  // (no uno por cada estatus del combo).
-  const filtroEsBundleSinConcluir = Boolean(prioridadFiltro)
-    && filtro.length === ESTADOS_NO_CONCLUIDO.length
-    && ESTADOS_NO_CONCLUIDO.every(e => filtro.includes(e))
-
-  /* Resumen de "filtros activos" + Limpiar todo (búsqueda + estatus +
-     prioridad) — mismo diseño que ya usa Bitácora. */
-  const chipsActivos = [
-    ...(busqueda ? [{ key: 'busqueda', label: `Búsqueda: "${busqueda}"`, onQuitar: () => setBusqueda('') }] : []),
-    ...(filtroEsBundleSinConcluir ? [] : filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) }))),
-    ...(prioridadFiltro ? [{
-      key: 'prioridad',
-      label: `Prioridad: ${prioridadFiltro}`,
-      onQuitar: () => { setPrioridadFiltro(''); if (filtroEsBundleSinConcluir) setFiltro([]) },
-    }] : []),
-  ]
-  const limpiarTodosFiltros = () => {
-    setBusqueda('')
-    setFiltro([])
-    setPrioridadFiltro('')
-  }
 
   /* ── Resize panel izquierdo ── */
   const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
@@ -825,6 +868,7 @@ export default function SolicitudesTurnadas() {
                 onClick={() => setFiltro([])}
               >
                 Todos
+                <span className="filtro-chip-count">{lista.length}</span>
               </button>
               {estatusROL2.map(e => (
                 <button
@@ -833,6 +877,7 @@ export default function SolicitudesTurnadas() {
                   onClick={() => toggleFiltro(e.clave)}
                 >
                   {e.nombre}
+                  <span className="filtro-chip-count">{conteoEstatus[e.clave] || 0}</span>
                 </button>
               ))}
               {/* Rechazado/Pendiente_validacion viven en FUS.estatusParticular, no en
@@ -843,29 +888,31 @@ export default function SolicitudesTurnadas() {
                 onClick={() => toggleFiltro('Pendiente_validacion')}
               >
                 Pendiente de validación
+                <span className="filtro-chip-count">{conteoEstatus.Pendiente_validacion || 0}</span>
               </button>
               <button
                 className={`filtro-chip filtro-chip-rechazado${filtro.includes('Rechazado') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Rechazado')}
               >
                 Rechazados
+                <span className="filtro-chip-count">{conteoEstatus.Rechazado || 0}</span>
               </button>
               <button
                 className={`filtro-chip filtro-chip-vencido${filtro.includes('Vencido') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('Vencido')}
               >
                 Vencido
+                <span className="filtro-chip-count">{conteoEstatus.Vencido || 0}</span>
               </button>
               <button
                 className={`filtro-chip filtro-chip-porvencer${filtro.includes('PorVencer') ? ' filtro-chip-active' : ''}`}
                 onClick={() => toggleFiltro('PorVencer')}
               >
                 Por vencer
+                <span className="filtro-chip-count">{conteoEstatus.PorVencer || 0}</span>
               </button>
-              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} />
+              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} conteos={conteoPrioridad} />
             </div>
-
-            <FiltrosActivosChips chips={chipsActivos} onLimpiarTodo={limpiarTodosFiltros} />
 
             {errorCarga && lista.length > 0 && (
               <div className="banner-error-carga">
@@ -886,7 +933,7 @@ export default function SolicitudesTurnadas() {
                   <button type="button" className="btn-reintentar" onClick={recargar}>Reintentar</button>
                 </div>
               )}
-              {!cargando && !errorCarga && lista.length === 0 && (
+              {!cargando && !errorCarga && listaFiltrada.length === 0 && (
                 <div className="empty-state">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
@@ -895,7 +942,7 @@ export default function SolicitudesTurnadas() {
                   <p className="empty-state-sub">{busqueda || filtro.length > 0 ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
                 </div>
               )}
-              {lista.map(t => (
+              {listaFiltrada.map(t => (
                 <TurnadoCard
                   key={t.id}
                   t={t}

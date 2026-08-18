@@ -10,6 +10,7 @@ import CatalogoCheckbox from '../components/CatalogoCheckbox'
 import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useCountUp } from '../hooks/useCountUp'
+import { useAnalytics } from '../analytics'
 import './DashboardROL1.css'
 import './Reportes.css'
 
@@ -256,8 +257,11 @@ export default function ReportesROL2() {
   }
   const actualizarExtra = (name, value) => setFiltrosExtra(prev => ({ ...prev, [name]: value }))
 
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'REPORTES_EXPORTAR', accion: 'EXPORT' })
+
   const exportar = async (formato) => {
     setExportando(formato)
+    const taskId = startTask({ metadatos: { formato } })
     try {
       const response = await api.post(`/reportes/titular/exportar/${formato}/`, {}, { params: aplicados, responseType: 'blob' })
       const link = document.createElement('a')
@@ -265,6 +269,10 @@ export default function ReportesROL2() {
       link.download = `reporte_titular.${formato === 'excel' ? 'xlsx' : formato}`
       link.click()
       URL.revokeObjectURL(link.href)
+      completeTask(taskId)
+    } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
+      throw e
     } finally {
       setExportando('')
     }

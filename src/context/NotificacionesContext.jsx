@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import api from '../api/api'
+import { registrarServiceWorker, suscribirPush, desuscribirPush } from '../utils/webPush'
 
 const NotificacionesContext = createContext(null)
 
@@ -21,11 +22,24 @@ export function NotificacionesProvider({ children }) {
   const reconnectIntentos = useRef(0)
   const cargarController = useRef(null)
   const cargarRequestId = useRef(0)
-  const browserNotifRef = useRef(browserNotif)
-  const userRef         = useRef(user)
 
-  useEffect(() => { browserNotifRef.current = browserNotif }, [browserNotif])
-  useEffect(() => { userRef.current = user }, [user])
+  /* Registro del Service Worker (una sola vez por carga de la app) — sin
+     esto, el aviso real del sistema operativo nunca llega ni en PC con el
+     navegador cerrado ni en celular (ver public/sw.js). Independiente de si
+     el usuario ya dio permiso o no: hace falta tenerlo listo desde antes de
+     poder suscribirse. */
+  useEffect(() => { registrarServiceWorker() }, [])
+
+  /* Re-suscribe al iniciar sesión si ya había permiso otorgado de una vez
+     anterior — el navegador puede haber invalidado la suscripción vieja
+     (reinstaló el Service Worker, se limpió el storage, etc.) sin que el
+     usuario haya tenido que volver a aceptar el permiso del sistema.
+     suscribirPush ya es idempotente (reusa la suscripción si sigue viva). */
+  useEffect(() => {
+    if (!user || browserNotif !== 'on') return
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    suscribirPush(api)
+  }, [user, browserNotif])
 
   /* Mostrar prompt una vez por sesión si las notificaciones no están activas (solo HTTPS) */
   useEffect(() => {
@@ -72,32 +86,6 @@ export function NotificacionesProvider({ children }) {
     cargarController.current?.abort()
   }, [user?.id])
 
-  /* Dispara notificación del navegador con clic que navega a la ruta correcta del rol */
-  const _disparar = (notif) => {
-    if (!esHttps()) return
-    if (browserNotifRef.current !== 'on') return
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-    try {
-      const folio = notif.fusFolio || ''
-      const rol   = userRef.current?.rol
-      const dest  = rol === 'ROL2'
-        ? `/rol2/solicitudes${folio ? `?folio=${encodeURIComponent(folio)}` : ''}`
-        : rol === 'COMISIONADO'
-        ? '/comisionado/fus-comisionados'
-        : `/rol1/consultar-fus${folio ? `?folio=${encodeURIComponent(folio)}` : ''}`
-
-      const n = new Notification('SCS — Nueva notificación', {
-        body: notif.mensaje || '',
-        icon: '/Logo SCS 2026_2.png',
-        tag:  String(notif.id),
-      })
-      n.onclick = () => {
-        window.focus()
-        window.location.href = dest
-      }
-    } catch { /* permiso revocado a mitad de vuelo, sin notificación no pasa nada */ }
-  }
-
   /* WebSocket + fallback polling */
   useEffect(() => {
     if (!user) return
@@ -137,7 +125,10 @@ export function NotificacionesProvider({ children }) {
             const notif = JSON.parse(e.data)
             setNotifs(prev => {
               if (prev.some(n => n.id === notif.id)) return prev
-              _disparar(notif)
+              /* El aviso del sistema operativo ya no sale de aquí — lo dispara
+                 el Service Worker al recibir el push real del backend (ver
+                 public/sw.js), que a diferencia de esto sí llega con la app
+                 cerrada. Esto solo mantiene la campanita/lista en vivo. */
               /* Señal para que ROL2 refresque su lista cuando llega un nuevo turnado */
               if (notif.tipo === 'TURNADO') setTurnadoKey(k => k + 1)
               return [notif, ...prev]
@@ -198,12 +189,14 @@ export function NotificacionesProvider({ children }) {
     const pref = result === 'granted' ? 'on' : 'off'
     localStorage.setItem('scs_browser_notif', pref)
     setBrowserNotif(pref)
+    if (pref === 'on') suscribirPush(api)
   }
 
   /* Desactivar notificaciones del navegador */
   const desactivarBrowserNotif = () => {
     localStorage.setItem('scs_browser_notif', 'off')
     setBrowserNotif('off')
+    desuscribirPush(api)
   }
 
   /* Descartar el prompt sin decidir — preguntará de nuevo en el próximo login */

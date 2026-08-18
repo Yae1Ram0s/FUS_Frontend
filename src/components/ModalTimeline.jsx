@@ -16,7 +16,7 @@ const TIPO_INFO = {
   turnado:     { titulo: 'Turnado',     color: '#1F5647' },
   comisionado: { titulo: 'Comisionado', color: '#9F2241' },
   respuesta:   { titulo: 'Respuesta',   color: 'var(--fg-success)' },
-  atendido:    { titulo: 'Atendido',    color: '#b45309' },
+  atendido:    { titulo: 'En seguimiento', color: '#b45309' },
   concluido:   { titulo: 'Concluido',   color: 'var(--fg-success)' },
   rechazo:     { titulo: 'Rechazado',   color: '#b23030' },
 }

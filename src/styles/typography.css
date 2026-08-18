@@ -101,7 +101,6 @@ textarea,
 }
 
 /* Etiquetas de stat / badge */
-.std-badge-lbl,
 .adm-stat-lbl,
 .stat-label {
   font-family: var(--font-thin);
@@ -119,15 +118,6 @@ textarea,
   font-style: normal;
   font-size: 0.75rem;
   letter-spacing: 0.06em;
-}
-
-/* "BIENVENIDO(A)," — Thin con alto espaciado */
-.std-greeting-hello {
-  font-family: var(--font-thin);
-  font-weight: 400;
-  font-style: normal;
-  font-size: 0.88rem;
-  letter-spacing: 0.04em;
 }
 
 /* Celdas de datos en tablas */
@@ -206,7 +196,6 @@ h1, h2, h3 {
 /* Títulos de página */
 .bita-header-left h1,
 .adm-header-left h1,
-.reg-page-title,
 .header-titulo {
   font-family: var(--font-display);
   font-weight: 800;
@@ -235,14 +224,6 @@ h1, h2, h3 {
   letter-spacing: -0.01em;
 }
 
-/* Nombre del usuario en saludo — firme, institucional */
-.std-greeting-name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-style: normal;
-  letter-spacing: -0.015em;
-}
-
 /* Título del panel izquierdo — recto, no cursiva */
 .panel-title {
   font-family: var(--font-display);
@@ -265,26 +246,12 @@ h1, h2, h3 {
   font-style: normal;
 }
 
-/* Divisor de sección (RESUMEN DE SOLICITUDES, etc.) */
-.std-divider-text {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-style: normal;
-}
-
 /* Toast — mensajes del sistema, directos y claros */
 .toast-msg {
   font-family: var(--font-display);
   font-weight: 800;
   font-style: normal;
   letter-spacing: 0.005em;
-}
-
-/* Divisor de sección de contenido */
-.std-divider-text {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-style: normal;
 }
 
 /* Sidebar — ítems de navegación (activo e inactivo) */
@@ -343,8 +310,7 @@ h1, h2, h3 {
 
 /* Números grandes de estadísticas */
 .stat-number,
-.adm-stat-num,
-.std-badge-num {
+.adm-stat-num {
   font-family: var(--font-display);
   font-weight: 800;
   font-style: normal;
@@ -454,10 +420,7 @@ h1, h2, h3 {
    RESPONSIVO — ajuste de fuentes en pantallas pequeñas
 ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .std-greeting-name  { font-size: 1rem; }
-  .std-greeting-hello { font-size: 0.85rem; letter-spacing: 0.03em; }
   .stat-number        { letter-spacing: -0.02em; }
-  .std-badge-num      { letter-spacing: -0.02em; }
   .panel-title        { font-size: 0.85rem; }
   .sidebar-item       { font-size: 0.875rem; }
 
@@ -480,8 +443,6 @@ h1, h2, h3 {
 }
 
 @media (max-width: 480px) {
-  .std-greeting-name  { font-size: 0.95rem; }
-  .std-greeting-hello { font-size: 0.82rem; }
   .adm-stat-num       { font-size: 1.25rem; }
   .bita-limpiar       { font-size: 0.8rem; }
   .notif-read-all     { font-size: 0.78rem; }

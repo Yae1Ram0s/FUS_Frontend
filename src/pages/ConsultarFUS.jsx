@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
@@ -7,7 +7,7 @@ import ModalTimeline from '../components/ModalTimeline'
 import ModalTurnar from '../components/FUS/ModalTurnar'
 import FusCard from '../components/FUS/FusCard'
 import PrioridadFiltroChip from '../components/FUS/PrioridadFiltroChip'
-import FiltrosActivosChips from '../components/FiltrosActivosChips'
+import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import DetalleFUS from '../components/FUS/DetalleFUS'
 import api from '../api/api'
 import { useToast } from '../context/ToastContext'
@@ -18,10 +18,15 @@ import './ConsultarFUS.css'
 
 const PAGE_SIZE = 30
 
-// Mismo conjunto que usa el KPI "Prioridad alta" del Dashboard (DashboardROL1.jsx)
-// para armar su link — se repite aquí solo para reconocer ese combo en
-// "Filtros activos" (ver chipsActivos) y no como fuente de verdad del filtro.
-const ESTADOS_NO_CONCLUIDO = ['Registrado', 'Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado']
+// Mismo criterio que FUSListCreateView (backend) para el parámetro
+// `estatusParticular` — se replica aquí para filtrar en el cliente sobre lo
+// ya cargado en caché, sin volver a pedirle al servidor la misma lista cada
+// vez que se cambia de chip. `estadoTemporalidad` ya viene calculado en cada
+// FUS con el mismo criterio (fechaLimite vs. ahora, salvo Concluido).
+function coincideFiltroFus(f, clave) {
+  if (clave === 'Vencido' || clave === 'PorVencer') return f.estadoTemporalidad === clave
+  return f.estatusParticular === clave
+}
 
 function combinarPaginasFUS(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
@@ -37,8 +42,11 @@ function combinarPaginasFUS(estadoAnterior, paginaNueva) {
 
 // Relabel puntual del chip de filtro para ROL1 — el catálogo comparte
 // "Pendiente de validación" con ROL2, pero en su propia bandeja se lee mejor
-// como acción pendiente de él: "Por validar".
-const FILTRO_LABEL_ROL1 = { Pendiente_validacion: 'Por validar' }
+// como acción pendiente de él: "Por validar". "Atendido" (fus.estatusParticular)
+// se muestra como "En seguimiento" para no leerse como si ya hubiera
+// terminado — el filtro sigue siendo el mismo (clave 'Atendido'), solo
+// cambia la palabra visible.
+const FILTRO_LABEL_ROL1 = { Pendiente_validacion: 'Por validar', Atendido: 'En seguimiento' }
 
 /* ── Panel de detalle FUS ── */
 /* ── Página principal ── */
@@ -78,8 +86,11 @@ export default function ConsultarFUS() {
   // Firma de "qué se está pidiendo" — al ser parte de la queryKey, cambiar
   // cualquiera de estos valores aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1), así que ya no hace falta el guard
-  // manual de "filtros cambiaron" que existía con useAsyncResource.
-  const queryKey = ['fusListado', { folioParam, filtro, prioridadFiltro, busquedaAplicada }]
+  // manual de "filtros cambiaron" que existía con useAsyncResource. Estatus
+  // y prioridad YA NO viajan aquí (ver `listaFiltrada` más abajo): se
+  // filtran en el cliente sobre lo que ya está en caché, así que cambiar de
+  // chip no dispara una petición nueva al backend.
+  const queryKey = ['fusListado', { folioParam, busquedaAplicada }]
   const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
     if (folioParam) {
@@ -87,13 +98,11 @@ export default function ConsultarFUS() {
       // se filtra en el servidor, así se encuentra aunque no esté entre los
       // más recientes de la bandeja general.
       params.folio = folioParam
-    } else {
-      if (filtro.length)   params.estatusParticular = filtro.join(',')
-      if (prioridadFiltro) params.prioridad = prioridadFiltro
-      if (busquedaAplicada) params.search = busquedaAplicada
+    } else if (busquedaAplicada) {
+      params.search = busquedaAplicada
     }
     return params
-  }, [busquedaAplicada, filtro, folioParam, prioridadFiltro])
+  }, [busquedaAplicada, folioParam])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
@@ -119,6 +128,36 @@ export default function ConsultarFUS() {
   const lista = resultado.items
   const totalItems = resultado.total
   const pagina = resultado.page
+
+  // Filtrado 100% en el cliente sobre lo ya cargado en caché — cambiar de
+  // chip (estatus o prioridad) ya no dispara ninguna petición al backend,
+  // solo recalcula esta lista derivada. Se salta cuando hay folioParam: ese
+  // caso siempre debe mostrar el único FUS pedido, sin importar el filtro
+  // que haya quedado seleccionado.
+  const listaFiltrada = useMemo(() => {
+    if (folioParam) return lista
+    let base = lista
+    if (filtro.length) base = base.filter(f => filtro.some(clave => coincideFiltroFus(f, clave)))
+    if (prioridadFiltro) base = base.filter(f => f.prioridad === prioridadFiltro)
+    return base
+  }, [lista, filtro, prioridadFiltro, folioParam])
+
+  // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
+  // chip — para mostrar el número junto a la etiqueta y que se note de
+  // inmediato cuántos resultados trae cada filtro, sin tener que aplicarlo.
+  const conteoEstatus = useMemo(() => {
+    const mapa = {}
+    for (const clave of ['Vencido', 'PorVencer', ...estatusROL1.map(e => e.clave)]) {
+      mapa[clave] = lista.filter(f => coincideFiltroFus(f, clave)).length
+    }
+    return mapa
+  }, [lista, estatusROL1])
+  const conteoPrioridad = useMemo(() => (
+    PRIORIDAD_NIVELES.reduce((acc, p) => {
+      acc[p.valor] = lista.filter(f => f.prioridad === p.valor).length
+      return acc
+    }, {})
+  ), [lista])
 
   const procesarCargaExitosa = useCallback(result => {
     if (result.match) {
@@ -241,40 +280,11 @@ export default function ConsultarFUS() {
     }))
   }
 
+  // Selección única: elegir un chip reemplaza cualquier selección previa;
+  // volver a tocar el que ya está activo lo quita (vuelve a "Todos").
   const toggleFiltro = f => setFiltro(prev => (
-    prev.includes(f) ? prev.filter(v => v !== f) : [...prev, f]
+    prev.length === 1 && prev[0] === f ? [] : [f]
   ))
-
-  const labelEstatusFiltro = clave => {
-    if (clave === 'Vencido') return 'Vencido'
-    if (clave === 'PorVencer') return 'Por vencer'
-    return FILTRO_LABEL_ROL1[clave] || estatusROL1.find(e => e.clave === clave)?.nombre || clave
-  }
-
-  // El KPI "Prioridad alta" navega con un combo de estatus "sin concluir" +
-  // prioridad — ese combo es un detalle interno del filtro, no algo que el
-  // usuario armó a mano, así que aquí solo se muestra el chip de Prioridad
-  // (no uno por cada estatus del combo).
-  const filtroEsBundleSinConcluir = Boolean(prioridadFiltro)
-    && filtro.length === ESTADOS_NO_CONCLUIDO.length
-    && ESTADOS_NO_CONCLUIDO.every(e => filtro.includes(e))
-
-  /* Resumen de "filtros activos" + Limpiar todo (búsqueda + estatus +
-     prioridad) — mismo diseño que ya usa Bitácora. */
-  const chipsActivos = [
-    ...(busqueda ? [{ key: 'busqueda', label: `Búsqueda: "${busqueda}"`, onQuitar: () => setBusqueda('') }] : []),
-    ...(filtroEsBundleSinConcluir ? [] : filtro.map(f => ({ key: `estatus-${f}`, label: labelEstatusFiltro(f), onQuitar: () => toggleFiltro(f) }))),
-    ...(prioridadFiltro ? [{
-      key: 'prioridad',
-      label: `Prioridad: ${prioridadFiltro}`,
-      onQuitar: () => { setPrioridadFiltro(''); if (filtroEsBundleSinConcluir) setFiltro([]) },
-    }] : []),
-  ]
-  const limpiarTodosFiltros = () => {
-    setBusqueda('')
-    setFiltro([])
-    setPrioridadFiltro('')
-  }
 
   /* ── Panel izquierdo: cerrado por defecto (modo dashboard) ── */
 
@@ -359,6 +369,10 @@ export default function ConsultarFUS() {
               </svg>
               <input
                 aria-label="Buscar por folio, descripción, contacto, medio"
+                data-analytics-event="INTERACTION"
+                data-analytics-component="FUS_SEARCH"
+                data-analytics-action="SEARCH"
+                data-analytics-trigger="change"
                 placeholder="Buscar por folio, descripción, contacto, medio…"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
@@ -368,35 +382,41 @@ export default function ConsultarFUS() {
             <div className="left-filtros">
               <button
                 className={`filtro-chip${filtro.length === 0 ? ' filtro-chip-active' : ''}`}
+                data-analytics-event="INTERACTION" data-analytics-component="FUS_STATUS_FILTER" data-analytics-action="FILTER" data-analytics-metadata="TODOS"
                 onClick={() => setFiltro([])}
               >
                 Todos
+                <span className="filtro-chip-count">{lista.length}</span>
               </button>
               {estatusROL1.filter(e => e.clave !== 'Rechazado').map(e => (
                 <button
                   key={e.clave}
                   className={`filtro-chip filtro-chip-${e.clave.toLowerCase()}${filtro.includes(e.clave) ? ' filtro-chip-active' : ''}`}
+                  data-analytics-event="INTERACTION" data-analytics-component="FUS_STATUS_FILTER" data-analytics-action="FILTER" data-analytics-metadata={e.clave}
                   onClick={() => toggleFiltro(e.clave)}
                 >
                   {FILTRO_LABEL_ROL1[e.clave] || e.nombre}
+                  <span className="filtro-chip-count">{conteoEstatus[e.clave] || 0}</span>
                 </button>
               ))}
               <button
                 className={`filtro-chip filtro-chip-vencido${filtro.includes('Vencido') ? ' filtro-chip-active' : ''}`}
+                data-analytics-event="INTERACTION" data-analytics-component="FUS_TEMPORALITY_FILTER" data-analytics-action="FILTER" data-analytics-metadata="VENCIDO"
                 onClick={() => toggleFiltro('Vencido')}
               >
                 Vencido
+                <span className="filtro-chip-count">{conteoEstatus.Vencido || 0}</span>
               </button>
               <button
                 className={`filtro-chip filtro-chip-porvencer${filtro.includes('PorVencer') ? ' filtro-chip-active' : ''}`}
+                data-analytics-event="INTERACTION" data-analytics-component="FUS_TEMPORALITY_FILTER" data-analytics-action="FILTER" data-analytics-metadata="POR_VENCER"
                 onClick={() => toggleFiltro('PorVencer')}
               >
                 Por vencer
+                <span className="filtro-chip-count">{conteoEstatus.PorVencer || 0}</span>
               </button>
-              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} />
+              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} conteos={conteoPrioridad} />
             </div>
-
-            <FiltrosActivosChips chips={chipsActivos} onLimpiarTodo={limpiarTodosFiltros} />
 
             {errorCarga && lista.length > 0 && (
               <div className="banner-error-carga">
@@ -417,7 +437,7 @@ export default function ConsultarFUS() {
                   <button type="button" className="btn-reintentar" onClick={recargar}>Reintentar</button>
                 </div>
               )}
-              {!cargando && !errorCarga && lista.length === 0 && (
+              {!cargando && !errorCarga && listaFiltrada.length === 0 && (
                 <div className="empty-state">
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -429,7 +449,7 @@ export default function ConsultarFUS() {
                   <p className="empty-state-sub">{busqueda || filtro.length > 0 ? 'Ningún FUS coincide con tu búsqueda.' : 'Aún no hay FUS registrados.'}</p>
                 </div>
               )}
-              {lista.map(f => (
+              {listaFiltrada.map(f => (
                 <FusCard
                   key={f.id}
                   fus={f}

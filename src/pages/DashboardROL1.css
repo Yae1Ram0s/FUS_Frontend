@@ -53,175 +53,8 @@
   background: rgba(201, 162, 39, 0.16);
 }
 
-.dash-wrap-apple {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 1400px;
-  min-width: 0;
-  padding: 2.5rem 2.5rem 3rem;
-  box-sizing: border-box;
-}
-
-/* ── Tarjeta grande que contiene todo el dashboard ── */
-.dash-mega-card {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(34px) saturate(180%);
-  -webkit-backdrop-filter: blur(34px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: 32px;
-  box-shadow: 0 20px 60px rgba(31, 86, 71, 0.16), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  padding: 2.25rem 2.25rem 2.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Brillo diagonal — simula el reflejo de luz sobre el vidrio */
-.dash-mega-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(115deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 30%);
-  pointer-events: none;
-}
-.dash-mega-card > * { position: relative; z-index: 1; }
-
-.dash-header-apple h1 {
-  margin: 0;
-  font-size: 1.9rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #1d1d1f;
-}
-.dash-header-apple p {
-  margin: 4px 0 0;
-  font-size: .95rem;
-  color: #55555a;
-}
-
-/* ── Bloque de sección (título + contenido) ── */
-.dash-section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.dash-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.dash-section-head h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1d1d1f;
-  letter-spacing: -0.01em;
-}
-.dash-section-caption { margin: 0; font-size: .8rem; color: #55555a; }
-
-/* ── Filas de tarjetas de estadística — 4 → 2 → 1 ── */
-.dash-stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  min-width: 0;
-}
-.dash-stat-row > * { min-width: 0; }
-
-/* ── Tarjeta de KPI minimalista, estilo Apple ── */
-.dash-mini-stat {
-  position: relative;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 18px;
-  padding: 16px 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-.dash-mini-stat-clickable { cursor: pointer; }
-.dash-mini-stat-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07); }
-.dash-mini-stat-clickable:active { transform: translateY(0) scale(0.98); }
-
-.dash-mini-stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.dash-mini-stat-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.dash-mini-stat-value-row { display: flex; align-items: center; gap: 6px; }
-.dash-mini-stat-value {
-  font-size: 1.7rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #1d1d1f;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.dash-mini-stat-live {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-  animation: dash-live-pulse 1.8s ease-in-out infinite;
-}
-@keyframes dash-live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.6; transform: scale(1.2); }
-}
-.dash-mini-stat-label { font-size: .82rem; font-weight: 600; color: #1d1d1f; }
-.dash-mini-stat-sub { font-size: .72rem; color: #86868b; }
-.dash-mini-stat-arrow { margin-left: auto; color: #c7c7cc; flex-shrink: 0; }
-
-/* ── Grid genérico de 2 columnas para pares de gráficas ── */
-.dash-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  align-items: stretch;
-  min-width: 0;
-}
-.dash-grid-2 > * { min-width: 0; }
-
-.dash-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  padding: 24px 26px;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.dash-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%);
-  pointer-events: none;
-}
-.dash-card > * { position: relative; z-index: 1; }
-.dash-card h2 { margin: 0; font-size: 1.02rem; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
 .dash-subtitle { margin: 4px 0 18px; font-size: .8rem; color: #55555a; }
 .dash-empty { font-size: .85rem; color: #55555a; margin: 0; }
-
-.dash-card-centrado { align-items: center; justify-content: center; text-align: center; }
-.dash-card-centrado .dash-subtitle { margin-bottom: 8px; }
 
 /* ── Barras horizontales (canal de recepción, prioridad, antigüedad) ── */
 .dash-bars { display: flex; flex-direction: column; gap: 15px; min-width: 0; }
@@ -293,45 +126,7 @@
 .dash-donut-legend .dash-legend-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #48484c; font-weight: 600; }
 .dash-donut-legend .dash-legend-value { font-weight: 700; color: #1d1d1f; }
 
-/* ── Actualizaciones / feed ── */
-.dash-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.dash-feed-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; }
-.dash-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: #1F5647; color: #ffffff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .82rem; font-weight: 700; flex-shrink: 0;
-}
-.dash-feed-body { flex: 1; min-width: 0; }
-.dash-feed-text { font-size: .84rem; color: #1d1d1f; line-height: 1.4; overflow-wrap: anywhere; }
-.dash-feed-hora { font-size: .76rem; color: #55555a; white-space: nowrap; flex-shrink: 0; }
-
 /* ── Mis solicitudes (tabla ROL2) ── */
-.dash-table-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-.dash-table-filters select,
-.dash-table-filters input[type="date"] {
-  font: inherit;
-  font-size: .82rem;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.7);
-  color: #1d1d1f;
-  min-width: 140px;
-}
-.dash-table-filters button {
-  font: inherit;
-  font-size: .8rem;
-  font-weight: 600;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.04);
-  color: #1d1d1f;
-  cursor: pointer;
-}
-.dash-table-filters button:hover { background: rgba(0, 0, 0, 0.08); }
-
 .dash-table-scroll { overflow-x: auto; min-width: 0; }
 .dash-table { width: 100%; border-collapse: collapse; min-width: 560px; }
 .dash-table th {
@@ -355,7 +150,6 @@
 .dash-table tbody tr { cursor: pointer; transition: background 150ms ease; }
 .dash-table tbody tr:hover { background: rgba(0, 0, 0, 0.04); }
 .dash-table td.dash-td-desc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-table-empty { padding: 20px 0; text-align: center; color: #55555a; font-size: .85rem; }
 
 /* ── Error de carga (dashboard completo) ── */
 .dash-error-state {
@@ -408,54 +202,17 @@
 }
 .banner-error-carga button:hover { background: rgba(35, 91, 78, 0.18); }
 
-/* ── Vencimientos (buckets con estado vacío) ── */
-.dash-venc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.dash-venc-card {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  padding: 16px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 150ms, box-shadow 150ms;
-}
-.dash-venc-card:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07); }
-.dash-venc-card:active { transform: translateY(0) scale(0.98); }
-.dash-venc-value { font-size: 1.6rem; font-weight: 700; color: #1d1d1f; font-variant-numeric: tabular-nums; }
-.dash-venc-label { font-size: .74rem; font-weight: 600; color: #55555a; margin-top: 4px; }
-.dash-venc-note { margin: 10px 0 0; font-size: .74rem; color: #86868b; text-align: center; }
-
 /* ══════════════════════════════════════
    RESPONSIVO — Desktop 4 col / Tablet 2 col / Móvil 1 col
 ══════════════════════════════════════ */
 @media (max-width: 1100px) {
-  .dash-stat-row { grid-template-columns: repeat(2, 1fr); }
-  .dash-grid-2 { grid-template-columns: 1fr; }
   .dash-bucket-row { grid-template-columns: repeat(2, 1fr); }
-  .dash-venc-row { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {
   .dash-bg::before { width: 280px; height: 280px; top: -90px; left: -70px; filter: blur(60px); }
   .dash-bg::after  { width: 300px; height: 300px; bottom: -100px; right: -90px; filter: blur(60px); }
 
-  .dash-wrap-apple { padding: 1.25rem 1rem calc(90px + env(safe-area-inset-bottom, 0px)); }
-  .dash-mega-card { padding: 1.25rem 1rem 1.5rem; gap: 22px; border-radius: 22px; }
-  .dash-header-apple h1 { font-size: 1.4rem; }
-  .dash-header-apple p { font-size: .85rem; }
-
-  .dash-section-head h3 { font-size: 1rem; }
-
-  .dash-stat-row { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .dash-mini-stat { padding: 12px 14px; gap: 10px; border-radius: 15px; }
-  .dash-mini-stat-icon { width: 34px; height: 34px; border-radius: 10px; }
-  .dash-mini-stat-icon svg { width: 18px; height: 18px; }
-  .dash-mini-stat-value { font-size: 1.4rem; }
-  .dash-mini-stat-label { font-size: .74rem; }
-  .dash-mini-stat-sub { font-size: .66rem; }
-
-  .dash-card { padding: 16px 18px; border-radius: 16px; }
-  .dash-card h2 { font-size: .94rem; }
   .dash-subtitle { font-size: .74rem; margin-bottom: 14px; }
 
   .dash-bar-row { grid-template-columns: 78px 1fr 26px; gap: 8px; }
@@ -465,29 +222,26 @@
   .dash-trend-labels span:nth-child(odd) { display: none; }
 
   .dash-bucket-row { grid-template-columns: 1fr 1fr; }
-  .dash-venc-row { grid-template-columns: 1fr; }
 
   .dash-donut-multi-wrap { gap: 18px; }
   .dash-donut-multi-figure { width: 140px; height: 140px; }
   .dash-donut-multi-total-value { font-size: 1.4rem; }
 
-  .dash-feed-text { font-size: .8rem; }
-  .dash-avatar { width: 30px; height: 30px; font-size: .76rem; }
-
   .dash-table { min-width: 480px; }
 }
 
 @media (max-width: 480px) {
-  .dash-stat-row { grid-template-columns: 1fr; }
   .dash-bucket-row { grid-template-columns: 1fr 1fr; }
   .dash-donut-multi-wrap { flex-direction: column; align-items: stretch; }
   .dash-donut-multi-figure { margin: 0 auto; }
 }
 
 /* ══════════════════════════════════════
-   REDISEÑO "LIQUID GLASS" — exclusivo ROL1 (ver DashboardROL1.jsx).
-   Namespace propio (dash2-/kpi2-/venc-/segmented) para no tocar ni una
-   sola regla de las de arriba, que rol 4 (EQUIPO_PARTICULAR) sigue usando.
+   REDISEÑO "LIQUID GLASS" — usado por DashboardROL1.jsx (ROL1 y
+   EQUIPO_PARTICULAR) y reutilizado por DashboardROL2/Reportes.
+   Namespace propio (dash2-/kpi2-/venc-/segmented) sobre las utilidades
+   compartidas de arriba (dash-bg, dash-bar-*, dash-trend-*, dash-bucket-*,
+   dash-donut-*, dash-table, dash-error-*).
 ══════════════════════════════════════ */
 .dash2-wrap {
   --dash2-card-bg: rgba(255, 255, 255, 0.6);
@@ -685,32 +439,6 @@
 
 .venc-item-clickable { cursor: pointer; border-radius: 10px; transition: padding-left 0.25s ease, background 150ms ease; }
 .venc-item-clickable:hover { background: rgba(0,0,0,0.03); }
-
-/* Avisos — actividad reciente (bitácora), bajo los vencimientos en la misma tarjeta */
-.dash2-subhead {
-  margin: 18px 0 6px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: #86868b;
-}
-.aviso-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  font-size: 12px;
-}
-.aviso-item:last-child { border-bottom: none; }
-.aviso-folio { font-weight: 600; color: #1d1d1f; flex-shrink: 0; }
-.aviso-texto { color: #55555a; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.aviso-fecha { color: #86868b; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
-.aviso-item-clickable { cursor: pointer; border-radius: 8px; transition: background 150ms ease; }
-.aviso-item-clickable:hover { background: rgba(0,0,0,0.03); }
 
 /* Total del periodo integrado a la tarjeta de tendencia (fila compacta) —
    oculto en escritorio, donde .dash2-total-card (tarjeta aparte) es la que

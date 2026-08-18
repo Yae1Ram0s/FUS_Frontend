@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner'
 import api from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
+import { useAnalytics } from '../analytics'
 import FusFolioPicker from '../components/Calendario/FusFolioPicker'
 import FechaInput from '../components/FechaInput'
 import './CalendarioActividades.css'
@@ -145,6 +146,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const eliminarEnCursoRef = useRef(false)
   const { user } = useAuth()
   const soloLectura = modal.mode === 'editar' && !esCreador
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'CALENDARIO_ACTIVIDAD' })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -192,17 +194,21 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
     if (guardarEnCursoRef.current) return
     guardarEnCursoRef.current = true
     setError(''); setGuardando(true)
+    const taskId = startTask({ accion: modal.mode === 'crear' ? 'CREATE' : 'UPDATE' })
     try {
       if (modal.mode === 'crear') {
         await api.post('/actividades/', construirPayload(forzar))
       } else {
         await api.patch(`/actividades/${modal.id}/`, construirPayload(forzar))
       }
+      completeTask(taskId)
       onGuardado()
     } catch (e) {
       if (e.response?.status === 409) {
+        failTask(taskId, { metadatos: { motivo: 'conflicto' } })
         setConflicto(e.response.data?.detail || 'Ya existe otra actividad en ese horario.')
       } else {
+        failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
         const detalle = e.response?.data?.detail || 'No se pudo guardar la actividad.'
         setError(detalle)
         onError(detalle)
@@ -217,10 +223,13 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
     if (eliminarEnCursoRef.current) return
     eliminarEnCursoRef.current = true
     setEliminando(true)
+    const taskId = startTask({ componente: 'CALENDARIO_ACTIVIDAD_ELIMINAR', accion: 'UPDATE' })
     try {
       await api.delete(`/actividades/${modal.id}/`)
+      completeTask(taskId)
       onEliminado()
-    } catch {
+    } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       onError('No se pudo eliminar la actividad.')
     } finally {
       setEliminando(false)

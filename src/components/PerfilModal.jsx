@@ -24,11 +24,7 @@ const ICON_MAIL = (
 )
 
 function obtenerNombre(user) {
-  return user?.nombreCompleto
-    || user?.nombre_completo
-    || user?.nombre
-    || [user?.first_name, user?.last_name].filter(Boolean).join(' ')
-    || 'Nombre no disponible'
+  return user?.nombre || 'Nombre no disponible'
 }
 
 export default function PerfilModal({ abierto, cerrando, user, ancla, onClose, onCierreCompleto }) {

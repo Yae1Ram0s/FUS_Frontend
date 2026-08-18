@@ -10,7 +10,7 @@ const ESTADO_INFO = {
   Turnado:         { color: '#a78bfa', label: 'Turnado' },
   Recibido:        { color: '#9F2241', label: 'Recibido' },
   En_seguimiento:  { color: '#fbbf24', label: 'En seguimiento' },
-  Atendido:        { color: '#fbbf24', label: 'Atendido' },
+  Atendido:        { color: '#fbbf24', label: 'En seguimiento' },
   Concluido:       { color: '#4ade80', label: 'Concluido' },
   Pendiente_validacion: { color: '#a78bfa', label: 'Pendiente de validación' },
 }

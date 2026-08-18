@@ -9,6 +9,7 @@ import PrivateRoute               from './components/PrivateRoute'
 import ErrorBoundary              from './components/ErrorBoundary'
 import Spinner                    from './components/Spinner'
 import BannerSinConexion          from './components/BannerSinConexion'
+import { AnalyticsProvider }      from './analytics'
 
 import './context/Toast.css'
 
@@ -30,6 +31,7 @@ const AdminUsuarios = lazy(() => import('./features/system-admin/pages/AdminUsua
 const AdminSalud = lazy(() => import('./features/system-admin/pages/AdminSalud'))
 const AdminAuditoria = lazy(() => import('./features/system-admin/pages/AdminAuditoria'))
 const AdminOTP = lazy(() => import('./features/system-admin/pages/AdminOTP'))
+const AdminUsoSistema = lazy(() => import('./features/system-admin/pages/AdminUsoSistema'))
 
 export default function App() {
   // --app-vh: alto real de viewport visible (excluye barras dinámicas del navegador
@@ -53,6 +55,7 @@ export default function App() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <AnalyticsProvider>
           <NotificacionesProvider>
             <ToastProvider>
               <BannerSinConexion />
@@ -100,6 +103,7 @@ export default function App() {
                   <Route path="/admin/salud" element={<AdminSalud />} />
                   <Route path="/admin/auditoria" element={<AdminAuditoria />} />
                   <Route path="/admin/otp" element={<AdminOTP />} />
+                  <Route path="/admin/uso" element={<AdminUsoSistema />} />
                 </Route>
 
                 {/* Raíz → login */}
@@ -109,6 +113,7 @@ export default function App() {
               </Suspense>
             </ToastProvider>
           </NotificacionesProvider>
+          </AnalyticsProvider>
         </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

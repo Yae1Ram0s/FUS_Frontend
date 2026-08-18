@@ -239,6 +239,25 @@
 
 .cfus-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
+/* Número de resultados dentro de cada chip de filtro */
+.cfus-left .filtro-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 5px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: inherit;
+  text-shadow: none;
+  vertical-align: middle;
+}
+.cfus-left .filtro-chip-active .filtro-chip-count { background: rgba(255, 255, 255, 0.32); }
+
 .cfus-left .filtro-chip-active {
   background: rgba(255, 255, 255, 0.16) !important;
   border: 1px solid rgba(221, 201, 163, 0.45) !important;
@@ -308,8 +327,13 @@
   .cfus-left .left-filtros > .filtro-chip:first-child { grid-column: span 2; order: 1; }
   .cfus-left .filtro-chip-registrado { grid-column: span 3; order: 1; }
   .cfus-left .filtro-chip-turnado { grid-column: span 2; order: 1; }
-  .cfus-left .filtro-chip-atendido { grid-column: span 2; order: 1; }
-  .cfus-left .filtro-chip-vencido { grid-column: span 3; order: 1; }
+  /* "En seguimiento" (antes "Atendido") es bastante más largo — necesita más
+     columnas que las que le tocaban a la palabra corta original, o el chip
+     se ve desproporcionado frente a sus vecinos. Se le quita a "Vencido"
+     (7 letras, ya le sobraba espacio en span 3) para que la fila siga
+     sumando 12 columnas exactas. */
+  .cfus-left .filtro-chip-atendido { grid-column: span 3; order: 1; font-size: 0.66rem; letter-spacing: 0.02em; }
+  .cfus-left .filtro-chip-vencido { grid-column: span 2; order: 1; }
   .cfus-left .filtro-chip-concluido,
   .cfus-left .filtro-chip-pendiente_validacion,
   .cfus-left .filtro-chip-porvencer,
@@ -558,99 +582,6 @@
   background-blend-mode: normal, multiply;
 }
 
-/* ── Panel de estadísticas ROL1 ── */
-.std-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.4rem;
-  width: 100%;
-}
-
-/* Greeting */
-.std-greeting {
-  background: linear-gradient(135deg, #235b4e 0%, #1a4338 100%);
-  border-radius: 20px;
-  padding: 24px 28px;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  box-shadow: 8px 8px 22px rgba(15,45,38,0.20), -4px -4px 12px rgba(255,255,255,0.72);
-  position: relative;
-  overflow: hidden;
-}
-.std-greeting::before {
-  content: '';
-  position: absolute;
-  right: -50px; top: -50px;
-  width: 200px; height: 200px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.05);
-  pointer-events: none;
-}
-.std-greeting::after {
-  content: '';
-  position: absolute;
-  right: 30px; bottom: -70px;
-  width: 160px; height: 160px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.04);
-  pointer-events: none;
-}
-
-.std-avatar {
-  width: 54px; height: 54px;
-  border-radius: 15px;
-  background: rgba(255,255,255,0.16);
-  border: 1px solid rgba(255,255,255,0.28);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.35rem; font-weight: 800; color: #fff;
-  flex-shrink: 0;
-  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.18);
-  position: relative; z-index: 1;
-}
-
-.std-greeting-text {
-  display: flex; flex-direction: column; gap: 3px;
-  flex: 1; min-width: 0;
-  position: relative; z-index: 1;
-}
-.std-greeting-hello { font-size: 0.68rem; font-weight: 600; color: rgba(221,201,163,0.85); letter-spacing: 0.12em; text-transform: uppercase; }
-.std-greeting-name  { font-size: 1.05rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.std-greeting-role  { font-size: 0.71rem; color: rgba(221,201,163,0.75); font-weight: 500; }
-
-.std-greeting-badge {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.22);
-  border-radius: 14px;
-  padding: 10px 16px;
-  flex-shrink: 0;
-  position: relative; z-index: 1;
-}
-.std-badge-num { font-size: 1.9rem; font-weight: 800; color: #DDC9A3; line-height: 1; letter-spacing: -0.03em; }
-.std-badge-lbl { font-size: 0.65rem; font-weight: 600; color: rgba(221,201,163,0.75); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
-
-/* Divisor */
-.std-divider { display: flex; align-items: center; gap: 10px; }
-.std-divider-line { flex: 1; height: 1px; background: rgba(35,91,78,0.14); }
-.std-divider-text { font-size: 0.67rem; font-weight: 700; color: #235b4e; text-transform: uppercase; letter-spacing: 0.13em; white-space: nowrap; opacity: 0.62; font-style: normal; }
-
-/* Métricas */
-.std-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-.std-grid-2x2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-.std-stats-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-}
-
 .stat-card {
   background: rgba(240, 251, 248, 0.96);
   border-radius: 16px;
@@ -787,21 +718,6 @@
   font-weight: 500;
   margin-top: 2px;
 }
-
-/* Pista */
-.std-hint {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(240, 251, 248, 0.96);
-  border: 1px solid rgba(35,91,78,0.07);
-  border-radius: 11px;
-  padding: 11px 16px;
-  font-size: 0.78rem;
-  color: #3d6b5e;
-  box-shadow: 3px 3px 8px rgba(35,91,78,0.07), -2px -2px 6px rgba(255,255,255,0.80);
-}
-.std-hint svg { color: #235b4e; opacity: 0.45; flex-shrink: 0; }
 
 @keyframes statFadeUp {
   from { opacity: 0; transform: translateY(16px); }
@@ -1263,34 +1179,6 @@
 .dt-actions-comisionado { align-items: stretch; }
 .dt-comisionado-botones { display: flex; gap: 10px; width: 100%; }
 
-.btn-rechazar {
-  flex: 1;
-  background: transparent;
-  color: #b23030;
-  border: 1px solid rgba(178, 48, 48, 0.45);
-  border-radius: 20px;
-  padding: 10px 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-rechazar:hover:not(:disabled) { background: rgba(178, 48, 48, 0.08); }
-.btn-rechazar:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-aprobar {
-  flex: 1;
-  background: rgba(21, 128, 61, 0.90);
-  color: #ffffff;
-  border: 1px solid rgba(21, 128, 61, 0.70);
-  border-radius: 20px;
-  padding: 10px 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-aprobar:hover:not(:disabled) { background: rgba(16, 105, 50, 0.96); }
-.btn-aprobar:disabled { opacity: 0.5; cursor: not-allowed; }
-
 .dt-concluido-texto {
   text-align: right;
   font-size: 0.82rem;
@@ -1580,23 +1468,8 @@
   margin: 4px 0 0;
 }
 
-/* ── Botones en panel derecho ── */
 /* .btn-turnar y .btn-secondary: base global en styles/modal.css (se usan
    también dentro de modales compartidos entre páginas). */
-
-.btn-historial {
-  background: transparent;
-  color: rgba(35, 91, 78, 0.90);
-  border: 1px solid rgba(35, 91, 78, 0.35);
-  border-radius: 20px;
-  padding: 10px 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 200ms ease-in-out;
-}
-.btn-historial:hover { background: rgba(35, 91, 78, 0.08); border-color: rgba(35, 91, 78, 0.55); }
-.btn-historial:active { background: rgba(35, 91, 78, 0.14); }
 
 /* ── Modal — .modal-overlay/.modal-card/.modal-header/.modal-title/
    .modal-close/.modal-body/.modal-footer/.modal-error: base global en
@@ -1662,77 +1535,6 @@
 /* ── Modal: descargar PDF (con/sin imágenes) — CSS propio en
    components/ModalDescargarPDF.css, se usa desde varias páginas. ── */
 
-.btn-add-dest {
-  background: rgba(255, 255, 255, 0.52);
-  color: #235b4e;
-  border: 1px solid rgba(35, 91, 78, 0.30);
-  border-radius: 20px;
-  width: 38px;
-  height: 38px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 200ms ease-in-out;
-}
-
-.btn-add-dest:hover  { background: rgba(255,255,255,0.90); border-color: rgba(35,91,78,0.50); }
-.btn-add-dest:active { background: rgba(255,255,255,0.40); }
-
-/* Tabla destinatarios */
-.dest-table-wrap {
-  border: 1px solid rgba(35, 91, 78, 0.22);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.dest-table { width: 100%; border-collapse: collapse; }
-
-.dest-table th {
-  background: rgba(35, 91, 78, 0.92);
-  color: #ffffff;
-  padding: 10px 14px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-align: left;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  border-bottom: 2px solid rgba(195, 212, 207, 0.22);
-}
-.dest-table th:last-child { width: 44px; }
-
-.dest-table td {
-  padding: 9px 14px;
-  font-size: 0.83rem;
-  font-weight: 500;
-  color: #0a1e14;
-  border-bottom: 1px solid rgba(35, 91, 78, 0.10);
-  background: rgba(255, 255, 255, 0.78);
-  vertical-align: middle;
-}
-.dest-table tbody tr:nth-child(even) td { background: rgba(235, 248, 244, 0.82); }
-.dest-table tr:last-child td { border-bottom: none; }
-.dest-table td:last-child { width: 44px; text-align: center; }
-
-.btn-del {
-  background: #b91c1c;
-  border: none;
-  border-radius: 7px;
-  cursor: pointer;
-  color: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  transition: background 150ms, transform 100ms;
-}
-.btn-del:hover  { background: #991b1b; }
-.btn-del:active { transform: scale(.90); }
-
 /* ══════════════════════════════════════
    RESPONSIVO
 ══════════════════════════════════════ */
@@ -1751,10 +1553,6 @@
   .cfus-right    { padding: 1.25rem; }
   .detalle-panel { max-width: 100%; }
   .det-grid-3    { grid-template-columns: 1fr 1fr; }
-  .std-grid      { grid-template-columns: repeat(3, 1fr); }
-  .std-grid-2x2  { grid-template-columns: repeat(2, 1fr); }
-  .std-greeting  { padding: 20px 22px; gap: 14px; }
-  .std-greeting-badge { display: none; }
   .panel-header-left { flex-direction: row; align-items: center; gap: 8px; }
   .export-btns { flex-direction: row; }
 }
@@ -1765,8 +1563,6 @@
   .cfus-left.panel-cerrado    { width: 44px  !important; }
   .cfus-left .fus-card-top      { padding-right: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .cfus-left .fus-card-top > span { position: static; }
-  .std-grid-2x2  { grid-template-columns: repeat(2, 1fr); }
-  .std-grid      { grid-template-columns: repeat(2, 1fr); }
   .det-grid-2    { grid-template-columns: 1fr; }
   .cfus-right    { padding: 1rem; }
   .stat-card     { padding: 14px 16px; }
@@ -1939,34 +1735,13 @@
   .modal-row-inline { flex-wrap: wrap; }
   .modal-row-inline select { flex: 1; min-width: 0; }
 
-  .std-grid, .std-grid-2x2 { grid-template-columns: 1fr; gap: 0.75rem; }
   .stat-number { font-size: 1.9rem; }
-  .std-greeting { padding: 18px 20px; gap: 14px; }
 }
 
 /* Pantallas pequeñas */
 @media (max-width: 480px) {
   .cfus-right { padding: 0.75rem; padding-bottom: calc(0.75rem + 90px + env(safe-area-inset-bottom, 0px)); }
   .cfus-left  { max-height: 48vh; }
-
-  .std-greeting {
-    flex-wrap: wrap;
-    padding: 16px 18px;
-    gap: 12px;
-  }
-  .std-greeting-badge {
-    width: 100%;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 14px;
-    border-radius: 10px;
-  }
-  .std-badge-num  { font-size: 1.5rem; }
-  .std-badge-lbl  { margin-top: 0; }
-  .std-avatar     { width: 44px; height: 44px; font-size: 1.1rem; border-radius: 12px; }
-  .std-greeting-name { font-size: 0.95rem; }
 
   .stat-card   { padding: 14px 14px 14px 18px; gap: 10px; }
   .stat-number { font-size: 1.75rem; }
@@ -2022,7 +1797,6 @@
   .filtro-chip  { padding: 4px 10px; font-size: 0.68rem; }
   .stat-number  { font-size: 1.55rem; }
   .stat-card    { padding: 12px 12px 12px 14px; }
-  .std-badge-num { font-size: 1.3rem; }
 }
 
 /* ── Piezas faltantes en móvil ── */
@@ -2060,10 +1834,6 @@
   .act-seg-desc   { font-size: .78rem; }
   .act-seg-fecha  { font-size: .68rem; }
 
-  /* Tabla de destinatarios en modal */
-  .dest-table th,
-  .dest-table td  { padding: 7px 8px; font-size: .74rem; }
-
   /* Personas y respuestas, más compacto todavía */
   .pyr-badge { font-size: 9.5px; padding: 2px 8px; }
   .pyr-btn-respuestas { font-size: .70rem; padding: 4px 10px; }
@@ -2078,8 +1848,6 @@
 
 @media (max-width: 360px) {
   .ev-item-name { max-width: 110px; font-size: .70rem; }
-  .dest-table th,
-  .dest-table td  { padding: 5px 6px; font-size: .68rem; }
 
   /* Nombre/área + botón "Ver respuestas" + chevron ya no caben en una sola
      fila — el toggle y el chevron se quedan juntos arriba (order 1/2) y el

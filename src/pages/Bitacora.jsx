@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -20,8 +20,10 @@ import './Bitacora.css'
 // en la práctica, más Vencido/PorVencer (calculados a partir de fechaLimite,
 // no un estatus guardado — el backend ya sabe resolverlos como caso especial).
 // Cada rol ve los estatus relevantes a su parte del flujo — para ROL1 (y su
-// Equipo del Particular), "que se dio una respuesta" se llama "Atendido" en
-// vez de "En seguimiento".
+// Equipo del Particular), "que se dio una respuesta" vive en la clave
+// 'Atendido' (FUS.estatusParticular), no 'En_seguimiento' (Turnado.estatusTitular,
+// clave de ROL2/COMISIONADO) — ambas se muestran igual ("En seguimiento",
+// ver ESTATUS_FUS_LABELS) aunque sean claves distintas.
 const ESTATUS_POR_ROL = {
   ROL1:             ['Registrado', 'Turnado', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
   EQUIPO_PARTICULAR: ['Registrado', 'Turnado', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
@@ -29,6 +31,12 @@ const ESTATUS_POR_ROL = {
   COMISIONADO:      ['En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Concluido', 'Rechazado', 'Vencido', 'PorVencer'],
 }
 const ESTATUS_FUS_LABELS = {
+  // "Atendido" (fus.estatusParticular) se muestra como "En seguimiento" —
+  // mismo criterio que Badge.jsx (ETIQUETAS) y ConsultarFUS.jsx
+  // (FILTRO_LABEL_ROL1): la palabra "Atendido" se leía como si ya hubiera
+  // terminado. El valor guardado en la bitácora (estadoAnterior/estadoNuevo)
+  // sigue siendo 'Atendido', solo cambia lo que se muestra.
+  Atendido: 'En seguimiento',
   En_seguimiento: 'En seguimiento',
   Pendiente_validacion: 'Pendiente de validación',
   PorVencer: 'Por vencer',
@@ -488,17 +496,31 @@ export default function Bitacora() {
 
   const [cargandoMas, setCargandoMas] = useState(false)
 
+  // Estatus "de flujo" (Registrado/Turnado/Atendido/…) se puede filtrar en
+  // el cliente sobre lo ya cargado: cada registro ya trae estadoAnterior/
+  // estadoNuevo, suficiente para resolverlo sin ir al servidor (ver
+  // `registrosFiltrados` más abajo). Vencido/PorVencer sí necesitan
+  // resolverse en el servidor: dependen de fechaLimite del FUS, que no
+  // viaja en cada registro de bitácora — si la selección los incluye, se
+  // manda fEstatus completo como antes (para no romper el OR entre ambos
+  // tipos de estatus).
+  const fEstatusTemporal = fEstatus.some(e => e === 'Vencido' || e === 'PorVencer')
+  const fEstatusServidor = useMemo(
+    () => (fEstatusTemporal ? fEstatus : []),
+    [fEstatusTemporal, fEstatus],
+  )
+
   // Firma de "qué se está pidiendo": al ser parte de la queryKey, cambiar
   // cualquier filtro u orden aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
   // que antes reiniciaba la paginación al cambiar filtros.
-  const queryKey = ['bitacora', { fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir }]
+  const queryKey = ['bitacora', { fBusquedaDeb, fEstatusServidor, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir }]
   const construirParams = useCallback((page) => {
     const params = new URLSearchParams()
     params.set('page', page)
     params.set('page_size', PAGE_SIZE)
     if (fBusquedaDeb)         params.set('q',           fBusquedaDeb)
-    fEstatus.forEach(e => params.append('estatus_fus', e))
+    fEstatusServidor.forEach(e => params.append('estatus_fus', e))
     fUnidades.forEach(id => params.append('unidadAdministrativa', id))
     fResponsables.forEach(email => params.append('usuario', email))
     if (fDesde)               params.set('fecha_desde', fDesde)
@@ -506,7 +528,7 @@ export default function Bitacora() {
     if (fPrioridad)           params.set('prioridad', fPrioridad)
     if (sortCol)              params.set('ordering', `${sortDir === 'desc' ? '-' : ''}${sortCol}`)
     return params
-  }, [fBusquedaDeb, fEstatus, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir])
+  }, [fBusquedaDeb, fEstatusServidor, fUnidades, fResponsables, fDesde, fHasta, fPrioridad, sortCol, sortDir])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false },
@@ -523,6 +545,18 @@ export default function Bitacora() {
   const registros = resultado.items
   const total = resultado.total
   const pagina = resultado.page
+
+  // Filtro de estatus "de flujo" aplicado en el cliente (ver fEstatusServidor
+  // arriba) sobre lo que ya está en caché — cambiar entre esos chips no
+  // dispara ninguna petición nueva. Cuando la selección incluye Vencido/
+  // PorVencer, `registros` ya viene filtrado correctamente desde el
+  // servidor (fEstatusServidor los mandó tal cual) y aquí no hay nada más
+  // que reducir. `r.estadoNuevo || r.estadoAnterior` replica estatusDeRegistro()
+  // de más abajo (no se puede reutilizar esa función: se define después).
+  const registrosFiltrados = useMemo(() => {
+    if (fEstatusTemporal || !fEstatus.length) return registros
+    return registros.filter(r => fEstatus.includes(r.estadoNuevo || r.estadoAnterior || null))
+  }, [registros, fEstatus, fEstatusTemporal])
 
   const cargar = (pag = 1, append = false) => {
     if (!append) { recargar(); return }
@@ -702,7 +736,8 @@ export default function Bitacora() {
               <span>registros</span>
               {cargando && registros.length > 0 && <span className="btn-spinner bita-total-spinner" />}
             </span>
-            <button type="button" className="bita-header-descargar" disabled={exportando} onClick={() => setModalDescargarAbierto(true)}>
+            <button type="button" className="bita-header-descargar" disabled={exportando} onClick={() => setModalDescargarAbierto(true)}
+              data-analytics-event="INTERACTION" data-analytics-component="BITACORA_TOOLBAR" data-analytics-action="EXPORT">
               {exportando
                 ? <span className="btn-spinner" />
                 : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -736,6 +771,7 @@ export default function Bitacora() {
                 </svg>
                 <input className="bita-input bita-busqueda"
                   ref={busquedaInputRef}
+                  data-analytics-event="INTERACTION" data-analytics-component="BITACORA_SEARCH" data-analytics-action="SEARCH" data-analytics-trigger="change"
                   placeholder={esParticular ? 'Buscar por folio, usuario o nombre…' : 'Buscar por folio…'}
                   value={fBusqueda} onChange={e => setFBusqueda(e.target.value)} />
               </div>
@@ -743,6 +779,7 @@ export default function Bitacora() {
                 type="button"
                 className={`bita-toolbar-btn${panelFiltrosAbierto ? ' activo' : ''}`}
                 aria-expanded={panelFiltrosAbierto}
+                data-analytics-event="INTERACTION" data-analytics-component="BITACORA_FILTERS" data-analytics-action="FILTER"
                 onClick={() => setPanelFiltrosAbierto(abierto => {
                   if (!abierto) editarFiltros()
                   return !abierto
@@ -763,6 +800,7 @@ export default function Bitacora() {
                   ref={columnasBtnRef}
                   className={`bita-toolbar-btn${menuColumnasAbierto ? ' activo' : ''}`}
                   aria-expanded={menuColumnasAbierto}
+                  data-analytics-event="INTERACTION" data-analytics-component="BITACORA_COLUMNS" data-analytics-action="OPEN"
                   onClick={() => {
                     // En móvil el menú se muestra como hoja inferior fija (ver
                     // @media en Bitacora.css: position:fixed anclado al fondo,
@@ -1071,7 +1109,7 @@ export default function Bitacora() {
                   </td>
                 </tr>
               )}
-              {!cargando && !errorCarga && registros.length === 0 && (
+              {!cargando && !errorCarga && registrosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={COLS} className="bita-empty">
                     <div className="bita-empty-inner">
@@ -1083,7 +1121,7 @@ export default function Bitacora() {
                   </td>
                 </tr>
               )}
-              {registros.map(r => (
+              {registrosFiltrados.map(r => (
                 <tr
                   key={r.id}
                   className={r.fusFolio ? 'bita-row-clickeable' : ''}

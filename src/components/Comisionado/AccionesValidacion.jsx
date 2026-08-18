@@ -3,6 +3,7 @@ import api from '../../api/api'
 import { esParticular } from '../../utils/permisos'
 import { useMotivoRechazo } from '../../hooks/useMotivoRechazo'
 import { useToast } from '../../context/ToastContext'
+import { useAnalytics } from '../../analytics'
 import ConfirmModal from './ConfirmModal'
 import RechazarModal from './RechazarModal'
 import './Comisionado.css'
@@ -20,6 +21,7 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
   const [modalRechazar, setModalRechazar] = useState(false)
   const toast = useToast()
   const motivoRechazo = useMotivoRechazo(fus)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_VALIDACION' })
 
   const estatus = fus.estatusParticular
 
@@ -76,10 +78,17 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
             colorBoton="verde"
             onClose={() => setModalConcluir(false)}
             onConfirmar={async () => {
-              const { data } = await api.post(`/fus/${fus.id}/concluir-asunto/`)
-              setFusData(data)
-              setModalConcluir(false)
-              toast.success('Solicitud concluida.')
+              const taskId = startTask({ accion: 'UPDATE' })
+              try {
+                const { data } = await api.post(`/fus/${fus.id}/concluir-asunto/`)
+                completeTask(taskId)
+                setFusData(data)
+                setModalConcluir(false)
+                toast.success('Solicitud concluida.')
+              } catch (err) {
+                failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
+                throw err
+              }
             }}
           />
         )}
@@ -91,16 +100,23 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
     return <p className="com-nota-discreta">Pendiente de validación por el Particular.</p>
   }
 
-  // 'Atendido' sin turnado directo (FUS comisionado de frente por Rol 1):
-  // solo el flujo de Comisionado usa este botón FUS-completo — con turnado
-  // directo, cada persona confirma "Atendido" por su cuenta desde su propia
-  // fila en Personas y respuestas (PersonasYRespuestasCard), no aquí, para
-  // no confundir el estatus de UNA persona con el de todo el FUS.
-  if (estatus === 'Atendido' && !fus.tieneTurnado && tieneFacultad && !esParticular(user)) {
+  // 'Atendido' con comisionado asignado (fus.idComisionado): sin importar si
+  // llegó ahí directo desde Rol 1 o vía un Turnado que un Titular delegó, es
+  // este botón FUS-completo el que corresponde — las respuestas del
+  // comisionado viven en SeguimientoRespuesta, no en el Seguimiento del
+  // Turnado, así que turnado.estatusTitular nunca avanza solo. Antes esto
+  // exigía además "!fus.tieneTurnado", lo que ocultaba el botón por completo
+  // en el caso Titular→Comisionado (nadie podía mandarlo a validación).
+  // Sin comisionado, cada persona turnada confirma "Atendido" por su cuenta
+  // desde su propia fila en Personas y respuestas (PersonasYRespuestasCard).
+  if (estatus === 'Atendido' && fus.idComisionado && tieneFacultad && !esParticular(user)) {
     return (
       <div className="dt-actions">
         <button type="button" className="com-btn-verde" onClick={() => setModalAtendido(true)}>
-          Atendido
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Enviar para validación
         </button>
         {modalAtendido && (
           <ConfirmModal
@@ -110,10 +126,17 @@ export default function AccionesValidacion({ user, fus, setFusData, tieneFaculta
             colorBoton="verde"
             onClose={() => setModalAtendido(false)}
             onConfirmar={async () => {
-              const { data } = await api.post(`/fus/${fus.id}/atendido/`)
-              setFusData(data)
-              setModalAtendido(false)
-              toast.success('Solicitud marcada como atendida.')
+              const taskId = startTask({ accion: 'UPDATE' })
+              try {
+                const { data } = await api.post(`/fus/${fus.id}/atendido/`)
+                completeTask(taskId)
+                setFusData(data)
+                setModalAtendido(false)
+                toast.success('Solicitud marcada como atendida.')
+              } catch (err) {
+                failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
+                throw err
+              }
             }}
           />
         )}

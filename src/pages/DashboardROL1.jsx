@@ -228,7 +228,7 @@ export default function DashboardROL1() {
   /* ── 1. KPIs principales ── */
   const totalFUS     = fusData.length
   const pendientes   = fusData.filter(f => f.estatusParticular === 'Registrado').length
-  // KPI "Atendidos" (tarjeta principal): cuenta nada más el estatus
+  // KPI "En seguimiento" (tarjeta principal): cuenta nada más el estatus
   // 'Atendido', para que el número coincida exactamente con lo que muestra
   // el filtro al que lleva el clic.
   const atendidos    = fusData.filter(f => f.estatusParticular === 'Atendido').length
@@ -284,7 +284,7 @@ export default function DashboardROL1() {
   const kpis2 = [
     { icon: ICON_STACK,  label: 'Total de FUS',   sub: 'Todas las solicitudes',      value: totalFUS,              color: 'blue',  onClick: () => irAConsultar('') },
     { icon: ICON_FOLDER, label: 'Registrados',    sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado') },
-    { icon: ICON_TARGET, label: 'Atendidos',      sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido') },
+    { icon: ICON_TARGET, label: 'En seguimiento', sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido') },
     { icon: ICON_CHECK,  label: 'Concluidos',     sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido') },
     { icon: ICON_FLAG,   label: 'Prioridad alta', sub: 'Sin concluir',               value: prioridadAltaPendiente, color: 'red',  onClick: () => irAConsultarPrioridad('Alta') },
   ]

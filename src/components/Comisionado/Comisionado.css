@@ -194,6 +194,10 @@
 
 .com-btn-verde {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   border: none;
   background: #235b4e;
   color: #ffffff;

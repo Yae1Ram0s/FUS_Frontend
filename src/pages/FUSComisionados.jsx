@@ -11,6 +11,7 @@ import api from '../api/api'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
+import { useAnalytics } from '../analytics'
 import { formatearFechaHora } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
 import { FolioTexto } from '../utils/folio'
@@ -65,15 +66,19 @@ function SeguimientoComisionado({ fusId, folio, estatusParticular }) {
   const [contenido, setContenido]   = useState('')
   const [enviando, setEnviando]     = useState(false)
   const [error, setError]           = useState('')
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_COMISIONADO_SEGUIMIENTO', accion: 'CREATE' })
 
   const agregar = async () => {
     if (!contenido.trim()) { setError('Escribe una descripción antes de agregar.'); return }
     setError(''); setEnviando(true)
+    const taskId = startTask({ metadatos: { tipo } })
     try {
       await api.post(`/fus/${fusId}/seguimiento/`, { tipo, contenido })
+      completeTask(taskId)
       setContenido('')
       setRefreshKey(k => k + 1)
     } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
     } finally {
       setEnviando(false)

@@ -69,16 +69,15 @@ function PersonaFila({ turnado, user, onCambio }) {
     : '—'
 
   // Badge de la fila: "Recibido" (sin responder aún) no se muestra — no hay
-  // nada que comunicar todavía. "En_seguimiento" (ya respondió, falta que
-  // confirme "Atendido") se etiqueta directo como "Atendido" para no meter
-  // un estatus intermedio que solo confunde en esta vista resumida; el
-  // estatus real (turnado.estatusTitular) sigue intacto para el resto de la
-  // lógica (qué botones mostrar, etc.), esto es puramente de exhibición.
+  // nada que comunicar todavía. El resto se muestra tal cual
+  // (turnado.estatusTitular), sin relabelear "En_seguimiento" como
+  // "Atendido" — antes esta vista era la única que decía "Atendido" en ese
+  // punto del flujo, mientras el propio Titular (Solicitudes Turnadas) y el
+  // comisionado ven "En seguimiento"/su estatus real para ese mismo momento;
+  // mostrar el estatus real aquí lo deja consistente en todos lados.
   const estatusVisible = turnado.estatusTitular === 'Recibido'
     ? null
-    : turnado.estatusTitular === 'En_seguimiento'
-      ? 'Atendido'
-      : turnado.estatusTitular
+    : turnado.estatusTitular
 
   // Solo las respuestas de ESTE turnado — a diferencia del resumen de la
   // tarjeta (que combina todos), el modal por persona muestra nada más lo

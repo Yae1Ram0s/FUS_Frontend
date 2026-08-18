@@ -4,6 +4,7 @@ import api from '../../api/api'
 import { obtenerIniciales } from '../../utils/personas'
 import { useDebouncedSearch } from '../../hooks/useDebouncedSearch'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAnalytics } from '../../analytics'
 import './Comisionado.css'
 
 export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
@@ -14,6 +15,7 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
   useModalBehavior(onClose, { closeEnabled: !enviando })
   const inputRef     = useRef(null)
   const envioEnCursoRef = useRef(false)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_COMISIONAR', accion: 'CREATE' })
 
   const buscar = useCallback(async (q, { signal }) => {
     const respuesta = await api.get(
@@ -34,10 +36,13 @@ export default function ComisionarModal({ fusId, onClose, onConfirmado }) {
     if (!seleccionado || envioEnCursoRef.current) return
     envioEnCursoRef.current = true
     setError(''); setEnviando(true)
+    const taskId = startTask()
     try {
       const { data } = await api.post(`/fus/${fusId}/comisionar/`, { comisionado_id: seleccionado.id })
+      completeTask(taskId)
       onConfirmado(data)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'No se pudo asignar el comisionado. Intenta nuevamente.')
     } finally {
       envioEnCursoRef.current = false

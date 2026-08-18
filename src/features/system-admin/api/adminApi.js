@@ -77,7 +77,6 @@ export const obtenerResumenAdmin = ({ signal } = {}) => data(api.get(`${BASE}/re
 export const obtenerMetricasAdmin = (params = {}, { signal } = {}) => data(api.get(`${BASE}/metricas/`, { params, signal }))
 export const obtenerUsuariosAdmin = (params = {}, { signal } = {}) => data(api.get(`${BASE}/usuarios/`, { params, signal }))
 export const crearUsuarioAdmin = payload => data(api.post(`${BASE}/usuarios/`, payload))
-export const obtenerUsuarioAdmin = (id, { signal } = {}) => data(api.get(`${BASE}/usuarios/${id}/`, { signal }))
 export const actualizarUsuarioAdmin = (id, payload) => data(api.patch(`${BASE}/usuarios/${id}/`, payload))
 export const eliminarUsuarioAdmin = id => api.delete(`${BASE}/usuarios/${id}/`).then(() => true)
 export const ejecutarAccionUsuario = (id, accion, payload = {}) => data(api.post(`${BASE}/usuarios/${id}/${accion}/`, payload))

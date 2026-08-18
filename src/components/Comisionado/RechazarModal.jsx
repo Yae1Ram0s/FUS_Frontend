@@ -4,6 +4,7 @@ import api, { mensajeErrorConexion } from '../../api/api'
 import { useConexionInternet } from '../../hooks/useConexionInternet'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAnalytics } from '../../analytics'
 import './Comisionado.css'
 
 export default function RechazarModal({ fusId, onClose, onRechazado }) {
@@ -13,6 +14,7 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
   const [error, setError]       = useState('')
   const envioEnCursoRef         = useRef(false)
   const enLinea                 = useConexionInternet()
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_RECHAZAR', accion: 'UPDATE' })
   useModalBehavior(onClose, { closeEnabled: !enviando })
 
   // Autoguardado del motivo — si la conexión se cae a mitad de escribirlo, no
@@ -28,11 +30,14 @@ export default function RechazarModal({ fusId, onClose, onRechazado }) {
     if (envioEnCursoRef.current) return
     envioEnCursoRef.current = true
     setError(''); setEnviando(true)
+    const taskId = startTask()
     try {
       const { data } = await api.post(`/fus/${fusId}/rechazar-solicitud/`, { motivo })
       sessionStorage.removeItem(borradorKey)
+      completeTask(taskId)
       onRechazado(data)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(mensajeErrorConexion(err, 'No se pudo rechazar la solicitud. Intenta nuevamente.'))
     } finally {
       envioEnCursoRef.current = false

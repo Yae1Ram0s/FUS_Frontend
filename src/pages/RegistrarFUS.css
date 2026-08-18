@@ -616,14 +616,6 @@
   gap: 10px;
 }
 
-.evidencia-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 /* Evidencias ya cargadas (modo edición) */
 .ev-existentes-list {
   display: flex;
@@ -784,14 +776,6 @@
 
 .file-btn:hover  { background: rgba(255, 255, 255, 0.90); box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
 .file-btn:active { background: rgba(255, 255, 255, 0.50); }
-
-.file-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.78rem;
-  color: #2d5e4e;
-}
 
 /* Feedback */
 .reg-error {
@@ -1005,8 +989,6 @@
     text-align: center;
   }
 
-  .evidencia-row { flex-direction: column; align-items: flex-start; }
-
   .prioridad-pills { gap: 6px; }
   .prioridad-pill  { padding: 7px 14px; font-size: 0.82rem; }
 
@@ -1016,7 +998,6 @@
 }
 
 @media (max-width: 480px) {
-  .reg-page-title { font-size: 1rem; }
   .reg-content    {
     padding: 0.75rem;
     padding-bottom: calc(0.75rem + 90px + env(safe-area-inset-bottom, 0px));

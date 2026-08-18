@@ -11,6 +11,7 @@ import api from '../api/api'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
 import { useCountUp } from '../hooks/useCountUp'
+import { useAnalytics } from '../analytics'
 import './DashboardROL1.css'
 import './Reportes.css'
 
@@ -361,9 +362,11 @@ export default function Reportes() {
   }
   const actualizarExtra = (name, value) => setFiltrosExtra(prev => ({ ...prev, [name]: value }))
   const visible = id => seleccion.includes(id)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'REPORTES_EXPORTAR', accion: 'EXPORT' })
 
   const exportar = async formato => {
     setExportando(formato)
+    const taskId = startTask({ metadatos: { formato } })
     try {
       const nombre = `Reporte FUS — ${rangoFechas.fecha_inicio} a ${rangoFechas.fecha_fin}`
       const response = await api.post(
@@ -376,8 +379,10 @@ export default function Reportes() {
       link.download = `reporte_fus.${formato === 'excel' ? 'xlsx' : formato}`
       link.click()
       URL.revokeObjectURL(link.href)
+      completeTask(taskId)
       if (guardarAlExportar) recargarGuardados()
-    } catch {
+    } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       toast.error('No se pudo generar el reporte. Intenta de nuevo.')
     } finally {
       setExportando('')
@@ -385,6 +390,7 @@ export default function Reportes() {
   }
 
   const descargarGuardado = async (g) => {
+    const taskId = startTask({ componente: 'REPORTES_GUARDADOS', accion: 'OPEN' })
     try {
       const response = await api.get(`/reportes/guardados/${g.id}/descargar/`, { responseType: 'blob' })
       const link = document.createElement('a')
@@ -392,7 +398,9 @@ export default function Reportes() {
       link.download = g.nombreArchivo
       link.click()
       URL.revokeObjectURL(link.href)
-    } catch {
+      completeTask(taskId)
+    } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       toast.error('No se pudo descargar el reporte guardado.')
     }
   }

@@ -4,6 +4,7 @@ import api, { mensajeErrorConexion } from '../../api/api'
 import { useConexionInternet } from '../../hooks/useConexionInternet'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAnalytics } from '../../analytics'
 import { formatearFechaHora } from '../../utils/fechas'
 import './ModalTurnar.css'
 
@@ -62,6 +63,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
   const [error, setError] = useState('')
   const [borradorGuardado, setBorradorGuardado] = useState(false)
   const envioEnCursoRef = useRef(false)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_TURNAR', accion: 'CREATE' })
   const enLinea = useConexionInternet()
   const buscadorRef = useRef(null)
   const busquedaWrapRef = useRef(null)
@@ -164,6 +166,7 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
     envioEnCursoRef.current = true
     setError('')
     setLoading(true)
+    const taskId = startTask({ metadatos: { total: lista.length } })
     try {
       await api.post(`/fus/${fus.id}/turnar/`, {
         destinatarios: lista.map(item => ({
@@ -173,9 +176,11 @@ export default function ModalTurnar({ fus, onClose, onDone }) {
         medioEspecificacion: esMedioOtro ? medioEspecificacion.trim() : '',
         solicitudTexto: texto.trim(),
       })
+      completeTask(taskId)
       sessionStorage.removeItem(borradorKey)
       onDone()
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(mensajeErrorConexion(err, 'No se pudo turnar. Intenta nuevamente.'))
     } finally {
       envioEnCursoRef.current = false

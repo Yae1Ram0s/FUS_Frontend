@@ -31,6 +31,10 @@ const VARIANTS_LIGHT = {
 }
 
 const ETIQUETAS = {
+  // "Atendido" (fus.estatusParticular) se lee como si ya hubiera terminado —
+  // se muestra como "En seguimiento" en toda la app; el valor guardado y
+  // `data-estatus` siguen siendo 'Atendido', solo cambia la palabra visible.
+  Atendido: 'En seguimiento',
   En_seguimiento: 'En seguimiento',
   Pendiente_validacion: 'Pendiente de validación',
   PorVencer: 'Por vencer',

@@ -242,9 +242,6 @@
 
 .login-personal-message { display: none; }
 
-/* Subtítulo oculto en este diseño */
-.login-sub { display: none; }
-
 .login-form { width: 100%; }
 
 /* margin-top da lugar a la etiqueta flotante (top: -20px, ver abajo): sin

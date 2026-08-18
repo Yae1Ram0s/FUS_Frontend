@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../../../api/api'
 import { actualizarUsuarioAdmin, eliminarUsuarioAdmin, ejecutarAccionUsuario, mensajeErrorAdmin } from '../api/adminApi'
+import { useAnalytics } from '../../../analytics'
 
 const ROL_OPCIONES = [
   { value: 'ROL1', label: 'Particular del Titular' },
@@ -25,6 +26,7 @@ export default function ModalUsuario({ usuario, onClose, onUpdated, onDeleted })
   // Requiere una cuenta ya activada (con contraseña propia) — no hay sesiones
   // ni bloqueo que gestionar para un correo apenas autorizado.
   const pk = usuario.id ?? usuario.autorizacionId
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'ADMIN_USUARIO_MODAL' })
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -42,6 +44,7 @@ export default function ModalUsuario({ usuario, onClose, onUpdated, onDeleted })
   const ejecutar = async (accion, payload) => {
     setBusy(true)
     setError('')
+    const taskId = startTask({ accion: accion === 'guardar' ? 'UPDATE' : 'UPDATE', metadatos: { control: accion } })
     try {
       if (accion === 'guardar') {
         const value = await actualizarUsuarioAdmin(pk, {
@@ -49,12 +52,15 @@ export default function ModalUsuario({ usuario, onClose, onUpdated, onDeleted })
           rol: form.rol,
           unidadAdministrativaId: form.unidadAdministrativaId || null,
         })
+        completeTask(taskId)
         onUpdated(value)
       } else {
         const value = await ejecutarAccionUsuario(pk, accion, payload)
+        completeTask(taskId)
         onUpdated(value.usuario)
       }
     } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       setError(mensajeErrorAdmin(e))
     } finally {
       setBusy(false)
@@ -64,10 +70,13 @@ export default function ModalUsuario({ usuario, onClose, onUpdated, onDeleted })
   const eliminar = async () => {
     setBusy(true)
     setError('')
+    const taskId = startTask({ accion: 'UPDATE', metadatos: { control: 'eliminar' } })
     try {
       await eliminarUsuarioAdmin(pk)
+      completeTask(taskId)
       onDeleted(usuario)
     } catch (e) {
+      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
       setError(mensajeErrorAdmin(e))
       setConfirmandoEliminar(false)
     } finally {
