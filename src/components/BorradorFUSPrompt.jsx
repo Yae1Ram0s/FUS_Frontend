@@ -50,10 +50,10 @@ export default function BorradorFUSPrompt() {
         <p className="bfp-sub">Guardamos lo que ya habías llenado — puedes continuar donde te quedaste.</p>
       </div>
       <div className="bfp-actions">
-        <button className="bfp-btn-continuar" onClick={continuar}>
+        <button className="bfp-btn-continuar" onClick={continuar} data-analytics-event="INTERACTION" data-analytics-component="BORRADOR_FUS_PROMPT" data-analytics-action="NAVIGATE" data-analytics-metadata="continuar">
           Continuar registro
         </button>
-        <button className="bfp-btn-descartar" onClick={descartar}>
+        <button className="bfp-btn-descartar" onClick={descartar} data-analytics-event="INTERACTION" data-analytics-component="BORRADOR_FUS_PROMPT" data-analytics-action="UPDATE" data-analytics-metadata="descartar">
           Descartar
         </button>
       </div>

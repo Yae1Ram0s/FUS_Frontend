@@ -7,6 +7,7 @@ import Spinner from '../components/Spinner'
 import { useAuth } from '../context/AuthContext'
 import { useCountUp } from '../hooks/useCountUp'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { useAnalytics } from '../analytics'
 import '../components/Comisionado/Comisionado.css'
 import './PanelAdmin.css'
 
@@ -63,7 +64,7 @@ const ICON_CORNER = (
 /* ── Tarjeta de KPI "liquid glass" seleccionable — mismo patrón que los
    dashboards (Kpi2Card), aquí además marca con `activa` cuál filtro está
    aplicado en este momento. ── */
-function Kpi2CardFiltro({ icon, label, sub, value, color, activa, onClick, index }) {
+function Kpi2CardFiltro({ icon, label, sub, value, color, activa, onClick, index, filtroKey }) {
   const count = useCountUp(value)
   return (
     <div
@@ -73,6 +74,10 @@ function Kpi2CardFiltro({ icon, label, sub, value, color, activa, onClick, index
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}
+      data-analytics-event="INTERACTION"
+      data-analytics-component="PANEL_ADMIN_KPI_FILTRO"
+      data-analytics-action="FILTER"
+      data-analytics-metadata={filtroKey}
     >
       <div className={`adm-kpi-glow adm-kpi-glow--${color}`} />
       <div className={`adm-kpi-icon adm-kpi-icon--${color}`}>{icon}</div>
@@ -103,6 +108,7 @@ export default function PanelAdmin() {
   const guardarEnCursoRef = useRef(false)
   const agregarEnCursoRef = useRef(false)
   const toggleEnCursoRef = useRef(new Set())
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'PANEL_ADMIN_USUARIO' })
 
   useEffect(() => {
     api.get('/catalogos/unidades-administrativas/')
@@ -152,14 +158,17 @@ export default function PanelAdmin() {
     if (guardarEnCursoRef.current) return
     guardarEnCursoRef.current = true
     setError(''); setGuardando(true)
+    const taskId = startTask({ accion: 'UPDATE' })
     try {
       await api.patch(`/auth/correos-autorizados/${editando.id}/`, formEdit)
+      completeTask(taskId)
       setExito('Usuario actualizado correctamente.')
       setModal(false)
       setEditando(null)
       cargar()
       setTimeout(() => setExito(''), 3000)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'No se pudo guardar los cambios.')
     } finally {
       setGuardando(false)
@@ -176,10 +185,13 @@ export default function PanelAdmin() {
     toggleEnCursoRef.current.add(c.id)
     setErrorOperacion('')
     setToggleandoId(c.id)
+    const taskId = startTask({ accion: 'UPDATE', metadatos: { control: c.activo ? 'desactivar' : 'activar' } })
     try {
       await api.patch(`/auth/correos-autorizados/${c.id}/`, { activo: c.activo ? 0 : 1 })
+      completeTask(taskId)
       cargar()
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setErrorOperacion(err.response?.data?.detail || 'No se pudo actualizar el estado de la cuenta.')
     } finally {
       setToggleandoId(null)
@@ -196,14 +208,17 @@ export default function PanelAdmin() {
     if (agregarEnCursoRef.current) return
     agregarEnCursoRef.current = true
     setError(''); setGuardando(true)
+    const taskId = startTask({ accion: 'CREATE' })
     try {
       await api.post('/auth/correos-autorizados/', form)
+      completeTask(taskId)
       setExito('Correo agregado correctamente.')
       setModal(false)
       setForm({ email: '', nombre: '', rol: 'ROL1', unidadAdministrativa: '' })
       cargar()
       setTimeout(() => setExito(''), 3000)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'No se pudo agregar el correo.')
     } finally {
       setGuardando(false)
@@ -229,7 +244,7 @@ export default function PanelAdmin() {
             </svg>
             <h1>Panel de Administrador</h1>
           </div>
-          <button className="adm-btn-add" onClick={() => { setModal('agregar'); setError('') }}>
+          <button className="adm-btn-add" onClick={() => { setModal('agregar'); setError('') }} data-analytics-event="INTERACTION" data-analytics-component="PANEL_ADMIN_AGREGAR" data-analytics-action="OPEN">
             + Agregar correo
           </button>
         </div>
@@ -242,18 +257,21 @@ export default function PanelAdmin() {
             label="Total" sub="Todos los usuarios" value={correos.length}
             activa={!filtroRol && !filtroActivo}
             onClick={() => { setFiltroRol(''); setFiltroActivo('') }}
+            filtroKey="total"
           />
           <Kpi2CardFiltro
             index={1} color="green" icon={ICON_CHECK}
             label="Activos" sub="Cuentas habilitadas" value={activos}
             activa={filtroActivo === '1'}
             onClick={() => setFiltroActivo(actual => actual === '1' ? '' : '1')}
+            filtroKey="activos"
           />
           <Kpi2CardFiltro
             index={2} color="red" icon={ICON_X}
             label="Inactivos" sub="Cuentas deshabilitadas" value={inactivos}
             activa={filtroActivo === '0'}
             onClick={() => setFiltroActivo(actual => actual === '0' ? '' : '0')}
+            filtroKey="inactivos"
           />
           {Object.entries(ROL_LABELS).map(([k, v], i) => (
             <Kpi2CardFiltro
@@ -262,6 +280,7 @@ export default function PanelAdmin() {
               value={correos.filter(c => c.rol === k).length}
               activa={filtroRol === k}
               onClick={() => setFiltroRol(actual => actual === k ? '' : k)}
+              filtroKey={k.toLowerCase()}
             />
           ))}
         </div>
@@ -371,7 +390,7 @@ export default function PanelAdmin() {
                 <h3>Agregar correo autorizado</h3>
                 <button type="button" className="com-modal-x" onClick={() => setModal(false)} disabled={guardando} aria-label="Cerrar">✕</button>
               </div>
-              <form onSubmit={agregarCorreo} className="adm-modal-form">
+              <form onSubmit={agregarCorreo} className="adm-modal-form" data-analytics-form="PANEL_ADMIN_USUARIO">
                 <label>Email institucional
                   <input className="com-pill-input" type="email" placeholder="usuario@anam.gob.mx"
                     value={form.email}
@@ -457,7 +476,7 @@ export default function PanelAdmin() {
                 <h3>Editar usuario</h3>
                 <button type="button" className="com-modal-x" onClick={() => setModal(false)} disabled={guardando} aria-label="Cerrar">✕</button>
               </div>
-              <form onSubmit={guardarEdicion} className="adm-modal-form">
+              <form onSubmit={guardarEdicion} className="adm-modal-form" data-analytics-form="PANEL_ADMIN_USUARIO">
                 <label>Nombre completo
                   <input className="com-pill-input" type="text" placeholder="Nombre Apellido"
                     value={formEdit.nombre}

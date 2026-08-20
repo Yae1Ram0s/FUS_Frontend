@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -9,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { formatearDuracion, formatearNumero } from '../utils/formatAnalitica'
+import { formatearDuracion, formatearFecha, formatearNumero } from '../utils/formatAnalitica'
 
 export function AnaliticaKpi({ etiqueta, valor, ayuda, tono = 'verde' }) {
   return (
@@ -130,6 +131,71 @@ export function TablaAcciones({ acciones = [] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+export function TablaUsuariosUso({ usuarios = [] }) {
+  const [busqueda, setBusqueda] = useState('')
+
+  const filtrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    if (!q) return usuarios
+    return usuarios.filter(item =>
+      item.nombre.toLowerCase().includes(q) || item.email.toLowerCase().includes(q)
+    )
+  }, [usuarios, busqueda])
+
+  if (!usuarios.length) {
+    return <EstadoVacio detalle="No hay usuarios con actividad para esta combinación de filtros." />
+  }
+
+  return (
+    <div className="sau-users">
+      <label className="sau-users__search">
+        <span className="sr-only">Buscar usuario</span>
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o correo…"
+          data-analytics-event="INTERACTION"
+          data-analytics-component="ADMIN_USO_USUARIOS_BUSQUEDA"
+          data-analytics-action="SEARCH"
+          data-analytics-trigger="change"
+        />
+      </label>
+      {filtrados.length ? (
+        <div className="sau-table-wrap">
+          <table className="sau-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Unidad</th>
+                <th>Módulos</th>
+                <th>Acciones</th>
+                <th>Éxito</th>
+                <th>Última actividad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map(item => (
+                <tr key={item.id}>
+                  <td data-label="Usuario"><strong>{item.nombre}</strong><small>{item.email}</small></td>
+                  <td data-label="Rol">{item.rol || '—'}</td>
+                  <td data-label="Unidad">{item.unidad || '—'}</td>
+                  <td data-label="Módulos">{formatearNumero(item.modulosUsados)}</td>
+                  <td data-label="Acciones">{formatearNumero(item.accionesSignificativas)}</td>
+                  <td data-label="Éxito"><span className={`sau-rate ${item.tasaExito < 70 ? 'is-low' : ''}`}>{formatearNumero(item.tasaExito)}%</span></td>
+                  <td data-label="Última actividad">{formatearFecha(item.ultimaActividad)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EstadoVacio detalle="Ningún usuario coincide con la búsqueda." />
+      )}
     </div>
   )
 }

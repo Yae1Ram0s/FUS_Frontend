@@ -1,6 +1,7 @@
 import Badge from '../Badge'
 import { formatearFechaHora } from '../../utils/fechas'
 import { FolioTexto } from '../../utils/folio'
+import { truncarTexto } from '../../utils/texto'
 
 export default function FusCard({ fus, activo, onClick, highlight, onVerHistorial }) {
   const handleKeyDown = event => {
@@ -41,7 +42,7 @@ export default function FusCard({ fus, activo, onClick, highlight, onVerHistoria
           {fus.idMedioRecepcion?.nombreMedio || '—'}
         </span>
       </p>
-      {fus.descripcion && <p className="fus-desc">{fus.descripcion}</p>}
+      {fus.descripcion && <p className="fus-desc">{truncarTexto(fus.descripcion)}</p>}
       <button
         className="fus-card-historial-btn"
         title="Ver historial"

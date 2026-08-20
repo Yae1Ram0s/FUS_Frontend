@@ -4,6 +4,7 @@ import api, { mensajeErrorConexion } from '../../api/api'
 import { useConexionInternet } from '../../hooks/useConexionInternet'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAnalytics } from '../../analytics'
 import '../Comisionado/Comisionado.css'
 import './DocumentoRespuestasModal.css'
 
@@ -64,6 +65,7 @@ export default function DocumentoRespuestasModal({
   const enLinea = useConexionInternet()
   useModalBehavior(onClose, { closeEnabled: !enviando })
   const grupos = agruparPorFecha(respuestas)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_VALIDACION_PERSONA', accion: 'UPDATE' })
 
   // El Particular (Rol 1) valida la parte de ESTA persona una vez que ya
   // marcó su turnado como "Atendido" — ver MarcarTurnadoAtendidoView/
@@ -85,11 +87,14 @@ export default function DocumentoRespuestasModal({
     if (envioEnCursoRef.current) return
     envioEnCursoRef.current = true
     setError(''); setEnviando(true)
+    const taskId = startTask({ metadatos: { control: accion === 'concluir-persona' ? 'concluir' : 'rechazar' } })
     try {
       const { data } = await api.post(`/turnados/${turnado.id}/${accion}/`, datos)
+      completeTask(taskId)
       if (borradorKey) sessionStorage.removeItem(borradorKey)
       onValidado?.(data)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(mensajeErrorConexion(err, 'No se pudo completar la acción. Intenta nuevamente.'))
       setEnviando(false)
     } finally {

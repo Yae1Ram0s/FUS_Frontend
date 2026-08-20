@@ -29,14 +29,14 @@ export default function AdminUsuarios() {
             <h1>Usuarios y accesos</h1>
             <p>{count} usuarios encontrados</p>
           </div>
-          <button onClick={() => setCreando(true)}>Dar de alta usuario</button>
+          <button onClick={() => setCreando(true)} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USUARIOS_ALTA" data-analytics-action="OPEN">Dar de alta usuario</button>
         </header>
 
         <FiltrosUsuarios filtros={filtros} onChange={setFiltros} />
 
         {error && (
           <div className="sa-error">
-            {mensajeErrorAdmin(error)} <button onClick={reload}>Reintentar</button>
+            {mensajeErrorAdmin(error)} <button onClick={reload} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USUARIOS_REINTENTAR">Reintentar</button>
           </div>
         )}
 
@@ -47,9 +47,9 @@ export default function AdminUsuarios() {
         )}
 
         <nav className="sa-pagination" aria-label="Paginación">
-          <button disabled={filtros.page <= 1} onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}>Anterior</button>
+          <button disabled={filtros.page <= 1} onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USUARIOS_PAGINACION" data-analytics-action="NAVIGATE" data-analytics-metadata="anterior">Anterior</button>
           <span>Página {filtros.page} de {totalPages}</span>
-          <button disabled={filtros.page >= totalPages} onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}>Siguiente</button>
+          <button disabled={filtros.page >= totalPages} onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USUARIOS_PAGINACION" data-analytics-action="NAVIGATE" data-analytics-metadata="siguiente">Siguiente</button>
         </nav>
 
         {selected && (

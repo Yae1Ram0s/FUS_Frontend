@@ -12,6 +12,7 @@ import {
   OportunidadesUso,
   RankingModulos,
   TablaAcciones,
+  TablaUsuariosUso,
   TendenciaUso,
 } from '../components/AnaliticaUso'
 import { formatearDuracion, formatearNumero } from '../utils/formatAnalitica'
@@ -37,7 +38,16 @@ function SelectorFiltro({ id, label, valor, opciones, onChange, todos }) {
   return (
     <label className="sau-filter" htmlFor={id}>
       <span>{label}</span>
-      <select id={id} value={valor} onChange={event => onChange(event.target.value)}>
+      <select
+        id={id}
+        value={valor}
+        onChange={event => onChange(event.target.value)}
+        data-analytics-event="INTERACTION"
+        data-analytics-component="ADMIN_USO_FILTROS"
+        data-analytics-action="FILTER"
+        data-analytics-trigger="change"
+        data-analytics-metadata={id}
+      >
         <option value="">{todos}</option>
         {opciones.map(item => <option key={item.valor} value={item.valor}>{item.etiqueta}</option>)}
       </select>
@@ -45,8 +55,17 @@ function SelectorFiltro({ id, label, valor, opciones, onChange, todos }) {
   )
 }
 
+const TABS = [
+  ['resumen', 'Resumen'],
+  ['modulos', 'Módulos y acciones'],
+  ['usuarios', 'Usuarios'],
+  ['procesos', 'Procesos'],
+  ['calidad', 'Calidad'],
+]
+
 export default function AdminUsoSistema() {
   const [filtros, setFiltros] = useState(FILTROS_INICIALES)
+  const [vista, setVista] = useState('resumen')
   const { data, loading, initialLoading, error, reload } = useAnaliticaSistema(filtros)
   const resultado = data || {}
   const kpis = resultado.kpis || {}
@@ -83,12 +102,16 @@ export default function AdminUsoSistema() {
                   className={filtros.dias === dias ? 'is-active' : ''}
                   aria-pressed={filtros.dias === dias}
                   onClick={() => cambiarFiltro('dias', dias)}
+                  data-analytics-event="INTERACTION"
+                  data-analytics-component="ADMIN_USO_VENTANA"
+                  data-analytics-action="FILTER"
+                  data-analytics-metadata={String(dias)}
                 >
                   {dias} días
                 </button>
               ))}
             </div>
-            <button className="sau-refresh" type="button" onClick={reload} disabled={loading}>
+            <button className="sau-refresh" type="button" onClick={reload} disabled={loading} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USO_ACTUALIZAR">
               <span aria-hidden="true">↻</span> {loading ? 'Actualizando…' : 'Actualizar'}
             </button>
           </div>
@@ -103,13 +126,13 @@ export default function AdminUsoSistema() {
           <SelectorFiltro id="sau-unidad" label="Unidad" valor={filtros.unidad} opciones={catalogos.unidades || []} todos="Todas las unidades" onChange={valor => cambiarFiltro('unidad', valor)} />
           <SelectorFiltro id="sau-dispositivo" label="Dispositivo" valor={filtros.dispositivo} opciones={catalogos.dispositivos || []} todos="Todos" onChange={valor => cambiarFiltro('dispositivo', valor)} />
           <SelectorFiltro id="sau-modulo" label="Módulo" valor={filtros.modulo} opciones={catalogos.modulos || []} todos="Todos los módulos" onChange={valor => cambiarFiltro('modulo', valor)} />
-          {hayFiltros && <button className="sau-clear" type="button" onClick={() => setFiltros(actual => ({ ...FILTROS_INICIALES, dias: actual.dias }))}>Limpiar filtros</button>}
+          {hayFiltros && <button className="sau-clear" type="button" onClick={() => setFiltros(actual => ({ ...FILTROS_INICIALES, dias: actual.dias }))} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USO_LIMPIAR_FILTROS" data-analytics-action="FILTER">Limpiar filtros</button>}
         </section>
 
         {error && (
           <div className="sa-error sau-error" role="alert">
             <div><strong>No pudimos cargar la analítica</strong><p>{mensajeErrorAnalitica(error)}</p></div>
-            <button type="button" onClick={reload}>Reintentar</button>
+            <button type="button" onClick={reload} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USO_REINTENTAR">Reintentar</button>
           </div>
         )}
 
@@ -138,71 +161,106 @@ export default function AdminUsoSistema() {
               <div><span>Tiempo para completar</span><strong>{formatearDuracion(kpis.duracionMedianaMs)}</strong></div>
             </section>
 
-            <div className="sau-grid sau-grid--overview">
-              <section className="sa-panel sau-panel sau-panel--trend">
-                <div className="sau-panel-heading">
-                  <div><span className="sau-section-number">01</span><h2>Tendencia de adopción</h2><p>Usuarios activos y acciones útiles por día.</p></div>
-                  <span className="sau-insight-chip">{resultado.ventana?.dias || filtros.dias} días</span>
-                </div>
-                <TendenciaUso serie={resultado.serie} />
-              </section>
+            <nav className="sa-dashboard-tabs sau-tabs" aria-label="Secciones de uso del sistema">
+              {TABS.map(([key, label]) => (
+                <button
+                  key={key}
+                  className={vista === key ? 'is-active' : ''}
+                  onClick={() => setVista(key)}
+                  data-analytics-event="INTERACTION"
+                  data-analytics-component="ADMIN_USO_TAB"
+                  data-analytics-action="NAVIGATE"
+                  data-analytics-metadata={key}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
 
-              <section className="sa-panel sau-panel">
-                <div className="sau-panel-heading">
-                  <div><span className="sau-section-number">02</span><h2>Módulos que generan valor</h2><p>Ordenados por usuarios únicos, acompañados de acciones significativas.</p></div>
-                </div>
-                <RankingModulos modulos={resultado.modulos} />
-              </section>
-            </div>
+            {vista === 'resumen' && (
+              <div className="sau-grid sau-grid--overview">
+                <section className="sa-panel sau-panel sau-panel--trend">
+                  <div className="sau-panel-heading">
+                    <div><span className="sau-section-number">01</span><h2>Tendencia de adopción</h2><p>Usuarios activos y acciones útiles por día.</p></div>
+                    <span className="sau-insight-chip">{resultado.ventana?.dias || filtros.dias} días</span>
+                  </div>
+                  <TendenciaUso serie={resultado.serie} />
+                </section>
 
-            <section className="sa-panel sau-panel sau-panel--actions">
-              <div className="sau-panel-heading">
-                <div><span className="sau-section-number">03</span><h2>Componentes y acciones</h2><p>Uso efectivo, resultado y esfuerzo requerido por operación.</p></div>
+                <section className="sa-panel sau-panel">
+                  <div className="sau-panel-heading">
+                    <div><span className="sau-section-number">02</span><h2>Módulos que generan valor</h2><p>Ordenados por usuarios únicos, acompañados de acciones significativas.</p></div>
+                  </div>
+                  <RankingModulos modulos={resultado.modulos} />
+                </section>
               </div>
-              <TablaAcciones acciones={resultado.acciones} />
-            </section>
+            )}
 
-            {(resultado.roles?.length || resultado.dispositivos?.length) ? (
-              <section className="sa-panel sau-panel sau-segments-panel">
+            {vista === 'modulos' && (
+              <section className="sa-panel sau-panel sau-panel--actions">
                 <div className="sau-panel-heading">
-                  <div><span className="sau-section-number">04</span><h2>Quién usa el sistema</h2><p>Distribución para detectar necesidades por perfil y dispositivo.</p></div>
+                  <div><span className="sau-section-number">01</span><h2>Componentes y acciones</h2><p>Uso efectivo, resultado y esfuerzo requerido por operación.</p></div>
                 </div>
-                <div className="sau-segments">
-                  <DistribucionSegmentos titulo="Uso por rol" datos={resultado.roles} />
-                  <DistribucionSegmentos titulo="Uso por dispositivo" datos={resultado.dispositivos} />
-                </div>
+                <TablaAcciones acciones={resultado.acciones} />
               </section>
-            ) : null}
+            )}
 
-            <div className="sau-grid sau-grid--decisions">
-              <section className="sa-panel sau-panel">
-                <div className="sau-panel-heading">
-                  <div><span className="sau-section-number">05</span><h2>Embudos de procesos</h2><p>Identifica el paso exacto donde los usuarios se detienen.</p></div>
-                </div>
-                <EmbudosUso embudos={resultado.embudos} />
-              </section>
-              <section className="sa-panel sau-panel">
-                <div className="sau-panel-heading">
-                  <div><span className="sau-section-number">06</span><h2>Oportunidades priorizadas</h2><p>Hallazgos traducidos en siguientes pasos accionables.</p></div>
-                </div>
-                <OportunidadesUso oportunidades={resultado.oportunidades} />
-              </section>
-            </div>
+            {vista === 'usuarios' && (
+              <>
+                {(resultado.roles?.length || resultado.dispositivos?.length) ? (
+                  <section className="sa-panel sau-panel sau-segments-panel">
+                    <div className="sau-panel-heading">
+                      <div><span className="sau-section-number">01</span><h2>Quién usa el sistema</h2><p>Distribución para detectar necesidades por perfil y dispositivo.</p></div>
+                    </div>
+                    <div className="sau-segments">
+                      <DistribucionSegmentos titulo="Uso por rol" datos={resultado.roles} />
+                      <DistribucionSegmentos titulo="Uso por dispositivo" datos={resultado.dispositivos} />
+                    </div>
+                  </section>
+                ) : null}
 
-            <section className="sa-panel sau-panel sau-quality" aria-labelledby="sau-quality-title">
-              <div className="sau-panel-heading">
-                <div><span className="sau-section-number">07</span><h2 id="sau-quality-title">Calidad y cobertura</h2><p>Contexto necesario para interpretar las métricas con confianza.</p></div>
-                <span className={`sau-quality-state sau-quality-state--${cobertura.estado}`}>{cobertura.estado.replaceAll('_', ' ')}</span>
+                <section className="sa-panel sau-panel sau-panel--actions">
+                  <div className="sau-panel-heading">
+                    <div><span className="sau-section-number">02</span><h2>Uso por usuario</h2><p>Actividad individual dentro del periodo y filtros seleccionados.</p></div>
+                  </div>
+                  <TablaUsuariosUso usuarios={resultado.usuarios} />
+                </section>
+              </>
+            )}
+
+            {vista === 'procesos' && (
+              <div className="sau-grid sau-grid--decisions">
+                <section className="sa-panel sau-panel">
+                  <div className="sau-panel-heading">
+                    <div><span className="sau-section-number">01</span><h2>Embudos de procesos</h2><p>Identifica el paso exacto donde los usuarios se detienen.</p></div>
+                  </div>
+                  <EmbudosUso embudos={resultado.embudos} />
+                </section>
+                <section className="sa-panel sau-panel">
+                  <div className="sau-panel-heading">
+                    <div><span className="sau-section-number">02</span><h2>Oportunidades priorizadas</h2><p>Hallazgos traducidos en siguientes pasos accionables.</p></div>
+                  </div>
+                  <OportunidadesUso oportunidades={resultado.oportunidades} />
+                </section>
               </div>
-              <div className="sau-quality__grid">
-                <div><span>Cobertura temporal</span><strong>{coberturaPct}%</strong><small>{cobertura.diasConDatos || 0} de {cobertura.diasEsperados || resultado.ventana?.dias || 0} días con datos</small></div>
-                <div><span>Eventos válidos</span><strong>{formatearNumero(cobertura.eventosValidos)}</strong><small>{formatearNumero(cobertura.eventosDescartados)} descartados por calidad</small></div>
-                <div><span>Sesiones identificadas</span><strong>{sesionesIdentificadasPct}%</strong><small>{formatearNumero(cobertura.sesionesConUsuario)} de {formatearNumero(cobertura.sesionesTotales)}</small></div>
-                <div><span>Ventana observada</span><strong>{resultado.ventana?.dias || filtros.dias} días</strong><small>{fechaLegible(resultado.ventana?.desde, { day: '2-digit', month: 'short' })} — {fechaLegible(resultado.ventana?.hasta, { day: '2-digit', month: 'short' })}</small></div>
-                <div><span>Frescura</span><strong>{resultado.generadoEn ? 'Actualizada' : 'Sin sincronizar'}</strong><small>{fechaLegible(resultado.generadoEn)}</small></div>
-              </div>
-              <DefinicionesUso definiciones={resultado.definiciones} />
-            </section>
+            )}
+
+            {vista === 'calidad' && (
+              <section className="sa-panel sau-panel sau-quality" aria-labelledby="sau-quality-title">
+                <div className="sau-panel-heading">
+                  <div><span className="sau-section-number">01</span><h2 id="sau-quality-title">Calidad y cobertura</h2><p>Contexto necesario para interpretar las métricas con confianza.</p></div>
+                  <span className={`sau-quality-state sau-quality-state--${cobertura.estado}`}>{cobertura.estado.replaceAll('_', ' ')}</span>
+                </div>
+                <div className="sau-quality__grid">
+                  <div><span>Cobertura temporal</span><strong>{coberturaPct}%</strong><small>{cobertura.diasConDatos || 0} de {cobertura.diasEsperados || resultado.ventana?.dias || 0} días con datos</small></div>
+                  <div><span>Eventos válidos</span><strong>{formatearNumero(cobertura.eventosValidos)}</strong><small>{formatearNumero(cobertura.eventosDescartados)} descartados por calidad</small></div>
+                  <div><span>Sesiones identificadas</span><strong>{sesionesIdentificadasPct}%</strong><small>{formatearNumero(cobertura.sesionesConUsuario)} de {formatearNumero(cobertura.sesionesTotales)}</small></div>
+                  <div><span>Ventana observada</span><strong>{resultado.ventana?.dias || filtros.dias} días</strong><small>{fechaLegible(resultado.ventana?.desde, { day: '2-digit', month: 'short' })} — {fechaLegible(resultado.ventana?.hasta, { day: '2-digit', month: 'short' })}</small></div>
+                  <div><span>Frescura</span><strong>{resultado.generadoEn ? 'Actualizada' : 'Sin sincronizar'}</strong><small>{fechaLegible(resultado.generadoEn)}</small></div>
+                </div>
+                <DefinicionesUso definiciones={resultado.definiciones} />
+              </section>
+            )}
           </>
         ) : !error ? <EstadoVacio /> : null}
       </div>

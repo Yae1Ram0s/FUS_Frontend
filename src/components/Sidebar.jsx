@@ -206,6 +206,9 @@ export default function Sidebar() {
         onClick={abrirPerfil}
         aria-label="Ver mi perfil"
         title="Ver mi perfil"
+        data-analytics-event="INTERACTION"
+        data-analytics-component="SIDEBAR_PERFIL"
+        data-analytics-action="OPEN"
       >
         <div className="sidebar-avatar">{initials}</div>
         <div className="sidebar-user-info">
@@ -227,6 +230,10 @@ export default function Sidebar() {
             className={`sidebar-item${isActive ? ' sidebar-item-active' : ''}`}
             onClick={() => handleNav(item)}
             title={item.label}
+            data-analytics-event="INTERACTION"
+            data-analytics-component="SIDEBAR_NAV"
+            data-analytics-action="NAVIGATE"
+            data-analytics-metadata={item.path.split('/').pop()}
           >
             <span className="sidebar-item-icon">{item.icon}</span>
             <span className="sidebar-item-label">{item.label}</span>

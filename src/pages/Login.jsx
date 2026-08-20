@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/api'
 import { rutaInicioPorRol } from '../utils/rutas'
 import useInstallPrompt from '../hooks/useInstallPrompt'
+import { useAnalytics } from '../analytics'
 import logosImg from '../assets/Logos_P_Hacienda_ANAM.png'
 import './Login.css'
 
@@ -45,6 +46,7 @@ export default function Login() {
   const { user, login, loginWithTokens, completarCambioContrasena, logout } = useAuth()
   const navigate = useNavigate()
   const { instalado, puedeInstalar, esIOS, instalar } = useInstallPrompt()
+  const { track, startTask, completeTask, failTask, abandonTask } = useAnalytics({ modulo: 'ACCESO' })
 
   useEffect(() => {
     if (user && !user.requiereCambioContrasena) navigate(rutaInicioPorRol(user.rol), { replace: true })
@@ -157,12 +159,21 @@ export default function Login() {
     // limpio a verificar-correo).
     const limpio = email.trim().toLowerCase()
     setEmail(limpio)
+    const taskId = startTask({ componente: 'LOGIN_EMAIL_STEP', accion: 'OPEN' })
     try {
       const { data } = await api.post('/auth/verificar-correo/', { email: limpio })
-      // Primer ingreso: directo a crear contraseña — el paso de código por
-      // correo queda suspendido por ahora (ver EstablecerContrasenaView).
-      setStep(data.estado === 'existente' ? STEP_PASS : STEP_NEWPASS)
+      completeTask(taskId)
+      if (data.estado === 'existente') {
+        setStep(STEP_PASS)
+      } else {
+        // Primer ingreso: verificar-correo ya generó y envió el OTP —
+        // pasa por el paso de código antes de crear la contraseña.
+        setOtp('')
+        setStep(STEP_OTP)
+        activarEsperaReenvio(limpio)
+      }
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'Error al verificar el correo.')
     } finally {
       setLoading(false)
@@ -175,6 +186,7 @@ export default function Login() {
     if (passBloqueoRestante > 0) return
     setError('')
     setLoading(true)
+    const taskId = startTask({ componente: 'LOGIN_PASSWORD_STEP', accion: 'OPEN' })
     try {
       const u = await login(email, password)
       if (remember) {
@@ -184,6 +196,7 @@ export default function Login() {
         localStorage.removeItem('scs_remember')
         localStorage.removeItem('scs_email')
       }
+      completeTask(taskId, { metadatos: { rol: u.rol } })
       if (u.requiereCambioContrasena) {
         setCambioObligatorio(true)
         setNewPass('')
@@ -197,6 +210,7 @@ export default function Login() {
         // El correo está autorizado pero nunca se activó la cuenta (no hay
         // User todavía) — en vez de dejarlo varado, reinicia el flujo de
         // activación automáticamente (mismo que seguiría un usuario nuevo).
+        failTask(taskId, { metadatos: { motivo: 'cuenta_no_activada' } })
         setPassword('')
         try {
           const { data } = await api.post('/auth/verificar-correo/', { email: email.trim().toLowerCase() })
@@ -207,8 +221,10 @@ export default function Login() {
       } else if (err.response?.data?.code === 'login_bloqueado') {
         const segundos = err.response.data.segundosRestantes || 60
         setPassBloqueadoHasta(Date.now() + segundos * 1000)
+        failTask(taskId, { metadatos: { motivo: 'login_bloqueado' } })
         setError(err.response.data.detail)
       } else {
+        failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
         setError(err.response?.data?.detail || 'Contraseña incorrecta.')
       }
     } finally {
@@ -219,14 +235,17 @@ export default function Login() {
   /* ── Olvidé mi contraseña ── */
   const handleForgot = async () => {
     setError(''); setReenvioMsg(''); setLoading(true)
+    const taskId = startTask({ componente: 'LOGIN_FORGOT_PASSWORD', accion: 'OPEN' })
     try {
       await api.post('/auth/recuperar-contrasena/', { email })
+      completeTask(taskId)
       setIsRecovery(true)
       setOtp('')
       setStep(STEP_OTP)
       activarEsperaReenvio()
       setReenvioMsg('Código de recuperación enviado a tu correo.')
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'No se pudo enviar el código.')
     } finally {
       setLoading(false)
@@ -238,10 +257,13 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
+    const taskId = startTask({ componente: 'LOGIN_OTP_STEP', accion: 'OPEN' })
     try {
       await api.post('/auth/verificar-otp/', { email, codigo: otp.trim() })
+      completeTask(taskId)
       setStep(STEP_NEWPASS)
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'Código incorrecto o expirado.')
     } finally {
       setLoading(false)
@@ -255,13 +277,20 @@ export default function Login() {
     if (newPass.length < 8)     { setError('Mínimo 8 caracteres.'); return }
     setError('')
     setLoading(true)
+    const esCambioObligatorio = cambioObligatorio || user?.requiereCambioContrasena
+    const taskId = startTask({
+      componente: 'LOGIN_NEWPASS_STEP',
+      accion: esCambioObligatorio || isRecovery ? 'UPDATE' : 'CREATE',
+    })
     try {
-      if (cambioObligatorio || user?.requiereCambioContrasena) {
+      if (esCambioObligatorio) {
         if (!password) {
+          abandonTask(taskId, { metadatos: { motivo: 'falta_password_temporal' } })
           setError('Ingresa nuevamente la contraseña temporal.')
           return
         }
         if (password === newPass) {
+          abandonTask(taskId, { metadatos: { motivo: 'password_igual' } })
           setError('La nueva contraseña debe ser diferente de la contraseña temporal.')
           return
         }
@@ -269,19 +298,23 @@ export default function Login() {
           passwordActual: password,
           passwordNueva: newPass,
         })
+        completeTask(taskId)
         const usuarioActualizado = completarCambioContrasena(data)
         redirect(usuarioActualizado.rol)
       } else if (isRecovery) {
         await api.post('/auth/restablecer-contrasena/', { email, codigo: otp, password: newPass })
+        completeTask(taskId)
         setRecoveryOk(true)
       } else {
         const { data } = await api.post('/auth/establecer-contrasena/', {
           email, codigo: otp, password: newPass,
         })
+        completeTask(taskId)
         const u = loginWithTokens(data)
         redirect(u.rol)
       }
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'Error al procesar la contraseña.')
     } finally {
       setLoading(false)
@@ -292,13 +325,16 @@ export default function Login() {
   const handleReenviar = async () => {
     if (reenviando || reenvioRestante > 0) return
     setReenvioMsg(''); setError(''); setReenviando(true)
+    const taskId = startTask({ componente: 'LOGIN_REENVIAR_OTP', accion: 'OPEN' })
     try {
       const endpoint = isRecovery ? '/auth/recuperar-contrasena/' : '/auth/reenviar-otp/'
       await api.post(endpoint, { email })
+      completeTask(taskId)
       setOtp('')
       activarEsperaReenvio()
       setReenvioMsg('Nuevo código enviado a tu correo.')
     } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
       setError(err.response?.data?.detail || 'No se pudo reenviar el código.')
     } finally {
       setReenviando(false)
@@ -364,7 +400,7 @@ export default function Login() {
       <form className="login-form" onSubmit={handlePassword} noValidate>
         <div className="lf-email-locked">
           <span>{email}</span>
-          <button type="button" className="lf-cambiar" onClick={() => { setStep(STEP_EMAIL); setError(''); setPassword(''); setPassBloqueadoHasta(0) }}>
+          <button type="button" className="lf-cambiar" onClick={() => { track({ componente: 'LOGIN_PASSWORD_STEP', accion: 'NAVIGATE', metadatos: { control: 'cambiar_correo' } }); setStep(STEP_EMAIL); setError(''); setPassword(''); setPassBloqueadoHasta(0) }}>
             Cambiar
           </button>
         </div>
@@ -447,7 +483,7 @@ export default function Login() {
           {loading ? 'Verificando…' : 'Verificar código'}
         </button>
         <div className="lf-actions-row">
-          <button type="button" className="lf-link" onClick={() => { resetAll(); setStep(isRecovery ? STEP_PASS : STEP_EMAIL) }}>
+          <button type="button" className="lf-link" onClick={() => { track({ componente: 'LOGIN_OTP_STEP', accion: 'NAVIGATE', metadatos: { control: isRecovery ? 'volver_login' : 'cambiar_correo' } }); resetAll(); setStep(isRecovery ? STEP_PASS : STEP_EMAIL) }}>
             ← {isRecovery ? 'Volver al login' : 'Cambiar correo'}
           </button>
           <button
@@ -536,7 +572,13 @@ export default function Login() {
         </button>
         {(cambioObligatorio || user?.requiereCambioContrasena) && (
           <div className="lf-actions-row">
-            <button type="button" className="lf-link" onClick={() => logout()}>
+            <button
+              type="button"
+              className="lf-link"
+              data-analytics-event="INTERACTION"
+              data-analytics-component="LOGIN_USAR_OTRA_CUENTA"
+              onClick={() => logout()}
+            >
               Usar otra cuenta
             </button>
           </div>

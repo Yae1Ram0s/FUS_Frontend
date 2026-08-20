@@ -7,6 +7,7 @@ import api, {
   refreshAccessToken,
 } from '../api/api'
 import Spinner from '../components/Spinner'
+import { trackAnalytics } from '../analytics/analyticsClient'
 
 // eslint-disable-next-line react-refresh/only-export-components -- Context + Provider + hook en un solo archivo es el patrón usado en todo el proyecto; separarlo tocaría los imports de ~18 archivos por un problema que solo afecta a fast refresh en dev
 export const AuthContext = createContext(null)
@@ -29,6 +30,14 @@ const msInactivo = () => {
     return guardado ? Date.now() - Number(guardado) : 0
   } catch { return 0 }
 }
+
+const trackLogout = (motivo) => trackAnalytics({
+  modulo: 'ACCESO',
+  componente: 'AUTH_LOGOUT',
+  evento: 'INTERACTION',
+  accion: 'UPDATE',
+  metadatos: { motivo },
+})
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate()
@@ -67,6 +76,7 @@ export function AuthProvider({ children }) {
     // cierre por inactividad aplica también al reabrir la app/pestaña, no
     // solo mientras se queda abierta en segundo plano.
     if (userRef.current && msInactivo() > IDLE_LIMIT_MS) {
+      trackLogout('sesion_expirada')
       api.post('/auth/logout/').catch(() => {})
       limpiarSesionLocal()
       setCargando(false)
@@ -91,6 +101,7 @@ export function AuthProvider({ children }) {
           if (!cancelado) await restaurarSesion(reintentosRestantes - 1)
           return
         }
+        trackLogout(status === 401 || status === 403 ? 'token_invalido' : 'error_conexion')
         limpiarSesionLocal()
         navigate('/login', { replace: true })
       }
@@ -120,6 +131,7 @@ export function AuthProvider({ children }) {
 
     const intervalo = setInterval(() => {
       if (msInactivo() > IDLE_LIMIT_MS) {
+        trackLogout('inactividad')
         api.post('/auth/logout/').catch(() => {})
         limpiarSesionLocal()
         navigate('/login', { replace: true })
@@ -175,8 +187,9 @@ export function AuthProvider({ children }) {
   // alcanzar a verse. `logout` nunca rechaza (.catch swallow), así que cerrar
   // sesión sigue funcionando aunque la red esté caída; `login` sí puede
   // rechazar (contraseña incorrecta, etc.), por eso usa try/finally.
-  const logout = async () => {
+  const logout = async (motivo = 'manual') => {
     setLoggingOut(true)
+    trackLogout(motivo)
     await api.post('/auth/logout/').catch(() => {})
     limpiarSesionLocal()
     setLoggingOut(false)

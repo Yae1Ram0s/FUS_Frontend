@@ -91,7 +91,7 @@ async function fetchAll(url, extraParams = {}, signal) {
 }
 
 /* ── Tarjeta de KPI "liquid glass" — mismo patrón que DashboardROL1. ── */
-function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
+function Kpi2Card({ icon, label, sub, value, color, onClick, index, trackId }) {
   const count = useCountUp(value)
   return (
     <div
@@ -101,6 +101,10 @@ function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e => e.key === 'Enter' && onClick()) : undefined}
+      data-analytics-event={onClick ? 'INTERACTION' : undefined}
+      data-analytics-component="DASHBOARD_KPI"
+      data-analytics-action="FILTER"
+      data-analytics-metadata={trackId}
     >
       <div className={`kpi2-glow kpi2-glow--${color}`} />
       <div className={`kpi2-icon kpi2-icon--${color}`}>{icon}</div>
@@ -169,11 +173,11 @@ export default function DashboardROL2() {
   const prioridadAlta = noConcluidos.filter(t => t.idFus?.prioridad === 'Alta').length
 
   const kpisGlass = [
-    { icon: ICON_STACK,    label: 'Mis FUS',        sub: 'Asignados',   value: misFus,        color: 'blue',  onClick: () => irAConsultar('') },
-    { icon: ICON_INBOX,    label: 'Recibidos',      sub: 'Por atender', value: misPendientes,  color: 'amber', onClick: () => irAConsultar('Recibido') },
-    { icon: ICON_ACTIVITY, label: 'En seguimiento', sub: 'Atendiendo',  value: enProceso,      color: 'blue',  onClick: () => irAConsultar('En_seguimiento') },
-    { icon: ICON_CHECK,    label: 'Concluidos',     sub: 'Completados', value: finalizadas,    color: 'green', onClick: () => irAConsultar('Concluido') },
-    { icon: ICON_FLAG,     label: 'Prioridad alta', sub: 'Sin concluir', value: prioridadAlta, color: 'red',   onClick: () => irAConsultarPrioridad('Alta') },
+    { icon: ICON_STACK,    label: 'Mis FUS',        sub: 'Asignados',   value: misFus,        color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
+    { icon: ICON_INBOX,    label: 'Recibidos',      sub: 'Por atender', value: misPendientes,  color: 'amber', onClick: () => irAConsultar('Recibido'), trackId: 'recibidos' },
+    { icon: ICON_ACTIVITY, label: 'En seguimiento', sub: 'Atendiendo',  value: enProceso,      color: 'blue',  onClick: () => irAConsultar('En_seguimiento'), trackId: 'seguimiento' },
+    { icon: ICON_CHECK,    label: 'Concluidos',     sub: 'Completados', value: finalizadas,    color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
+    { icon: ICON_FLAG,     label: 'Prioridad alta', sub: 'Sin concluir', value: prioridadAlta, color: 'red',   onClick: () => irAConsultarPrioridad('Alta'), trackId: 'prioridad-alta' },
   ]
 
   /* ── Próximos vencimientos — reales, ordenados por urgencia ── */
@@ -263,7 +267,7 @@ export default function DashboardROL2() {
         <div className="dash-bg">
           <div className="dash-error-state">
             <p className="dash-error-msg">No se pudo cargar el dashboard.</p>
-            <button type="button" className="btn-reintentar" onClick={reintentar}>Reintentar</button>
+            <button type="button" className="btn-reintentar" onClick={reintentar} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_REINTENTAR">Reintentar</button>
           </div>
         </div>
       </AppLayout>
@@ -278,7 +282,7 @@ export default function DashboardROL2() {
           {errorCarga && turnados.length > 0 && (
             <div className="banner-error-carga">
               <span>No se pudo actualizar — mostrando la última información disponible.</span>
-              <button type="button" onClick={reintentar}>Reintentar</button>
+              <button type="button" onClick={reintentar} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_REINTENTAR">Reintentar</button>
             </div>
           )}
 
@@ -323,6 +327,9 @@ export default function DashboardROL2() {
                           className="proximo-folio proximo-folio-link"
                           onClick={() => irAlFus(proximoFus.idFus?.folio)}
                           aria-label={`Ver detalle de ${proximoFus.idFus?.folio}`}
+                          data-analytics-event="INTERACTION"
+                          data-analytics-component="DASHBOARD_PROXIMO_FUS"
+                          data-analytics-action="OPEN"
                         >
                           {proximoFus.idFus?.folio}
                         </button>
@@ -336,7 +343,7 @@ export default function DashboardROL2() {
                       <div className="proximo-field proximo-field-asunto"><div className="proximo-l">Asunto</div><div className="proximo-v">{proximoFus.idFus?.descripcion || '—'}</div></div>
                       <div className="proximo-field proximo-field-tiempo"><div className="proximo-l">Tiempo restante</div><div className="proximo-v">{ICON_HOURGLASS} {tiempoRestanteTexto(proximoFus.idFus?.fechaLimite)}</div></div>
                     </div>
-                    <button type="button" className="proximo-btn" onClick={() => irAlFus(proximoFus.idFus?.folio)}>
+                    <button type="button" className="proximo-btn" onClick={() => irAlFus(proximoFus.idFus?.folio)} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_PROXIMO_FUS" data-analytics-action="OPEN">
                       Responder ahora {ICON_ARROW_RIGHT}
                     </button>
                   </>
@@ -387,6 +394,9 @@ export default function DashboardROL2() {
                         role="button"
                         tabIndex={0}
                         onKeyDown={e => e.key === 'Enter' && irAlFus(v.folio)}
+                        data-analytics-event="INTERACTION"
+                        data-analytics-component="DASHBOARD_VENCIMIENTO"
+                        data-analytics-action="OPEN"
                       >
                         <div className={`venc-icon venc-icon--${v.tipo}`}>{v.icon}</div>
                         <div className="venc-texto">
@@ -396,7 +406,7 @@ export default function DashboardROL2() {
                         <span className={`venc-badge venc-badge--${v.tipo}`}>{v.badge}</span>
                       </div>
                     ))}
-                    <div className="ver-todos" onClick={() => setMostrarVencimientos(true)}>
+                    <div className="ver-todos" onClick={() => setMostrarVencimientos(true)} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_VER_TODOS_VENCIMIENTOS" data-analytics-action="OPEN">
                       Ver todos mis vencimientos {ICON_ARROW_RIGHT}
                     </div>
                   </>

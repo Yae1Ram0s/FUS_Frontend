@@ -4,17 +4,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Badge from '../components/Badge'
 import Spinner from '../components/Spinner'
-import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
+import ModalTimeline from '../components/ModalTimeline'
+import SeguimientoComisionadoFeed, { SeguimientoComisionadoForm } from '../components/Comisionado/SeguimientoComisionadoFeed'
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import api from '../api/api'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useToast } from '../context/ToastContext'
-import { useAnalytics } from '../analytics'
 import { formatearFechaHora } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
 import { FolioTexto } from '../utils/folio'
+import { truncarTexto } from '../utils/texto'
 // Reusa el layout de lista+detalle (.st-*, .seccion, .sec-*, .dt-panel,
 // .drow, .fus-card...) tal cual SolicitudesTurnadas — este chunk se carga
 // aparte (lazy-loading por ruta) y no lo hereda solo, así que hay que
@@ -55,35 +56,14 @@ function EvidenciaList({ evidencias }) {
 }
 
 /* ── Feed de Respuestas y seguimiento (comisionado) ──
-   El historial (lectura) vive en SeguimientoComisionadoFeed, reusado tal
-   cual por ConsultarFUS/SolicitudesTurnadas — aquí solo se le agrega el
-   formulario para agregar, que sigue siendo exclusivo del comisionado.
-   `refreshKey` remonta el feed para reflejar lo recién agregado, ya que el
-   feed compartido administra su propio fetch internamente. */
+   El historial (lectura) vive en SeguimientoComisionadoFeed, y el
+   formulario para agregar en SeguimientoComisionadoForm — ambos reusados
+   tal cual por SolicitudesTurnadas, donde Rol 2 también puede agregar una
+   vez que comisionó (ver EsComisionadoAsignado en el backend). `refreshKey`
+   remonta el feed para reflejar lo recién agregado, ya que el feed
+   compartido administra su propio fetch internamente. */
 function SeguimientoComisionado({ fusId, folio, estatusParticular }) {
   const [refreshKey, setRefreshKey] = useState(0)
-  const [tipo, setTipo]             = useState('avance')
-  const [contenido, setContenido]   = useState('')
-  const [enviando, setEnviando]     = useState(false)
-  const [error, setError]           = useState('')
-  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'FUS_COMISIONADO_SEGUIMIENTO', accion: 'CREATE' })
-
-  const agregar = async () => {
-    if (!contenido.trim()) { setError('Escribe una descripción antes de agregar.'); return }
-    setError(''); setEnviando(true)
-    const taskId = startTask({ metadatos: { tipo } })
-    try {
-      await api.post(`/fus/${fusId}/seguimiento/`, { tipo, contenido })
-      completeTask(taskId)
-      setContenido('')
-      setRefreshKey(k => k + 1)
-    } catch (e) {
-      failTask(taskId, { metadatos: { motivo: e.response ? 'error_servidor' : 'sin_conexion' } })
-      setError(e.response?.data?.detail || 'No se pudo registrar. Intenta nuevamente.')
-    } finally {
-      setEnviando(false)
-    }
-  }
 
   // 'En_seguimiento' = aún sin responder; 'Atendido' = ya respondió al menos
   // una vez (el backend hace esa transición sola); 'Rechazado' = el
@@ -98,29 +78,7 @@ function SeguimientoComisionado({ fusId, folio, estatusParticular }) {
       <SeguimientoComisionadoFeed key={refreshKey} fusId={fusId} folio={folio} />
 
       {puedeAgregar && (
-        <div className="seccion">
-          <div className="sec-body">
-            <div className="seg-nueva fc-seg-nueva">
-              <div className="fc-seg-nueva-fila">
-                <select className="fc-tipo-select" value={tipo} onChange={e => setTipo(e.target.value)}>
-                  <option value="avance">Avance</option>
-                  <option value="accion_por_emprender">Acción por emprender</option>
-                </select>
-              </div>
-              <textarea
-                className="fc-seg-textarea"
-                placeholder="Describe el avance o la acción por emprender…"
-                value={contenido}
-                onChange={e => setContenido(e.target.value)}
-                rows={2}
-              />
-              <button className="btn-agregar" onClick={agregar} disabled={enviando}>
-                {enviando ? 'Guardando…' : 'Agregar'}
-              </button>
-            </div>
-            {error && <p className="sec-error" role="alert">{error}</p>}
-          </div>
-        </div>
+        <SeguimientoComisionadoForm fusId={fusId} onAgregado={() => setRefreshKey(k => k + 1)} />
       )}
 
       {estatusParticular === 'Concluido' && (
@@ -199,23 +157,53 @@ function DetalleFUSComisionado({ fus, onBack }) {
   )
 }
 
-/* ── Tarjeta de la lista ── */
-function FUSCard({ f, activo, onClick }) {
+/* ── Tarjeta de la lista — mismo layout que FusCard.jsx (Consultar FUS):
+   fila de meta con íconos y botón de historial, en vez del bloque anterior
+   de párrafos "Etiqueta: valor" sin íconos. Conserva la fecha de asignación
+   (no la de registro) porque es el dato relevante para el Comisionado. ── */
+function FUSCard({ f, activo, onClick, onVerHistorial }) {
   return (
-    <div className={`fus-card${activo ? ' fus-card-activo' : ''}`} onClick={onClick} role="button" tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onClick()}>
+    <div
+      className={`fus-card${activo ? ' fus-card-activo' : ''}${f.slaVencido ? ' fus-card-vencido' : ''}${!f.slaVencido && f.slaPorVencer ? ' fus-card-por-vencer' : ''}`}
+      onClick={onClick} role="button" tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+    >
       <div className="fus-card-top">
         <strong className="fus-folio"><FolioTexto folio={f.folio} /></strong>
-        <span className="fus-card-top-actions">
-          <span className="fus-card-badges">
-            <Badge estatus={f.estatusParticular} />
-            {f.estadoTemporalidad && <Badge estatus={f.estadoTemporalidad} />}
-          </span>
+        <span className="fus-card-badges">
+          <Badge estatus={f.estatusParticular} />
+          {f.estadoTemporalidad && <Badge estatus={f.estadoTemporalidad} />}
         </span>
       </div>
-      <p className="fus-meta"><b>Asignado:</b> {formatearFechaHora(f.fechaAsignacion)}</p>
-      <p className="fus-meta"><b>Medio:</b> {f.idMedioRecepcion?.nombreMedio || '—'}</p>
-      {f.descripcion && <p className="fus-desc">{f.descripcion.slice(0, 90)}…</p>}
+      <p className="fus-meta">
+        <span className="fus-meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+          {formatearFechaHora(f.fechaAsignacion)}
+        </span>
+        <span className="fus-meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="m22 7-10 6L2 7"/>
+          </svg>
+          {f.idMedioRecepcion?.nombreMedio || '—'}
+        </span>
+      </p>
+      {f.descripcion && <p className="fus-desc">{truncarTexto(f.descripcion)}</p>}
+      <button
+        className="fus-card-historial-btn"
+        title="Ver historial"
+        aria-label={`Ver historial de ${f.folio}`}
+        onClick={e => { e.stopPropagation(); onVerHistorial(f.folio) }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7"/>
+          <path d="M3 5v4h4"/>
+          <polyline points="12 7 12 12 15.5 14"/>
+        </svg>
+      </button>
     </div>
   )
 }
@@ -232,6 +220,7 @@ export default function FUSComisionados() {
 
   const [busqueda,     setBusqueda]     = useState('')
   const [seleccionado, setSeleccionado] = useState(null)
+  const [modalTimelineFolio, setModalTimelineFolio] = useState(null)
   const [cargandoMas, setCargandoMas] = useState(false)
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -368,7 +357,8 @@ export default function FUSComisionados() {
               )}
               {lista.map(f => (
                 <FUSCard key={f.id} f={f} activo={seleccionado?.id === f.id}
-                  onClick={() => { setSeleccionado(f); if (window.innerWidth <= 768) setPanelAbierto(false) }} />
+                  onClick={() => { setSeleccionado(f); if (window.innerWidth <= 768) setPanelAbierto(false) }}
+                  onVerHistorial={setModalTimelineFolio} />
               ))}
               {lista.length < totalItems && (
                 <button className="btn-cargar-mas" onClick={cargarMas} disabled={cargando || cargandoMas}>
@@ -400,6 +390,10 @@ export default function FUSComisionados() {
           }
         </div>
       </div>
+
+      {modalTimelineFolio && (
+        <ModalTimeline folio={modalTimelineFolio} onClose={() => setModalTimelineFolio(null)} />
+      )}
     </AppLayout>
   )
 }

@@ -79,6 +79,22 @@ const normalizarSegmentos = valor => lista(valor).map((item, indice) => ({
   porcentaje: porcentaje(item?.porcentaje ?? item?.participacionPct),
 }))
 
+const normalizarUsuarios = valor => lista(valor).map((item, indice) => ({
+  id: texto(item?.id ?? item?.usuarioId ?? indice),
+  nombre: texto(item?.nombre ?? item?.email ?? 'Usuario sin nombre'),
+  email: texto(item?.email),
+  rol: texto(item?.rol),
+  unidad: texto(item?.unidad),
+  eventos: numero(item?.eventos),
+  accionesSignificativas: numero(item?.accionesSignificativas ?? item?.acciones),
+  sesiones: numero(item?.sesiones),
+  modulosUsados: numero(item?.modulosUsados),
+  tasaExito: porcentaje(item?.tasaExito),
+  tasaError: porcentaje(item?.tasaError),
+  duracionMedianaMs: numero(item?.duracionMedianaMs ?? item?.duracionMs),
+  ultimaActividad: item?.ultimaActividad ?? null,
+}))
+
 const normalizarEmbudos = valor => lista(valor).map((item, indice) => ({
   id: texto(item?.id ?? item?.codigo ?? indice),
   nombre: texto(item?.nombre ?? item?.etiqueta ?? item?.tipo ?? 'Proceso'),
@@ -175,6 +191,7 @@ export function normalizarResumenAnalitica(respuesta = {}) {
     acciones: normalizarAcciones([...lista(fuente.componentes), ...lista(fuente.acciones)]),
     roles: normalizarSegmentos(fuente.roles),
     dispositivos: normalizarSegmentos(fuente.dispositivos),
+    usuarios: normalizarUsuarios(fuente.usuarios),
     embudos: normalizarEmbudos(fuente.embudos),
     oportunidades: normalizarOportunidades(fuente.oportunidades),
     filtros: {

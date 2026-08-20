@@ -179,13 +179,16 @@ export default function FusFolioPicker({ value, onChange, onSelect, disabled }) 
           if (soloVerFus) { e.preventDefault(); irAlFus(e) }
           else if (!disabled) { e.preventDefault(); abrir() }
         }}
+        data-analytics-event={disabled && !soloVerFus ? undefined : 'INTERACTION'}
+        data-analytics-component="FUS_FOLIO_PICKER"
+        data-analytics-action={soloVerFus ? 'OPEN' : 'SEARCH'}
       >
         {value ? (
           <span className="fusfp-chip">
             <span className="fusfp-chip-dot" />
             <span className="fusfp-chip-folio">{value}</span>
             {!disabled && (
-              <button type="button" className="fusfp-chip-x" onClick={limpiar} aria-label="Quitar folio">✕</button>
+              <button type="button" className="fusfp-chip-x" onClick={limpiar} aria-label="Quitar folio" data-analytics-event="INTERACTION" data-analytics-component="FUS_FOLIO_PICKER" data-analytics-action="UPDATE" data-analytics-metadata="limpiar">✕</button>
             )}
           </span>
         ) : (
@@ -227,6 +230,10 @@ export default function FusFolioPicker({ value, onChange, onSelect, disabled }) 
                   role="option"
                   className="fusfp-item"
                   onClick={() => seleccionar(item)}
+                  data-analytics-event="INTERACTION"
+                  data-analytics-component="FUS_FOLIO_PICKER"
+                  data-analytics-action="UPDATE"
+                  data-analytics-metadata="seleccionar"
                   onMouseEnter={e => onItemMouseEnter(item, e)}
                   onMouseLeave={onItemMouseLeave}
                   onTouchStart={e => onItemTouchStart(item, e)}

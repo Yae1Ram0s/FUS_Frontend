@@ -141,7 +141,7 @@ function TendenciaChart({ data }) {
 
 /* ── Rediseño "liquid glass" — tarjeta de KPI con glow e icono degradado,
    usada por ambos dashboards (ROL1 y su Equipo del Particular). ── */
-function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
+function Kpi2Card({ icon, label, sub, value, color, onClick, index, trackId }) {
   const count = useCountUp(value)
   return (
     <div
@@ -153,6 +153,10 @@ function Kpi2Card({ icon, label, sub, value, color, onClick, index }) {
       onKeyDown={onClick ? (e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() }
       }) : undefined}
+      data-analytics-event={onClick ? 'INTERACTION' : undefined}
+      data-analytics-component="DASHBOARD_KPI"
+      data-analytics-action="FILTER"
+      data-analytics-metadata={trackId}
     >
       <div className={`kpi2-glow kpi2-glow--${color}`} />
       <div className={`kpi2-icon kpi2-icon--${color}`}>{icon}</div>
@@ -172,6 +176,9 @@ function Venc2Item({ item, onClick }) {
       role="button"
       tabIndex={0}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      data-analytics-event="INTERACTION"
+      data-analytics-component="DASHBOARD_VENCIMIENTO"
+      data-analytics-action="OPEN"
     >
       <div className={`venc-icon venc-icon--${item.color}`}>{item.icon}</div>
       <div className="venc-texto">
@@ -282,11 +289,11 @@ export default function DashboardROL1() {
   /* ── Rediseño "liquid glass" (ambos dashboards, ver JSX final) — misma lógica de
      datos, solo se reempaqueta para el nuevo layout visual. ── */
   const kpis2 = [
-    { icon: ICON_STACK,  label: 'Total de FUS',   sub: 'Todas las solicitudes',      value: totalFUS,              color: 'blue',  onClick: () => irAConsultar('') },
-    { icon: ICON_FOLDER, label: 'Registrados',    sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado') },
-    { icon: ICON_TARGET, label: 'En seguimiento', sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido') },
-    { icon: ICON_CHECK,  label: 'Concluidos',     sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido') },
-    { icon: ICON_FLAG,   label: 'Prioridad alta', sub: 'Sin concluir',               value: prioridadAltaPendiente, color: 'red',  onClick: () => irAConsultarPrioridad('Alta') },
+    { icon: ICON_STACK,  label: 'Total de FUS',   sub: 'Todas las solicitudes',      value: totalFUS,              color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
+    { icon: ICON_FOLDER, label: 'Registrados',    sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado'), trackId: 'registrados' },
+    { icon: ICON_TARGET, label: 'En seguimiento', sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido'), trackId: 'seguimiento' },
+    { icon: ICON_CHECK,  label: 'Concluidos',     sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
+    { icon: ICON_FLAG,   label: 'Prioridad alta', sub: 'Sin concluir',               value: prioridadAltaPendiente, color: 'red',  onClick: () => irAConsultarPrioridad('Alta'), trackId: 'prioridad-alta' },
   ]
 
   /* Tendencia por unidad administrativa — cuenta real de FUS por la unidad del
@@ -359,7 +366,7 @@ export default function DashboardROL1() {
         <div className="dash-bg">
           <div className="dash-error-state">
             <p className="dash-error-msg">No se pudo cargar el dashboard.</p>
-            <button type="button" className="btn-reintentar" onClick={reintentar}>Reintentar</button>
+            <button type="button" className="btn-reintentar" onClick={reintentar} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_REINTENTAR">Reintentar</button>
           </div>
         </div>
       </AppLayout>
@@ -375,7 +382,7 @@ export default function DashboardROL1() {
             {errorCarga && fusData.length > 0 && (
               <div className="banner-error-carga">
                 <span>No se pudo actualizar — mostrando la última información disponible.</span>
-                <button type="button" onClick={reintentar}>Reintentar</button>
+                <button type="button" onClick={reintentar} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_REINTENTAR">Reintentar</button>
               </div>
             )}
 
@@ -406,6 +413,10 @@ export default function DashboardROL1() {
                           type="button"
                           className={r === rangoDias ? 'active' : ''}
                           onClick={() => setRangoDias(r)}
+                          data-analytics-event="INTERACTION"
+                          data-analytics-component="DASHBOARD_RANGO_TENDENCIA"
+                          data-analytics-action="FILTER"
+                          data-analytics-metadata={String(r)}
                         >
                           {r} días
                         </button>
@@ -509,7 +520,7 @@ export default function DashboardROL1() {
           {errorCarga && fusData.length > 0 && (
             <div className="banner-error-carga">
               <span>No se pudo actualizar — mostrando la última información disponible.</span>
-              <button type="button" onClick={reintentar}>Reintentar</button>
+              <button type="button" onClick={reintentar} data-analytics-event="INTERACTION" data-analytics-component="DASHBOARD_REINTENTAR">Reintentar</button>
             </div>
           )}
 

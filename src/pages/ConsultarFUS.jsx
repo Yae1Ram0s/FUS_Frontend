@@ -19,10 +19,11 @@ import './ConsultarFUS.css'
 const PAGE_SIZE = 30
 
 // Mismo criterio que FUSListCreateView (backend) para el parámetro
-// `estatusParticular` — se replica aquí para filtrar en el cliente sobre lo
-// ya cargado en caché, sin volver a pedirle al servidor la misma lista cada
-// vez que se cambia de chip. `estadoTemporalidad` ya viene calculado en cada
-// FUS con el mismo criterio (fechaLimite vs. ahora, salvo Concluido).
+// `estatusParticular` — se replica aquí solo para el conteo aproximado que
+// se muestra junto a cada chip (ver conteoEstatus más abajo), calculado
+// sobre lo que ya está cargado en `lista`; el filtrado real de resultados lo
+// hace el backend (construirParams). `estadoTemporalidad` ya viene calculado
+// en cada FUS con el mismo criterio (fechaLimite vs. ahora, salvo Concluido).
 function coincideFiltroFus(f, clave) {
   if (clave === 'Vencido' || clave === 'PorVencer') return f.estadoTemporalidad === clave
   return f.estatusParticular === clave
@@ -87,22 +88,28 @@ export default function ConsultarFUS() {
   // cualquiera de estos valores aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1), así que ya no hace falta el guard
   // manual de "filtros cambiaron" que existía con useAsyncResource. Estatus
-  // y prioridad YA NO viajan aquí (ver `listaFiltrada` más abajo): se
-  // filtran en el cliente sobre lo que ya está en caché, así que cambiar de
-  // chip no dispara una petición nueva al backend.
-  const queryKey = ['fusListado', { folioParam, busquedaAplicada }]
+  // y prioridad SÍ viajan al backend (ver construirParams) — filtrarlos en
+  // el cliente sobre `lista` solo filtraba lo ya cargado en la página
+  // actual: con más de una página de resultados, un chip podía mostrar "0
+  // resultados" aunque sí hubiera FUS con ese estatus/prioridad, solo que en
+  // otra página todavía sin cargar.
+  const queryKey = ['fusListado', { folioParam, busquedaAplicada, filtro, prioridadFiltro }]
   const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
     if (folioParam) {
       // Consulta puntual por folio (clic en notificación/bitácora/dashboard):
       // se filtra en el servidor, así se encuentra aunque no esté entre los
-      // más recientes de la bandeja general.
+      // más recientes de la bandeja general. Sin chips: siempre debe
+      // mostrar el único FUS pedido, sin importar el filtro que haya quedado
+      // seleccionado.
       params.folio = folioParam
-    } else if (busquedaAplicada) {
-      params.search = busquedaAplicada
+    } else {
+      if (busquedaAplicada) params.search = busquedaAplicada
+      if (filtro.length) params.estatusParticular = filtro.join(',')
+      if (prioridadFiltro) params.prioridad = prioridadFiltro
     }
     return params
-  }, [busquedaAplicada, folioParam])
+  }, [busquedaAplicada, folioParam, filtro, prioridadFiltro])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
@@ -129,18 +136,11 @@ export default function ConsultarFUS() {
   const totalItems = resultado.total
   const pagina = resultado.page
 
-  // Filtrado 100% en el cliente sobre lo ya cargado en caché — cambiar de
-  // chip (estatus o prioridad) ya no dispara ninguna petición al backend,
-  // solo recalcula esta lista derivada. Se salta cuando hay folioParam: ese
-  // caso siempre debe mostrar el único FUS pedido, sin importar el filtro
-  // que haya quedado seleccionado.
-  const listaFiltrada = useMemo(() => {
-    if (folioParam) return lista
-    let base = lista
-    if (filtro.length) base = base.filter(f => filtro.some(clave => coincideFiltroFus(f, clave)))
-    if (prioridadFiltro) base = base.filter(f => f.prioridad === prioridadFiltro)
-    return base
-  }, [lista, filtro, prioridadFiltro, folioParam])
+  // El backend ya filtra por estatus/prioridad (ver construirParams) — no
+  // hace falta volver a filtrar aquí, `lista` ya viene correcta. Se
+  // mantiene el nombre `listaFiltrada` nada más para no tocar el JSX de
+  // abajo que ya lo usa.
+  const listaFiltrada = lista
 
   // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
   // chip — para mostrar el número junto a la etiqueta y que se note de

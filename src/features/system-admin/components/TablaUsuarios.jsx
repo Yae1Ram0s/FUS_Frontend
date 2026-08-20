@@ -44,8 +44,8 @@ export default function TablaUsuarios({ usuarios, onVer, onReset }) {
               <td data-label="Último acceso">{formatFecha(usuario.ultimoIngreso)}</td>
               <td data-label="Acciones">
                 <div className="sa-row-actions">
-                  <button onClick={() => onVer(usuario)}>Administrar</button>
-                  <button onClick={() => onReset(usuario)} disabled={!usuario.id} title={usuario.id ? undefined : 'La cuenta aún no ha sido activada'}>
+                  <button onClick={() => onVer(usuario)} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_USUARIOS_ADMINISTRAR" data-analytics-action="OPEN">Administrar</button>
+                  <button onClick={() => onReset(usuario)} disabled={!usuario.id} title={usuario.id ? undefined : 'La cuenta aún no ha sido activada'} data-analytics-event={usuario.id ? 'INTERACTION' : undefined} data-analytics-component="ADMIN_USUARIOS_RESTABLECER" data-analytics-action="OPEN">
                     Contraseña
                   </button>
                 </div>

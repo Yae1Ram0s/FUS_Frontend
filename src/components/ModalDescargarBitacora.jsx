@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalBehavior } from '../hooks/useModalBehavior'
+import { useAnalytics } from '../analytics'
 import './Comisionado/Comisionado.css'
 import './ModalDescargarBitacora.css'
 
@@ -12,10 +13,15 @@ export default function ModalDescargarBitacora({ onCancelar, onConfirmar }) {
   const [formato, setFormato] = useState('excel')
   const [cargando, setCargando] = useState(false)
   useModalBehavior(onCancelar, { closeEnabled: !cargando })
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'BITACORA_DESCARGAR', accion: 'EXPORT' })
 
   const confirmar = () => {
     setCargando(true)
-    Promise.resolve(onConfirmar(formato)).finally(() => setCargando(false))
+    const taskId = startTask({ metadatos: { formato } })
+    Promise.resolve(onConfirmar(formato))
+      .then(() => completeTask(taskId))
+      .catch(err => { failTask(taskId, { metadatos: { motivo: err?.response ? 'error_servidor' : 'sin_conexion' } }); throw err })
+      .finally(() => setCargando(false))
   }
 
   return createPortal(
@@ -32,6 +38,10 @@ export default function ModalDescargarBitacora({ onCancelar, onConfirmar }) {
             className={`modal-bita-formato${formato === 'excel' ? ' modal-bita-formato-activo' : ''}`}
             onClick={() => setFormato('excel')}
             disabled={cargando}
+            data-analytics-event="INTERACTION"
+            data-analytics-component="BITACORA_DESCARGAR_FORMATO"
+            data-analytics-action="FILTER"
+            data-analytics-metadata="excel"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
@@ -44,6 +54,10 @@ export default function ModalDescargarBitacora({ onCancelar, onConfirmar }) {
             className={`modal-bita-formato${formato === 'pdf' ? ' modal-bita-formato-activo' : ''}`}
             onClick={() => setFormato('pdf')}
             disabled={cargando}
+            data-analytics-event="INTERACTION"
+            data-analytics-component="BITACORA_DESCARGAR_FORMATO"
+            data-analytics-action="FILTER"
+            data-analytics-metadata="pdf"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>

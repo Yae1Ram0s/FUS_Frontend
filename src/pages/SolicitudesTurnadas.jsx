@@ -10,7 +10,7 @@ import { descargar } from '../utils/descargarArchivo'
 import ComisionarModal from '../components/Comisionado/ComisionarModal'
 import ConfirmModal from '../components/Comisionado/ConfirmModal'
 import AccionesValidacion from '../components/Comisionado/AccionesValidacion'
-import SeguimientoComisionadoFeed from '../components/Comisionado/SeguimientoComisionadoFeed'
+import SeguimientoComisionadoFeed, { SeguimientoComisionadoForm } from '../components/Comisionado/SeguimientoComisionadoFeed'
 import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import FechaInput from '../components/FechaInput'
@@ -31,16 +31,18 @@ import {
 } from '../utils/fechas'
 import { formatMedioRecepcion } from '../utils/medio'
 import { FolioTexto } from '../utils/folio'
+import { truncarTexto } from '../utils/texto'
 import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
 
 // Mismo criterio que MisTurnadosView (backend) para el parámetro
-// `estatusTitular` — se replica aquí para filtrar en el cliente sobre los
-// turnados ya cargados en caché, sin volver a pedirle al servidor la misma
-// lista cada vez que se cambia de chip (Vencido/PorVencer son temporalidad
-// del FUS, no un estatus; Rechazado/Pendiente_validacion viven en
-// FUS.estatusParticular, no en Turnado.estatusTitular).
+// `estatusTitular` — se replica aquí solo para el conteo aproximado que se
+// muestra junto a cada chip (ver conteoEstatus más abajo), calculado sobre
+// lo que ya está cargado en `lista`; el filtrado real de resultados lo hace
+// el backend (construirParams). Vencido/PorVencer son temporalidad del FUS,
+// no un estatus; Rechazado/Pendiente_validacion viven en FUS.estatusParticular,
+// no en Turnado.estatusTitular.
 function coincideFiltroTurnado(t, clave) {
   if (clave === 'Vencido' || clave === 'PorVencer') return t.idFus?.estadoTemporalidad === clave
   if (clave === 'Rechazado' || clave === 'Pendiente_validacion') return t.idFus?.estatusParticular === clave
@@ -323,6 +325,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
   const [modalComisionar, setModalComisionar] = useState(false)
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const [modalAtendido, setModalAtendido] = useState(false)
+  const [segRefreshKey, setSegRefreshKey] = useState(0)
   const toast = useToast()
   const { startTask, completeTask, failTask } = useAnalytics({ componente: 'TURNADO_ATENDIDO', accion: 'UPDATE' })
   const fus = fusData
@@ -470,10 +473,20 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
       </div>
 
       {/* ── Seguimientos: una vez comisionado, este feed reemplaza al del
-           Turnado — las respuestas ahora las da el comisionado, no el
-           Titular directamente. ── */}
+           Turnado — pero a diferencia de Consultar FUS (Rol 1, solo
+           lectura), aquí Rol 2 sigue siendo el destinatario del turnado y
+           también puede agregar respuesta, no solo el comisionado (el
+           backend valida que sea el destinatario específico de este FUS,
+           ver EsComisionadoAsignado). ── */}
       {fus.idComisionado
-        ? <SeguimientoComisionadoFeed fusId={fus.id} folio={fus.folio} />
+        ? (
+          <>
+            <SeguimientoComisionadoFeed key={segRefreshKey} fusId={fus.id} folio={fus.folio} />
+            {['En_seguimiento', 'Atendido', 'Rechazado'].includes(fus.estatusParticular) && (
+              <SeguimientoComisionadoForm fusId={fus.id} onAgregado={() => setSegRefreshKey(k => k + 1)} />
+            )}
+          </>
+        )
         : <Seguimientos
             turnadoId={turnado.id}
             folio={fus.folio}
@@ -500,7 +513,7 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
           </button>
           {modalAtendido && (
             <ConfirmModal
-              titulo="Marcar como atendido"
+              titulo="Enviar para validación"
               texto="¿Confirmas que tu respuesta está completa? Será revisada por el Particular o su equipo, y ya no podrás registrar más respuestas hasta que la validen."
               textoBoton="Confirmar"
               colorBoton="verde"
@@ -513,7 +526,10 @@ function DetalleTurnado({ turnado: turnadoInicial, onBack }) {
                   setTurnadoData(t => ({ ...t, estatusTitular: data.estatusTitular }))
                   if (data.estatusParticular) setFusData(f => ({ ...f, estatusParticular: data.estatusParticular }))
                   setModalAtendido(false)
-                  toast.success('Tu parte se marcó como atendida.')
+                  // "Tu parte" solo tiene sentido si hay más de un Titular
+                  // turnado a este FUS — mismo criterio que el mensaje de la
+                  // notificación al Particular (backend, MarcarTurnadoAtendidoView).
+                  toast.success(data.esUnicoTurnado ? 'El FUS se envió para validación.' : 'Tu parte se envió para validación.')
                 } catch (err) {
                   failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
                   throw err
@@ -582,7 +598,7 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
           {fus.idMedioRecepcion?.nombreMedio || '—'}
         </span>
       </p>
-      {fus.descripcion && <p className="fus-desc">{fus.descripcion}</p>}
+      {fus.descripcion && <p className="fus-desc">{truncarTexto(fus.descripcion)}</p>}
       {fus.folio && (
         <button
           className="fus-card-historial-btn"
@@ -629,16 +645,23 @@ export default function SolicitudesTurnadas() {
   // cualquiera de estos valores aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
   // que antes reiniciaba la paginación al cambiar filtros. Estatus y
-  // prioridad YA NO viajan aquí (ver `listaFiltrada` más abajo): se filtran
-  // en el cliente sobre lo que ya está en caché, así que cambiar de chip no
-  // dispara una petición nueva al backend.
-  const queryKey = ['turnadosListado', { folioParam, busquedaDeb }]
+  // prioridad SÍ viajan al backend (ver construirParams) — filtrarlos en el
+  // cliente sobre `lista` solo filtraba lo ya cargado en la página actual:
+  // con más de una página de resultados, un chip podía mostrar "0
+  // resultados" aunque sí hubiera turnados con ese estatus/prioridad, solo
+  // que en otra página todavía sin cargar.
+  const queryKey = ['turnadosListado', { folioParam, busquedaDeb, filtro, prioridadFiltro }]
   const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
-    if (folioParam)                 params.folio = folioParam
-    if (!folioParam && busquedaDeb) params.search = busquedaDeb
+    if (folioParam) {
+      params.folio = folioParam
+    } else {
+      if (busquedaDeb) params.search = busquedaDeb
+      if (filtro.length) params.estatusTitular = filtro.join(',')
+      if (prioridadFiltro) params.prioridad = prioridadFiltro
+    }
     return params
-  }, [busquedaDeb, folioParam])
+  }, [busquedaDeb, folioParam, filtro, prioridadFiltro])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
@@ -667,18 +690,11 @@ export default function SolicitudesTurnadas() {
   const pagina = resultado.page
   const totalItems = resultado.total
 
-  // Filtrado 100% en el cliente sobre lo ya cargado en caché — cambiar de
-  // chip (estatus o prioridad) ya no dispara ninguna petición al backend,
-  // solo recalcula esta lista derivada. Se salta cuando hay folioParam: ese
-  // caso siempre debe mostrar el único turnado pedido, sin importar el
-  // filtro que haya quedado seleccionado.
-  const listaFiltrada = useMemo(() => {
-    if (folioParam) return lista
-    let base = lista
-    if (filtro.length) base = base.filter(t => filtro.some(f => coincideFiltroTurnado(t, f)))
-    if (prioridadFiltro) base = base.filter(t => t.idFus?.prioridad === prioridadFiltro)
-    return base
-  }, [lista, filtro, prioridadFiltro, folioParam])
+  // El backend ya filtra por estatus/prioridad (ver construirParams) — no
+  // hace falta volver a filtrar aquí, `lista` ya viene correcta. Se
+  // mantiene el nombre `listaFiltrada` nada más para no tocar el JSX de
+  // abajo que ya lo usa.
+  const listaFiltrada = lista
 
   // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
   // chip — para mostrar el número junto a la etiqueta y que se note de

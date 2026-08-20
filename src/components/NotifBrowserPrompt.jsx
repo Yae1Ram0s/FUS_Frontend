@@ -20,10 +20,10 @@ export default function NotifBrowserPrompt() {
         <p className="nbp-sub">Actívalas para recibir avisos aunque la ventana esté minimizada.</p>
       </div>
       <div className="nbp-actions">
-        <button className="nbp-btn-activar" onClick={activarBrowserNotif}>
+        <button className="nbp-btn-activar" onClick={activarBrowserNotif} data-analytics-event="INTERACTION" data-analytics-component="NOTIF_BROWSER_PROMPT" data-analytics-action="UPDATE" data-analytics-metadata="activar">
           Activar
         </button>
-        <button className="nbp-btn-omitir" onClick={dismissPrompt}>
+        <button className="nbp-btn-omitir" onClick={dismissPrompt} data-analytics-event="INTERACTION" data-analytics-component="NOTIF_BROWSER_PROMPT" data-analytics-action="UPDATE" data-analytics-metadata="omitir">
           Ahora no
         </button>
       </div>

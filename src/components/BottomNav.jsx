@@ -255,6 +255,10 @@ export default function BottomNav() {
           onClick={() => ir(item)}
           aria-label={item.label}
           aria-current={isActive(item) ? 'page' : undefined}
+          data-analytics-event="INTERACTION"
+          data-analytics-component="BOTTOMNAV_NAV"
+          data-analytics-action="NAVIGATE"
+          data-analytics-metadata={item.path.split('/').pop()}
         >
           <span className="bn-icon">{item.icon}</span>
           <span className="bn-label">{item.label}</span>
@@ -268,6 +272,9 @@ export default function BottomNav() {
         aria-label={itemUnico ? itemUnico.label : 'Más opciones'}
         aria-haspopup={tieneVarios ? 'menu' : undefined}
         aria-expanded={tieneVarios ? open : undefined}
+        data-analytics-event="INTERACTION"
+        data-analytics-component="BOTTOMNAV_MAS"
+        data-analytics-action={itemUnico ? 'NAVIGATE' : 'OPEN'}
       >
         <span className="bn-icon">{itemUnico ? itemUnico.icon : ICON_MAS}</span>
         <span className="bn-label">{itemUnico ? itemUnico.label : 'Más'}</span>
@@ -281,6 +288,10 @@ export default function BottomNav() {
               className="bn-popover-item"
               role="menuitem"
               onClick={() => { setOpen(false); navigate(mi.path) }}
+              data-analytics-event="INTERACTION"
+              data-analytics-component="BOTTOMNAV_POPOVER"
+              data-analytics-action="NAVIGATE"
+              data-analytics-metadata={mi.path.split('/').pop()}
             >
               <span className="bn-popover-icon">{mi.icon}</span>
               {mi.label}

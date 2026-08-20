@@ -12,7 +12,7 @@
     position: fixed;
     left: 16px;
     right: 16px;
-    bottom: calc(13px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(0px + env(safe-area-inset-bottom, 0px));
     z-index: 1000;
     height: 64px;
     padding: 0 6px;

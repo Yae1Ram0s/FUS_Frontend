@@ -6,12 +6,14 @@ import GraficaLatenciaBaseDatos from '../components/GraficaLatenciaBaseDatos'
 import useSaludSistema from '../hooks/useSaludSistema'
 import useHistorialSalud from '../hooks/useHistorialSalud'
 import { mapearSalud, mensajeErrorAdmin } from '../api/adminApi'
+import { useAnalytics } from '../../../analytics'
 import '../styles/SystemAdmin.css'
 
 export default function AdminSalud() {
   const { data = {}, loading, error, reload, comprobarAhora } = useSaludSistema()
   const [comprobando, setComprobando] = useState(false)
   const servicios = mapearSalud(data)
+  const { startTask, completeTask, failTask } = useAnalytics({ componente: 'ADMIN_SALUD_COMPROBAR', accion: 'UPDATE' })
 
   const { data: historial, loading: cargandoHistorial } = useHistorialSalud(14)
   const entorno = data.entorno
@@ -20,7 +22,15 @@ export default function AdminSalud() {
   const comprobar = async () => {
     if (comprobando) return
     setComprobando(true)
-    try { await comprobarAhora() } finally { setComprobando(false) }
+    const taskId = startTask()
+    try {
+      await comprobarAhora()
+      completeTask(taskId)
+    } catch (err) {
+      failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
+    } finally {
+      setComprobando(false)
+    }
   }
 
   return (
@@ -36,7 +46,7 @@ export default function AdminSalud() {
 
         {error && (
           <div className="sa-error">
-            {mensajeErrorAdmin(error)} <button onClick={reload}>Reintentar</button>
+            {mensajeErrorAdmin(error)} <button onClick={reload} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_SALUD_REINTENTAR">Reintentar</button>
           </div>
         )}
 

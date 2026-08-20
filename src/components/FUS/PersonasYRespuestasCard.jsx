@@ -113,7 +113,7 @@ function PersonaFila({ turnado, user, onCambio }) {
           />
         )}
 
-        <button type="button" className="pyr-btn-respuestas" onClick={() => setModalAbierto(true)}>
+        <button type="button" className="pyr-btn-respuestas" onClick={() => setModalAbierto(true)} data-analytics-event="INTERACTION" data-analytics-component="PYR_VER_RESPUESTAS" data-analytics-action="OPEN">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </svg>

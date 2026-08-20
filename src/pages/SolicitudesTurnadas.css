@@ -227,24 +227,31 @@
 
 .st-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
-/* Número de resultados dentro de cada chip de filtro */
+/* Número de resultados dentro de cada chip de filtro — fondo sólido (no
+   translúcido como el resto del chip) para que el número resalte por
+   contraste en vez de perderse en el vidrio oscuro de fondo. */
 .st-left .filtro-chip-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  margin-left: 5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.18);
-  font-size: 0.63rem;
-  font-weight: 700;
-  color: inherit;
+  background: #ecdcbd;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0d2218;
   text-shadow: none;
   vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-.st-left .filtro-chip-active .filtro-chip-count { background: rgba(255, 255, 255, 0.32); }
+.st-left .filtro-chip-active .filtro-chip-count {
+  background: #ffffff;
+  color: #0d2218;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
 
 .st-left .filtro-chip-active {
   background: rgba(255, 255, 255, 0.16) !important;
@@ -437,8 +444,6 @@
   transition: all 200ms ease-in-out;
   min-width: 0;
   min-height: 132px;
-  max-height: 132px;
-  overflow: hidden;
 }
 
 .st-left .fus-card:hover    { background: rgba(255, 255, 255, 0.13) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
@@ -489,9 +494,14 @@
 }
 .st-left .fus-meta-item { display: inline-flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .st-left .fus-desc {
-  flex: 1;
+  /* El truncado ya no lo hace CSS (-webkit-line-clamp resultó poco fiable:
+     el "…" aparecía pero seguían layouteándose líneas de más debajo, que el
+     borde de la tarjeta cortaba a media palabra — se veía como un error del
+     sistema). El texto ya llega recortado en JS (ver truncarTexto en
+     FusCard.jsx/FUSComisionados.jsx/SolicitudesTurnadas.jsx); overflow:hidden
+     aquí es solo respaldo, no lo principal. */
+  flex: none;
   min-width: 0;
-  min-height: 0;
   font-size: 0.80rem;
   color: rgba(255, 255, 255, 0.80) !important;
   margin: 0;
@@ -500,16 +510,12 @@
   font-style: normal;
   text-align: justify;
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: normal;
 }
 
 @media (max-width: 768px) {
-  .st-left .fus-card { min-height: 150px; max-height: none; padding: 12px 14px; }
+  .st-left .fus-card { min-height: 150px; padding: 12px 14px; }
   .fus-card-top-actions { align-items: flex-start; width: 100%; }
 }
 
@@ -1230,6 +1236,13 @@
     width: 100%;
     box-sizing: border-box;
   }
+
+  /* El badge sigue en la esquina superior derecha (igual que en escritorio,
+     position:absolute heredado de la regla base) — solo se reserva alto
+     suficiente para que quepan DOS badges apilados (ej. estatus +
+     Vencido/PorVencer) sin que el segundo quede flotando sobre la fila de
+     fecha/medio de abajo. */
+  .fus-card-top { min-height: 46px; }
 
   /* Que la última tarjeta de la lista no quede tapada por el bottom nav flotante */
   .st-left .left-lista {

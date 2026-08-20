@@ -34,8 +34,12 @@ export default function AdminAuditoria() {
             placeholder="Buscar por correo del administrador…"
             value={filtros.actor}
             onChange={e => campo('actor', e.target.value)}
+            data-analytics-event="INTERACTION"
+            data-analytics-component="ADMIN_AUDITORIA_FILTROS"
+            data-analytics-action="SEARCH"
+            data-analytics-trigger="change"
           />
-          <select aria-label="Tipo de acción" value={filtros.accion} onChange={e => campo('accion', e.target.value)}>
+          <select aria-label="Tipo de acción" value={filtros.accion} onChange={e => campo('accion', e.target.value)} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_AUDITORIA_FILTROS" data-analytics-action="FILTER" data-analytics-trigger="change" data-analytics-metadata="accion">
             <option value="">Todas las acciones</option>
             {Object.entries(ACCION_LABELS).map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
           </select>
@@ -43,7 +47,7 @@ export default function AdminAuditoria() {
 
         {error && (
           <div className="sa-error">
-            {mensajeErrorAdmin(error)} <button onClick={reload}>Reintentar</button>
+            {mensajeErrorAdmin(error)} <button onClick={reload} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_AUDITORIA_REINTENTAR">Reintentar</button>
           </div>
         )}
 
@@ -83,9 +87,9 @@ export default function AdminAuditoria() {
         )}
 
         <nav className="sa-pagination" aria-label="Paginación">
-          <button disabled={filtros.page <= 1} onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}>Anterior</button>
+          <button disabled={filtros.page <= 1} onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_AUDITORIA_PAGINACION" data-analytics-action="NAVIGATE" data-analytics-metadata="anterior">Anterior</button>
           <span>Página {filtros.page} de {totalPages}</span>
-          <button disabled={filtros.page >= totalPages} onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}>Siguiente</button>
+          <button disabled={filtros.page >= totalPages} onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })} data-analytics-event="INTERACTION" data-analytics-component="ADMIN_AUDITORIA_PAGINACION" data-analytics-action="NAVIGATE" data-analytics-metadata="siguiente">Siguiente</button>
         </nav>
       </div>
     </AppLayout>

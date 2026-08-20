@@ -37,6 +37,9 @@ export default function EstadoServicio({
             aria-expanded={abierto}
             aria-controls={diagnosticoId}
             onClick={() => setAbierto(valor => !valor)}
+            data-analytics-event="INTERACTION"
+            data-analytics-component="ADMIN_SALUD_SERVICIO_DETALLE"
+            data-analytics-action="OPEN"
           >
             {abierto ? 'Ocultar detalle' : 'Ver detalle'}
             <span aria-hidden="true">{abierto ? '⌃' : '⌄'}</span>

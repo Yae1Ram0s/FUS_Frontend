@@ -36,7 +36,7 @@ export function NotificacionesProvider({ children }) {
      usuario haya tenido que volver a aceptar el permiso del sistema.
      suscribirPush ya es idempotente (reusa la suscripción si sigue viva). */
   useEffect(() => {
-    if (!user || browserNotif !== 'on') return
+    if (!user || user.requiereCambioContrasena || browserNotif !== 'on') return
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
     suscribirPush(api)
   }, [user, browserNotif])
@@ -88,7 +88,15 @@ export function NotificacionesProvider({ children }) {
 
   /* WebSocket + fallback polling */
   useEffect(() => {
-    if (!user) return
+    // Mientras el backend exija cambiar la contraseña temporal,
+    // VersionedJWTAuthentication rechaza con 401 cualquier ruta que no sea
+    // cambiar-contrasena-obligatoria/logout (ver authentication.py). Sin este
+    // freno, cada 401 aquí dispara un refresh de token, que cambia
+    // `accessToken`, que vuelve a montar este efecto (dependencia de abajo)
+    // y repite la llamada — un ciclo que satura /auth/token/refresh/ (429) y
+    // termina cerrando la sesión sola antes de que el usuario alcance a
+    // completar el cambio de contraseña.
+    if (!user || user.requiereCambioContrasena) return
 
     cargar()
 
