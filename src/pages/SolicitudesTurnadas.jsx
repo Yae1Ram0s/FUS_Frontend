@@ -672,6 +672,15 @@ export default function SolicitudesTurnadas() {
         conteos: respuesta.data.conteos || null,
       }
     },
+    // Cada combinación de busqueda/filtro/prioridad tiene su propia entrada
+    // de caché (queryKey) — con más margen que el staleTime/gcTime global
+    // (30s / 5min) para que volver a un término ya buscado (o retroceder el
+    // texto a uno anterior) se sienta instantáneo, sin golpear el backend de
+    // nuevo. Los cambios reales (turnar, atender, etc.) igual se reflejan al
+    // instante vía queryClient.setQueryData/recargar() más abajo, que no
+    // dependen de que el staleTime haya vencido.
+    staleTime: 2 * 60_000,
+    gcTime: 15 * 60_000,
   })
 
   const lista = resultado.items

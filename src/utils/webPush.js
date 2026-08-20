@@ -2,6 +2,17 @@
 // para no mezclar la lógica de conversión de llaves/registro del navegador
 // con el estado de React.
 
+// Service Worker/Push requieren "contexto seguro": HTTPS, o localhost
+// (navegadores lo tratan como seguro para desarrollo aunque use HTTP plano)
+// — comprobar solo `location.protocol === 'https:'` bloqueaba el flujo
+// completo al probarlo en local (donde el backend sí expone un par VAPID de
+// desarrollo fijo, ver backend/settings.py, precisamente para que funcione
+// sin configurar nada), aunque el navegador lo hubiera permitido igual.
+export function contextoSeguroParaPush() {
+  const { protocol, hostname } = window.location
+  return protocol === 'https:' || hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
 // PushManager.subscribe() exige la llave VAPID como Uint8Array, no como el
 // string base64url que entrega el backend.
 function base64UrlToUint8Array(base64Url) {

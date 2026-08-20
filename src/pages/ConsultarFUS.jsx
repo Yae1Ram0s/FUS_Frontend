@@ -120,6 +120,13 @@ export default function ConsultarFUS() {
         conteos: response.data.conteos || null,
       }
     },
+    // Cada combinación de busqueda/filtro/prioridad tiene su propia entrada
+    // de caché (queryKey) — con más margen que el staleTime/gcTime global
+    // (30s / 5min) para que volver a un término ya buscado (o retroceder el
+    // texto a uno anterior) se sienta instantáneo, sin golpear el backend de
+    // nuevo, en vez de solo evitar la pantalla en blanco mientras revalida.
+    staleTime: 2 * 60_000,
+    gcTime: 15 * 60_000,
   })
   const lista = resultado.items
   const totalItems = resultado.total

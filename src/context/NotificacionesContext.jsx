@@ -1,11 +1,9 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import api from '../api/api'
-import { registrarServiceWorker, suscribirPush, desuscribirPush } from '../utils/webPush'
+import { registrarServiceWorker, suscribirPush, desuscribirPush, contextoSeguroParaPush } from '../utils/webPush'
 
 const NotificacionesContext = createContext(null)
-
-const esHttps = () => window.location.protocol === 'https:'
 
 export function NotificacionesProvider({ children }) {
   const { user, accessToken } = useAuth()
@@ -48,7 +46,7 @@ export function NotificacionesProvider({ children }) {
       setShowPrompt(false)
       return
     }
-    if (!esHttps()) return   // solo disponible en producción (HTTPS)
+    if (!contextoSeguroParaPush()) return   // Service Worker/Push requieren HTTPS (o localhost)
     const pref        = localStorage.getItem('scs_browser_notif')
     const bloqueado   = typeof Notification !== 'undefined' && Notification.permission === 'denied'
     const yaPromovido = sessionStorage.getItem('scs_notif_prompted')
@@ -186,7 +184,7 @@ export function NotificacionesProvider({ children }) {
   /* Activar notificaciones del navegador */
   const activarBrowserNotif = async () => {
     setShowPrompt(false)
-    if (!esHttps() || typeof Notification === 'undefined') return
+    if (!contextoSeguroParaPush() || typeof Notification === 'undefined') return
     if (Notification.permission === 'denied') {
       alert('Las notificaciones están bloqueadas en este navegador.\nVe a Configuración del sitio y actívalas manualmente.')
       localStorage.setItem('scs_browser_notif', 'off')

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useAuth } from '../context/AuthContext'
+import { contextoSeguroParaPush } from '../utils/webPush'
 import './NotificacionesBell.css'
 
 const timeAgo = (dateStr) => {
@@ -79,9 +80,9 @@ export default function NotificacionesBell() {
     browserNotif, activarBrowserNotif, desactivarBrowserNotif, conectado,
   } = ctx
 
-  const soloHttps       = window.location.protocol === 'https:'
-  const browserBloqueado   = soloHttps && typeof Notification !== 'undefined' && Notification.permission === 'denied'
-  const browserNoSoportado = !soloHttps || typeof Notification === 'undefined'
+  const contextoSeguro     = contextoSeguroParaPush()
+  const browserBloqueado   = contextoSeguro && typeof Notification !== 'undefined' && Notification.permission === 'denied'
+  const browserNoSoportado = !contextoSeguro || typeof Notification === 'undefined'
 
   const toggleBrowser = () => {
     if (browserNotif === 'on') {

@@ -156,7 +156,7 @@
 }
 
 .panel-title {
-  font-size: 0.875rem;
+  font-size: 0.990rem;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -1129,19 +1129,6 @@
   100% { background-position: 0 50%; }
 }
 
-.pyr-chevron-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.pyr-chevron { flex-shrink: 0; color: rgba(35, 91, 78, 0.55); transition: transform 150ms ease; }
-.pyr-chevron-abierto { transform: rotate(180deg); }
-
 .pyr-expand {
   display: flex;
   flex-direction: column;
@@ -1862,14 +1849,13 @@
 @media (max-width: 360px) {
   .ev-item-name { max-width: 110px; font-size: .70rem; }
 
-  /* Nombre/área + botón "Ver respuestas" + chevron ya no caben en una sola
-     fila — el toggle y el chevron se quedan juntos arriba (order 1/2) y el
-     botón cae a su propia línea completa debajo (order 3). El `order`
-     reordena solo lo visual, no el tab/DOM — no afecta el layout normal. */
+  /* Nombre/área + botón "Ver respuestas" ya no caben en una sola fila — el
+     toggle se queda arriba (order 1) y el botón cae a su propia línea
+     completa debajo (order 2). El `order` reordena solo lo visual, no el
+     tab/DOM — no afecta el layout normal. */
   .pyr-fila-cabecera { flex-wrap: wrap; }
   .pyr-fila-toggle { order: 1; }
-  .pyr-chevron-btn { order: 2; }
-  .pyr-btn-respuestas { order: 3; width: 100%; justify-content: center; margin-left: 0; }
+  .pyr-btn-respuestas { order: 2; width: 100%; justify-content: center; margin-left: 0; }
 }
 
 /* Ajuste exclusivo para "Pendiente de validación": su badge largo necesita
@@ -1884,14 +1870,9 @@
   }
 
   .pyr-fila-cabecera-pendiente .pyr-fila-toggle {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 1;
     width: 100%;
-  }
-
-  .pyr-fila-cabecera-pendiente .pyr-chevron-btn {
-    grid-column: 2;
-    grid-row: 1;
   }
 
   .pyr-fila-cabecera-pendiente .pyr-estatus-pendiente {
