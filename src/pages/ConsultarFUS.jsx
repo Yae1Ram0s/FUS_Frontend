@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
@@ -7,7 +7,6 @@ import ModalTimeline from '../components/ModalTimeline'
 import ModalTurnar from '../components/FUS/ModalTurnar'
 import FusCard from '../components/FUS/FusCard'
 import PrioridadFiltroChip from '../components/FUS/PrioridadFiltroChip'
-import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import DetalleFUS from '../components/FUS/DetalleFUS'
 import api from '../api/api'
 import { useToast } from '../context/ToastContext'
@@ -17,17 +16,6 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import './ConsultarFUS.css'
 
 const PAGE_SIZE = 30
-
-// Mismo criterio que FUSListCreateView (backend) para el parámetro
-// `estatusParticular` — se replica aquí solo para el conteo aproximado que
-// se muestra junto a cada chip (ver conteoEstatus más abajo), calculado
-// sobre lo que ya está cargado en `lista`; el filtrado real de resultados lo
-// hace el backend (construirParams). `estadoTemporalidad` ya viene calculado
-// en cada FUS con el mismo criterio (fechaLimite vs. ahora, salvo Concluido).
-function coincideFiltroFus(f, clave) {
-  if (clave === 'Vencido' || clave === 'PorVencer') return f.estadoTemporalidad === clave
-  return f.estatusParticular === clave
-}
 
 function combinarPaginasFUS(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
@@ -112,7 +100,7 @@ export default function ConsultarFUS() {
   }, [busquedaAplicada, folioParam, filtro, prioridadFiltro])
 
   const {
-    data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
+    data: resultado = { items: [], total: 0, page: 1, append: false, match: null, conteos: null },
     isFetching: cargando,
     error: errorCarga,
     refetch: recargar,
@@ -129,6 +117,7 @@ export default function ConsultarFUS() {
         append: false,
         match,
         folioNoEncontrado: Boolean(folioParam) && !match,
+        conteos: response.data.conteos || null,
       }
     },
   })
@@ -142,22 +131,14 @@ export default function ConsultarFUS() {
   // abajo que ya lo usa.
   const listaFiltrada = lista
 
-  // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
-  // chip — para mostrar el número junto a la etiqueta y que se note de
-  // inmediato cuántos resultados trae cada filtro, sin tener que aplicarlo.
-  const conteoEstatus = useMemo(() => {
-    const mapa = {}
-    for (const clave of ['Vencido', 'PorVencer', ...estatusROL1.map(e => e.clave)]) {
-      mapa[clave] = lista.filter(f => coincideFiltroFus(f, clave)).length
-    }
-    return mapa
-  }, [lista, estatusROL1])
-  const conteoPrioridad = useMemo(() => (
-    PRIORIDAD_NIVELES.reduce((acc, p) => {
-      acc[p.valor] = lista.filter(f => f.prioridad === p.valor).length
-      return acc
-    }, {})
-  ), [lista])
+  // Conteos por chip: los calcula el backend sobre TODA la bandeja (mismo
+  // search/scope de rol, pero sin el filtro de chip que esté activo) — antes
+  // se contaban aquí sobre `lista`, que ya viene filtrada por el chip
+  // seleccionado, así que en cuanto se elegía uno los DEMÁS chips se veían
+  // en 0 aunque sí hubiera resultados. `?? {}` cubre el primer render antes
+  // de que responda la API.
+  const conteoEstatus = resultado.conteos?.estatus ?? {}
+  const conteoPrioridad = resultado.conteos?.prioridad ?? {}
 
   const procesarCargaExitosa = useCallback(result => {
     if (result.match) {

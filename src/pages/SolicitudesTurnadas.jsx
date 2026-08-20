@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
@@ -35,19 +35,6 @@ import { truncarTexto } from '../utils/texto'
 import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
-
-// Mismo criterio que MisTurnadosView (backend) para el parámetro
-// `estatusTitular` — se replica aquí solo para el conteo aproximado que se
-// muestra junto a cada chip (ver conteoEstatus más abajo), calculado sobre
-// lo que ya está cargado en `lista`; el filtrado real de resultados lo hace
-// el backend (construirParams). Vencido/PorVencer son temporalidad del FUS,
-// no un estatus; Rechazado/Pendiente_validacion viven en FUS.estatusParticular,
-// no en Turnado.estatusTitular.
-function coincideFiltroTurnado(t, clave) {
-  if (clave === 'Vencido' || clave === 'PorVencer') return t.idFus?.estadoTemporalidad === clave
-  if (clave === 'Rechazado' || clave === 'Pendiente_validacion') return t.idFus?.estatusParticular === clave
-  return t.estatusTitular === clave
-}
 
 function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
@@ -664,7 +651,7 @@ export default function SolicitudesTurnadas() {
   }, [busquedaDeb, folioParam, filtro, prioridadFiltro])
 
   const {
-    data: resultado = { items: [], total: 0, page: 1, append: false, match: null },
+    data: resultado = { items: [], total: 0, page: 1, append: false, match: null, conteos: null },
     error: errorCarga,
     isFetching: cargando,
     refetch: recargar,
@@ -682,6 +669,7 @@ export default function SolicitudesTurnadas() {
         page: 1,
         append: false,
         match,
+        conteos: respuesta.data.conteos || null,
       }
     },
   })
@@ -696,23 +684,14 @@ export default function SolicitudesTurnadas() {
   // abajo que ya lo usa.
   const listaFiltrada = lista
 
-  // Cuántos de los ya cargados (`lista`, sin filtrar) coinciden con cada
-  // chip — para mostrar el número junto a la etiqueta y que se note de
-  // inmediato cuántos resultados trae cada filtro, sin tener que aplicarlo.
-  const conteoEstatus = useMemo(() => {
-    const claves = ['Pendiente_validacion', 'Rechazado', 'Vencido', 'PorVencer', ...estatusROL2.map(e => e.clave)]
-    const mapa = {}
-    for (const clave of claves) {
-      mapa[clave] = lista.filter(t => coincideFiltroTurnado(t, clave)).length
-    }
-    return mapa
-  }, [lista, estatusROL2])
-  const conteoPrioridad = useMemo(() => (
-    PRIORIDAD_NIVELES.reduce((acc, p) => {
-      acc[p.valor] = lista.filter(t => t.idFus?.prioridad === p.valor).length
-      return acc
-    }, {})
-  ), [lista])
+  // Conteos por chip: los calcula el backend sobre TODA la bandeja (mismo
+  // search/scope, pero sin el filtro de chip que esté activo) — antes se
+  // contaban aquí sobre `lista`, que ya viene filtrada por el chip
+  // seleccionado, así que en cuanto se elegía uno los DEMÁS chips se veían
+  // en 0 aunque sí hubiera resultados. `?? {}` cubre el primer render antes
+  // de que responda la API.
+  const conteoEstatus = resultado.conteos?.estatus ?? {}
+  const conteoPrioridad = resultado.conteos?.prioridad ?? {}
 
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
