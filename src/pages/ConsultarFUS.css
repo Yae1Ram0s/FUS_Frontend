@@ -33,7 +33,7 @@
 /* ── Panel izquierdo — glassmorphism verde translúcido — ancho fijo, ya no
    se puede angostar/ensanchar arrastrando (antes tenía un resize-handle). ── */
 .cfus-left {
-  width: 530px;
+  width: 650px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -233,9 +233,9 @@
 .cfus-left .filtro-chip-atendido,
 .cfus-left .filtro-chip-concluido,
 .cfus-left .filtro-chip-pendiente_validacion,
+.cfus-left .filtro-chip-rechazado,
 .cfus-left .filtro-chip-vencido,
-.cfus-left .filtro-chip-porvencer,
-.cfus-left .filtro-chip-alta       { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+.cfus-left .filtro-chip-porvencer       { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 
 .cfus-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
@@ -279,23 +279,23 @@
 .cfus-left .filtro-chip-active.filtro-chip-atendido,
 .cfus-left .filtro-chip-active.filtro-chip-concluido,
 .cfus-left .filtro-chip-active.filtro-chip-pendiente_validacion,
+.cfus-left .filtro-chip-active.filtro-chip-rechazado,
 .cfus-left .filtro-chip-active.filtro-chip-vencido,
-.cfus-left .filtro-chip-active.filtro-chip-porvencer,
-.cfus-left .filtro-chip-active.filtro-chip-alta       { color: #f0dfc0; }
+.cfus-left .filtro-chip-active.filtro-chip-porvencer       { color: #f0dfc0; }
 
-/* Chip "Prioridad" — el .filtro-chip visible es decorativo; el <select>
-   nativo va encima, invisible, para abrir el picker del dispositivo. */
-.prioridad-filtro-wrap { position: relative; display: inline-flex; }
-.prioridad-filtro-select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  border: none;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
+/* Etiqueta del grupo "Plazo" (Vencido / Por vencer): son un filtro aparte de
+   los estatus, así que se separan visualmente en su propia fila. En móvil
+   (flex-wrap) ocupa una línea completa encima de sus chips. */
+.cfus-left .filtros-grupo-label {
+  flex-basis: 100%;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px 0 6px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 @media (min-width: 769px) {
@@ -331,22 +331,19 @@
     padding: 5px 13px;
     letter-spacing: 0.05em;
   }
-  .cfus-left .left-filtros > .filtro-chip:first-child { grid-column: span 2; order: 1; }
-  .cfus-left .filtro-chip-registrado { grid-column: span 3; order: 1; }
-  .cfus-left .filtro-chip-turnado { grid-column: span 2; order: 1; }
-  /* "En seguimiento" (antes "Atendido") es bastante más largo — necesita más
-     columnas que las que le tocaban a la palabra corta original, o el chip
-     se ve desproporcionado frente a sus vecinos. Se le quita a "Vencido"
-     (7 letras, ya le sobraba espacio en span 3) para que la fila siga
-     sumando 12 columnas exactas. */
-  .cfus-left .filtro-chip-atendido { grid-column: span 3; order: 1; font-size: 0.66rem; letter-spacing: 0.02em; }
-  .cfus-left .filtro-chip-vencido { grid-column: span 2; order: 1; }
-  .cfus-left .filtro-chip-concluido,
+  /* Las filas siguen el orden del DOM (flujo del trámite) y cada una suma 12
+     columnas exactas: Todos + 3 estatus / 3 estatus / etiqueta "Plazo" +
+     Vencido + Por vencer. */
+  .cfus-left .left-filtros > .filtro-chip:first-child { grid-column: span 2; }
+  .cfus-left .filtro-chip-registrado,
+  .cfus-left .filtro-chip-turnado { grid-column: span 3; }
+  .cfus-left .filtro-chip-atendido,
   .cfus-left .filtro-chip-pendiente_validacion,
-  .cfus-left .filtro-chip-porvencer,
-  .cfus-left .prioridad-filtro-wrap { grid-column: span 3; order: 2; }
-  .cfus-left .prioridad-filtro-wrap,
-  .cfus-left .prioridad-filtro-wrap .filtro-chip { width: 100%; }
+  .cfus-left .filtro-chip-rechazado,
+  .cfus-left .filtro-chip-concluido { grid-column: span 4; }
+  .cfus-left .filtros-grupo-label { grid-column: span 2; flex-basis: auto; padding-top: 0; }
+  .cfus-left .filtro-chip-vencido,
+  .cfus-left .filtro-chip-porvencer { grid-column: span 5; }
 }
 
 /* Lista */
@@ -459,7 +456,7 @@
   margin-bottom: 8px;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(10, 30, 20, 0.18);
-  transition: all 200ms ease-in-out;
+  transition: background 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
   min-width: 0;
   min-height: 132px;
 }
@@ -1914,3 +1911,28 @@
   .pyr-detalles-grid { column-gap: 9px; }
   .pyr-detalle-solicitud { padding: 9px 10px; }
 }
+
+/* ══════════════════════════════════════
+   PRÓRROGA DE FECHA LÍMITE (Particular)
+══════════════════════════════════════ */
+.det-vencido-aviso {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #b23030;
+}
+.btn-prorroga {
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid #9F2241;
+  color: #9F2241;
+  border-radius: 999px;
+  padding: 7px 16px;
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-prorroga:hover { background: rgba(159, 34, 65, 0.08); }
+.btn-prorroga-urgente { background: #9F2241; color: #ffffff; }
+.btn-prorroga-urgente:hover { background: #82182f; }

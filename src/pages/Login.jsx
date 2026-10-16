@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  motion, AnimatePresence, MotionConfig, animate,
+  useMotionValue, useSpring, useTransform, useReducedMotion,
+} from 'motion/react'
 import { useAuth } from '../context/AuthContext'
-import api from '../api/api'
+import api, { mensajeErrorConexion } from '../api/api'
 import { rutaInicioPorRol } from '../utils/rutas'
 import useInstallPrompt from '../hooks/useInstallPrompt'
 import { useAnalytics } from '../analytics'
@@ -15,10 +19,145 @@ const STEP_NEWPASS  = 'newpass'
 const DOMINIO_INSTITUCIONAL = '@anam.gob.mx'
 const REENVIO_COOLDOWN_MS = 2 * 60 * 1000
 const REENVIO_STORAGE_KEY = 'scs_otp_reenvio'
+const LOGIN_ANCHO_DISENO = 1920
+
+const TITULO_SISTEMA = 'Sistema de Control de Solicitudes'
+const EASE_SALIDA = [0.22, 1, 0.36, 1]
+
+/* ── Variantes de animación ──
+   El contenedor de cada paso escalona la entrada de sus hijos (campos, botón,
+   enlaces) y éstos solo declaran `variants={variantesItem}`. */
+const variantesPaso = {
+  hidden: { opacity: 0, x: 24 },
+  show: {
+    opacity: 1, x: 0,
+    transition: { duration: 0.45, ease: EASE_SALIDA, delayChildren: 0.06, staggerChildren: 0.07 },
+  },
+}
+const variantesItem = {
+  hidden: { opacity: 0, y: 16 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_SALIDA } },
+}
+const variantesIconos = {
+  hidden: {},
+  show:   { transition: { delayChildren: 0.7, staggerChildren: 0.09 } },
+}
+const variantesIcono = {
+  hidden: { opacity: 0, scale: 0.5, y: 10 },
+  show:   { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 320, damping: 18 } },
+}
 
 const usuarioGuardado = () => {
   try { return JSON.parse(localStorage.getItem('scs_user') || 'null') }
   catch { return null }
+}
+
+const EyeOpen  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+const EyeClose = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+
+/* Texto que aparece letra por letra. Las palabras se mantienen juntas
+   (nowrap) para que el salto de línea siga ocurriendo entre palabras.
+   `mascara`: cada letra sube desde un recorte; `desenfoque`: se enfoca. */
+function Letras({ texto, retraso = 0, paso = 0.03, mascara = false, desenfoque = false }) {
+  let n = 0
+  return texto.split(' ').map((palabra, i, palabras) => (
+    <Fragment key={i}>
+      <span className={mascara ? 'll-word-mask' : 'll-word-nowrap'}>
+        {[...palabra].map((letra, j) => (
+          <motion.span
+            key={j}
+            className="ll-word"
+            initial={{ opacity: 0, y: mascara ? '115%' : 10, filter: desenfoque ? 'blur(8px)' : 'blur(0px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: mascara ? 0.8 : 0.7, delay: retraso + (n++) * paso, ease: EASE_SALIDA }}
+          >
+            {letra}
+          </motion.span>
+        ))}
+      </span>
+      {i < palabras.length - 1 && ' '}
+    </Fragment>
+  ))
+}
+
+/* Logo SHCP/ANAM: se revela de izquierda a derecha y un destello dorado lo
+   recorre cada pocos segundos. El destello usa el propio logo como máscara
+   para iluminar solo sus trazos. */
+function LogoAnam({ imgClassName, retraso = 0 }) {
+  return (
+    <motion.div
+      className="ll-anam"
+      initial={{ clipPath: 'inset(0 100% 0 0)', opacity: 0, scale: 0.94 }}
+      animate={{ clipPath: 'inset(0 0% 0 0)', opacity: 1, scale: 1 }}
+      transition={{ duration: 1.2, delay: retraso, ease: EASE_SALIDA }}
+      whileHover={{ scale: 1.04 }}
+    >
+      <img src={logosImg} alt="SHCP — ANAM" className={imgClassName} />
+      <motion.span
+        className="ll-anam-shine"
+        aria-hidden="true"
+        style={{ WebkitMaskImage: `url(${logosImg})`, maskImage: `url(${logosImg})` }}
+        initial={{ backgroundPosition: '220% 0%' }}
+        animate={{ backgroundPosition: ['220% 0%', '-120% 0%'] }}
+        transition={{ duration: 1.8, delay: retraso + 1.4, repeat: Infinity, repeatDelay: 5.5, ease: 'easeInOut' }}
+      />
+    </motion.div>
+  )
+}
+
+/* Mensaje de error con entrada suave y un pequeño "sacudón" horizontal. */
+function Alerta({ children }) {
+  return (
+    <AnimatePresence initial={false}>
+      {children && (
+        <motion.p
+          key={children}
+          className="login-error"
+          role="alert"
+          initial={{ opacity: 0, y: -8, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1, x: [0, -9, 8, -5, 3, 0] }}
+          exit={{ opacity: 0, transition: { duration: 0.15 } }}
+          transition={{ duration: 0.3, ease: EASE_SALIDA, x: { duration: 0.5, ease: 'easeOut' } }}
+        >
+          {children}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  )
+}
+
+/* Botón principal: reacciona al hover y al clic salvo cuando está deshabilitado. */
+function BotonEntrar({ disabled, children, ...props }) {
+  return (
+    <motion.button
+      variants={variantesItem}
+      className="btn-entrar"
+      disabled={disabled}
+      whileHover={disabled ? undefined : { y: -2, scale: 1.015 }}
+      whileTap={disabled ? undefined : { y: 0, scale: 0.975 }}
+      {...props}
+    >
+      {children}
+    </motion.button>
+  )
+}
+
+/* Ojo de mostrar/ocultar contraseña con giro al alternar. */
+function IconoOjo({ visible }) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={visible ? 'oculto' : 'visible'}
+        style={{ display: 'flex' }}
+        initial={{ opacity: 0, scale: 0.5, rotate: -50 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        exit={{ opacity: 0, scale: 0.5, rotate: 50 }}
+        transition={{ duration: 0.16 }}
+      >
+        {visible ? <EyeClose /> : <EyeOpen />}
+      </motion.span>
+    </AnimatePresence>
+  )
 }
 
 export default function Login() {
@@ -57,6 +196,23 @@ export default function Login() {
     const actualizar = (evento) => setEsMovil(evento.matches)
     media.addEventListener('change', actualizar)
     return () => media.removeEventListener('change', actualizar)
+  }, [])
+
+  // Mantiene el login del mismo tamaño visual aunque se cambie el zoom del
+  // navegador en PC: el zoom reduce el ancho del viewport en px CSS, así que se
+  // compensa escalando respecto al ancho de diseño. En móvil no se escala.
+  useEffect(() => {
+    const raiz = document.documentElement
+    const actualizar = () => {
+      const w = window.innerWidth
+      raiz.style.setProperty('--login-zoom', w > 768 ? Math.max(0.4, w / LOGIN_ANCHO_DISENO).toFixed(4) : '1')
+    }
+    actualizar()
+    window.addEventListener('resize', actualizar)
+    return () => {
+      window.removeEventListener('resize', actualizar)
+      raiz.style.removeProperty('--login-zoom')
+    }
   }, [])
 
   useEffect(() => {
@@ -130,6 +286,46 @@ export default function Login() {
     meta.setAttribute('content', '#1c4a3e')
     return () => meta.setAttribute('content', original)
   }, [])
+
+  /* ── Parallax del panel izquierdo ──
+     El puntero (normalizado a -0.5…0.5 dentro del panel) alimenta valores de
+     movimiento con resorte: el logo se inclina en 3D, el halo y el texto se
+     desplazan a distinta profundidad y un foco de luz sigue al cursor. Se usan
+     porcentajes del panel (no px) para que no les afecte el zoom del login. */
+  const sinMovimiento = useReducedMotion()
+  const panelRef = useRef(null)
+  const punteroX = useMotionValue(0)
+  const punteroY = useMotionValue(0)
+  const resorteX = useSpring(punteroX, { stiffness: 80, damping: 16, mass: 0.7 })
+  const resorteY = useSpring(punteroY, { stiffness: 80, damping: 16, mass: 0.7 })
+  const logoX  = useTransform(resorteX, [-0.5, 0.5], [-14, 14])
+  const logoY  = useTransform(resorteY, [-0.5, 0.5], [-14, 14])
+  const logoRotY = useTransform(resorteX, [-0.5, 0.5], [-9, 9])
+  const logoRotX = useTransform(resorteY, [-0.5, 0.5], [8, -8])
+  const halo2X = useTransform(resorteX, [-0.5, 0.5], [22, -22])
+  const halo2Y = useTransform(resorteY, [-0.5, 0.5], [22, -22])
+  const textoX = useTransform(resorteX, [-0.5, 0.5], [-6, 6])
+  const textoY = useTransform(resorteY, [-0.5, 0.5], [-4, 4])
+  const focoX = useTransform(resorteX, v => `${(v + 0.5) * 100}%`)
+  const focoY = useTransform(resorteY, v => `${(v + 0.5) * 100}%`)
+  const focoOpacidad = useMotionValue(0)
+
+  const moverPuntero = (e) => {
+    if (sinMovimiento || e.pointerType === 'touch') return
+    const r = panelRef.current?.getBoundingClientRect()
+    if (!r || !r.width || !r.height) return
+    punteroX.set((e.clientX - r.left) / r.width - 0.5)
+    punteroY.set((e.clientY - r.top) / r.height - 0.5)
+  }
+  const entrarPuntero = (e) => {
+    if (sinMovimiento || e.pointerType === 'touch') return
+    animate(focoOpacidad, 1, { duration: 0.7 })
+  }
+  const salirPuntero = () => {
+    animate(focoOpacidad, 0, { duration: 0.9 })
+    punteroX.set(0)
+    punteroY.set(0)
+  }
 
   const redirect = (rol) => navigate(rutaInicioPorRol(rol))
 
@@ -225,7 +421,11 @@ export default function Login() {
         setError(err.response.data.detail)
       } else {
         failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
-        setError(err.response?.data?.detail || 'Contraseña incorrecta.')
+        // Sin err.response (caída de red, backend inalcanzable) no hay forma
+        // de saber si la contraseña era correcta — decir "Contraseña
+        // incorrecta." ahí engañaba: el usuario reintentaba la MISMA
+        // contraseña buena creyendo que estaba mal.
+        setError(mensajeErrorConexion(err, 'Contraseña incorrecta.'))
       }
     } finally {
       setLoading(false)
@@ -315,7 +515,7 @@ export default function Login() {
       }
     } catch (err) {
       failTask(taskId, { metadatos: { motivo: err.response ? 'error_servidor' : 'sin_conexion' } })
-      setError(err.response?.data?.detail || 'Error al procesar la contraseña.')
+      setError(mensajeErrorConexion(err, 'Error al procesar la contraseña.'))
     } finally {
       setLoading(false)
     }
@@ -342,26 +542,31 @@ export default function Login() {
   }
 
   /* ── Paneles del lado derecho ── */
-  const EyeOpen  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-  const EyeClose = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-
   const renderStep = () => {
     /* ── Contraseña restablecida ── */
     if (recoveryOk) return (
       <div className="login-form" style={{ textAlign: 'center' }}>
-        <div style={{ margin: '0 auto 1rem', width: 52, height: 52, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1.5px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
-        <p className="lf-step-info">Tu contraseña fue restablecida exitosamente.</p>
-        <button className="btn-entrar" onClick={() => { resetAll(); setStep(STEP_PASS) }}>
+        <motion.div
+          variants={{ hidden: { opacity: 0, scale: 0.4 }, show: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 260, damping: 16 } } }}
+          style={{ margin: '0 auto 1rem', width: 52, height: 52, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1.5px solid rgba(74,222,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round">
+            <motion.path
+              d="M20 6L9 17l-5-5"
+              variants={{ hidden: { pathLength: 0 }, show: { pathLength: 1, transition: { duration: 0.5, delay: 0.25, ease: EASE_SALIDA } } }}
+            />
+          </svg>
+        </motion.div>
+        <motion.p variants={variantesItem} className="lf-step-info">Tu contraseña fue restablecida exitosamente.</motion.p>
+        <BotonEntrar onClick={() => { resetAll(); setStep(STEP_PASS) }}>
           Iniciar sesión
-        </button>
+        </BotonEntrar>
       </div>
     )
 
     if (step === STEP_EMAIL) return (
       <form className="login-form" onSubmit={handleEmail} noValidate>
-        <div className="lf-group">
+        <motion.div variants={variantesItem} className="lf-group">
           <label htmlFor="login-email">Correo Institucional</label>
           {/* Mismo campo dividido (usuario + dominio fijo) en PC y móvil —
               antes solo aparecía en móvil; en desktop había que teclear el
@@ -369,6 +574,7 @@ export default function Login() {
           <div className="lf-email-mobile-wrap">
             <input
               id="login-email"
+              readOnly={loading}
               type="text"
               inputMode="email"
               placeholder="usuario@anam.gob.mx"
@@ -388,22 +594,22 @@ export default function Login() {
             />
             {email && <span aria-hidden="true">{DOMINIO_INSTITUCIONAL}</span>}
           </div>
-        </div>
-        {error && <p className="login-error" role="alert">{error}</p>}
-        <button className="btn-entrar" type="submit" disabled={loading || !email.trim()}>
+        </motion.div>
+        <Alerta>{error}</Alerta>
+        <BotonEntrar type="submit" disabled={loading || !email.trim()}>
           {loading ? 'Verificando…' : 'Continuar'}
-        </button>
+        </BotonEntrar>
       </form>
     )
 
     if (step === STEP_PASS) return (
       <form className="login-form" onSubmit={handlePassword} noValidate>
-        <div className="lf-email-locked">
+        <motion.div variants={variantesItem} className="lf-email-locked">
           <span>{email}</span>
           <button type="button" className="lf-cambiar" onClick={() => { track({ componente: 'LOGIN_PASSWORD_STEP', accion: 'NAVIGATE', metadatos: { control: 'cambiar_correo' } }); setStep(STEP_EMAIL); setError(''); setPassword(''); setPassBloqueadoHasta(0) }}>
             Cambiar
           </button>
-        </div>
+        </motion.div>
         {/* Input oculto (no display:none/visibility:hidden — algunos
             gestores de contraseñas los ignoran) con autoComplete="username":
             el correo se pidió en el paso anterior, en otro <form>, así que
@@ -412,11 +618,12 @@ export default function Login() {
             su gestor (cifrado por el SO, no accesible por JS/XSS) — la
             forma segura de "recordar la contraseña". */}
         <input type="email" name="username" autoComplete="username" value={email} readOnly hidden tabIndex={-1} aria-hidden="true" />
-        <div className="lf-group">
+        <motion.div variants={variantesItem} className="lf-group">
           <label htmlFor="login-pass">Contraseña</label>
           <div className="lf-pass-wrap">
             <input
               id="login-pass"
+              readOnly={loading}
               type={showPass ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
@@ -425,13 +632,13 @@ export default function Login() {
               autoComplete="current-password"
               autoFocus
             />
-            <button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
-              {showPass ? <EyeClose /> : <EyeOpen />}
-            </button>
+            <motion.button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1} whileTap={{ scale: 0.8 }}>
+              <IconoOjo visible={showPass} />
+            </motion.button>
           </div>
-        </div>
-        {error && <p className="login-error" role="alert">{error}</p>}
-        <div className="login-opts">
+        </motion.div>
+        <Alerta>{error}</Alerta>
+        <motion.div variants={variantesItem} className="login-opts">
           <label className="lf-remember" htmlFor="login-remember">
             <input
               id="login-remember"
@@ -443,29 +650,30 @@ export default function Login() {
           <button type="button" className="lf-forgot" onClick={handleForgot} disabled={loading}>
             {loading ? 'Enviando…' : 'Olvidé mi contraseña'}
           </button>
-        </div>
-        <button className="btn-entrar" type="submit" disabled={loading || !password || passBloqueoRestante > 0}>
+        </motion.div>
+        <BotonEntrar type="submit" disabled={loading || !password || passBloqueoRestante > 0}>
           {loading
             ? 'Verificando…'
             : passBloqueoRestante > 0
               ? `Espera ${String(Math.floor(passBloqueoRestante / 60)).padStart(2, '0')}:${String(passBloqueoRestante % 60).padStart(2, '0')}`
               : 'Entrar'}
-        </button>
+        </BotonEntrar>
       </form>
     )
 
     if (step === STEP_OTP) return (
       <form className="login-form" onSubmit={handleOtp} noValidate>
-        <p className="lf-step-info">
+        <motion.p variants={variantesItem} className="lf-step-info">
           {isRecovery
             ? <>Enviamos un código de recuperación a <strong>{email}</strong>.</>
             : <>Enviamos un código de 6 dígitos a <strong>{email}</strong>. Revisa tu bandeja.</>
           }
-        </p>
-        <div className="lf-group lf-group-otp">
+        </motion.p>
+        <motion.div variants={variantesItem} className="lf-group lf-group-otp">
           <label htmlFor="login-otp">Código de verificación</label>
           <input
             id="login-otp"
+            readOnly={loading}
             type="text"
             inputMode="numeric"
             maxLength={6}
@@ -476,13 +684,23 @@ export default function Login() {
             autoFocus
             className="lf-otp-input"
           />
-        </div>
-        {error      && <p className="login-error"  role="alert">{error}</p>}
-        {reenvioMsg && <p className="lf-resend-ok">{reenvioMsg}</p>}
-        <button className="btn-entrar" type="submit" disabled={loading || otp.length < 6}>
+        </motion.div>
+        <Alerta>{error}</Alerta>
+        {reenvioMsg && (
+          <motion.p
+            key={reenvioMsg}
+            className="lf-resend-ok"
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.3, ease: EASE_SALIDA }}
+          >
+            {reenvioMsg}
+          </motion.p>
+        )}
+        <BotonEntrar type="submit" disabled={loading || otp.length < 6}>
           {loading ? 'Verificando…' : 'Verificar código'}
-        </button>
-        <div className="lf-actions-row">
+        </BotonEntrar>
+        <motion.div variants={variantesItem} className="lf-actions-row">
           <button type="button" className="lf-link" onClick={() => { track({ componente: 'LOGIN_OTP_STEP', accion: 'NAVIGATE', metadatos: { control: isRecovery ? 'volver_login' : 'cambiar_correo' } }); resetAll(); setStep(isRecovery ? STEP_PASS : STEP_EMAIL) }}>
             ← {isRecovery ? 'Volver al login' : 'Cambiar correo'}
           </button>
@@ -500,27 +718,28 @@ export default function Login() {
                 ? `Reenviar en ${String(Math.floor(reenvioRestante / 60)).padStart(2, '0')}:${String(reenvioRestante % 60).padStart(2, '0')}`
                 : 'Reenviar código'}
           </button>
-        </div>
+        </motion.div>
       </form>
     )
 
     if (step === STEP_NEWPASS) return (
       <form className={`login-form${isRecovery ? ' login-form-recovery' : ''}`} onSubmit={handleNewPass} noValidate>
-        <p className="lf-step-info">
+        <motion.p variants={variantesItem} className="lf-step-info">
           {(cambioObligatorio || user?.requiereCambioContrasena)
             ? 'Por seguridad, reemplaza la contraseña temporal antes de entrar al sistema.'
             : isRecovery ? 'Elige tu nueva contraseña.' : 'Elige una contraseña segura para activar tu cuenta.'}
-        </p>
+        </motion.p>
         {/* Mismo motivo que en el paso de contraseña: sin un campo de
             usuario en este <form>, el navegador no puede ofrecer guardar
             (o actualizar) la contraseña en su gestor. */}
         <input type="email" name="username" autoComplete="username" value={email} readOnly hidden tabIndex={-1} aria-hidden="true" />
         {(cambioObligatorio || user?.requiereCambioContrasena) && (
-          <div className="lf-group">
+          <motion.div variants={variantesItem} className="lf-group">
             <label htmlFor="login-temp-pass">Contraseña temporal</label>
             <div className="lf-pass-wrap">
               <input
                 id="login-temp-pass"
+                readOnly={loading}
                 type={showPass ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -529,13 +748,14 @@ export default function Login() {
                 autoFocus={!password}
               />
             </div>
-          </div>
+          </motion.div>
         )}
-        <div className="lf-group">
+        <motion.div variants={variantesItem} className="lf-group">
           <label htmlFor="login-np">{(isRecovery || cambioObligatorio || user?.requiereCambioContrasena) ? 'Nueva contraseña' : 'Contraseña'}</label>
           <div className="lf-pass-wrap">
             <input
               id="login-np"
+              readOnly={loading}
               type={showPass ? 'text' : 'password'}
               placeholder="Mínimo 8 caracteres"
               value={newPass}
@@ -544,15 +764,16 @@ export default function Login() {
               autoComplete="new-password"
               autoFocus={!(cambioObligatorio || user?.requiereCambioContrasena) || Boolean(password)}
             />
-            <button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
-              {showPass ? <EyeClose /> : <EyeOpen />}
-            </button>
+            <motion.button type="button" className="lf-eye" onClick={() => setShowPass(v => !v)} tabIndex={-1} whileTap={{ scale: 0.8 }}>
+              <IconoOjo visible={showPass} />
+            </motion.button>
           </div>
-        </div>
-        <div className="lf-group">
+        </motion.div>
+        <motion.div variants={variantesItem} className="lf-group">
           <label htmlFor="login-cp">Confirmar contraseña</label>
           <input
             id="login-cp"
+            readOnly={loading}
             type={showPass ? 'text' : 'password'}
             placeholder="Repite la contraseña"
             value={confirmPass}
@@ -560,18 +781,18 @@ export default function Login() {
             required
             autoComplete="new-password"
           />
-        </div>
-        {error && <p className="login-error" role="alert">{error}</p>}
-        <button className="btn-entrar" type="submit" disabled={loading || !newPass || !confirmPass}>
+        </motion.div>
+        <Alerta>{error}</Alerta>
+        <BotonEntrar type="submit" disabled={loading || !newPass || !confirmPass}>
           {loading
             ? ((isRecovery || cambioObligatorio || user?.requiereCambioContrasena) ? 'Guardando…' : 'Creando cuenta…')
             : ((cambioObligatorio || user?.requiereCambioContrasena)
               ? 'Guardar nueva contraseña y entrar'
               : isRecovery ? 'Restablecer contraseña' : 'Crear cuenta y entrar')
           }
-        </button>
+        </BotonEntrar>
         {(cambioObligatorio || user?.requiereCambioContrasena) && (
-          <div className="lf-actions-row">
+          <motion.div variants={variantesItem} className="lf-actions-row">
             <button
               type="button"
               className="lf-link"
@@ -581,7 +802,7 @@ export default function Login() {
             >
               Usar otra cuenta
             </button>
-          </div>
+          </motion.div>
         )}
       </form>
     )
@@ -599,62 +820,111 @@ export default function Login() {
   const showStepIndicator = (step === STEP_OTP || step === STEP_NEWPASS) && !isRecovery
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="login-wrap">
 
       {/* ── Panel izquierdo ── */}
-      <div className="login-left">
+      <motion.div
+        className="login-left"
+        ref={panelRef}
+        onPointerMove={moverPuntero}
+        onPointerEnter={entrarPuntero}
+        onPointerLeave={salirPuntero}
+        initial={{ opacity: 0, x: -80 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 1, ease: EASE_SALIDA }}
+      >
+        <motion.div className="ll-spotlight" aria-hidden="true" style={{ left: focoX, top: focoY, opacity: focoOpacidad }} />
+
         <div className="ll-brand">
-          <img src={logosImg} alt="SHCP — ANAM" className="ll-brand-img" />
+          <LogoAnam imgClassName="ll-brand-img" retraso={0.3} />
         </div>
         <div className="ll-sphere ll-sphere-a" />
         <div className="ll-sphere ll-sphere-b" />
 
         <div className="ll-center-block">
-          <div className="ll-logo-scs-wrap">
-            <div className="ll-logo-scs-ring" />
+          <motion.div
+            className="ll-logo-scs-wrap"
+            initial={{ opacity: 0, scale: 0.5, rotate: -14 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ delay: 0.45, opacity: { duration: 0.8 }, default: { type: 'spring', stiffness: 70, damping: 12 } }}
+            style={{ x: logoX, y: logoY, rotateX: logoRotX, rotateY: logoRotY, transformPerspective: 900 }}
+          >
+            <motion.div
+              className="ll-logo-scs-ring"
+              style={{ x: halo2X, y: halo2Y }}
+              initial={{ scale: 0.4 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 1.6, delay: 0.7, ease: EASE_SALIDA }}
+            />
             <img src="/Logo SCS 2026_1.png" alt="SCS 2026" className="ll-logo-scs" />
-          </div>
-          <div className="ll-hero">
-            <p className="ll-sub">Agencia Nacional de Aduanas de México</p>
-            <h1 className="ll-title">Sistema de Control de Solicitudes</h1>
-            <div className="ll-title-rule" />
-          </div>
+          </motion.div>
+          <motion.div className="ll-hero" style={{ x: textoX, y: textoY }}>
+            <p className="ll-sub" aria-label="Agencia Nacional de Aduanas de México">
+              <Letras texto="Agencia Nacional de Aduanas de México" retraso={1.1} paso={0.022} desenfoque />
+            </p>
+            <h1 className="ll-title" aria-label={TITULO_SISTEMA}>
+              <Letras texto={TITULO_SISTEMA} retraso={1.35} paso={0.035} mascara />
+            </h1>
+            <motion.div
+              className="ll-title-rule"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 120, opacity: 1 }}
+              transition={{ duration: 0.9, delay: 2.3, ease: EASE_SALIDA }}
+            />
+          </motion.div>
         </div>
         <div className="ll-dots" />
-        <span className="ll-xmark">×</span>
         <div className="ll-sphere ll-sphere-c" />
         <div className="ll-sphere ll-sphere-d" />
-        <div className="ll-beige-strip" />
-      </div>
-
-      <div className="ll-arrow-sphere">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-          stroke="#777" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </div>
+        <motion.div
+          className="ll-beige-strip"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          style={{ originX: 0 }}
+          transition={{ duration: 1.1, delay: 0.1, ease: [0.65, 0, 0.35, 1] }}
+        />
+      </motion.div>
 
       {/* ── Panel derecho ── */}
       <div className="login-right">
 
-        <div className="login-mobile-brand">
-          <img src={logosImg} className="login-mobile-logo" alt="SHCP — ANAM" />
+        <motion.div
+          className="login-mobile-brand"
+          initial={{ opacity: 0, y: -28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: EASE_SALIDA }}
+        >
+          <LogoAnam imgClassName="login-mobile-logo" retraso={0.3} />
           <span className="login-mobile-sys">Sistema de Control de Solicitudes</span>
-        </div>
+        </motion.div>
 
-        <div className="login-card">
+        <motion.div
+          className="login-card"
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.25, ease: EASE_SALIDA }}
+        >
           {showStepIndicator && (
             <div className="lf-steps">
-              <span className="lf-step-dot lf-step-done" />
-              <span className="lf-step-line" />
-              <span className={`lf-step-dot ${step === STEP_NEWPASS ? 'lf-step-done' : 'lf-step-active'}`} />
-              <span className="lf-step-line" />
-              <span className={`lf-step-dot ${step === STEP_NEWPASS ? 'lf-step-active' : ''}`} />
+              <motion.span className="lf-step-dot lf-step-done" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }} />
+              <motion.span className="lf-step-line" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} style={{ originX: 0 }} transition={{ duration: 0.4, delay: 0.1 }} />
+              <motion.span className={`lf-step-dot ${step === STEP_NEWPASS ? 'lf-step-done' : 'lf-step-active'}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }} />
+              <motion.span className="lf-step-line" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} style={{ originX: 0 }} transition={{ duration: 0.4, delay: 0.3 }} />
+              <motion.span className={`lf-step-dot ${step === STEP_NEWPASS ? 'lf-step-active' : ''}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.4 }} />
             </div>
           )}
 
           <div className="login-card-header">
-            <h2 className="login-welcome">{recoveryOk ? '¡Listo!' : titles[step]}</h2>
+            <motion.h2
+              key={recoveryOk ? 'listo' : titles[step]}
+              className="login-welcome"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: EASE_SALIDA }}
+            >
+              {recoveryOk ? '¡Listo!' : titles[step]}
+            </motion.h2>
             {!recoveryOk && (step === STEP_EMAIL || step === STEP_PASS) && (
               <p className="login-personal-message">
                 Ingresa tus credenciales para continuar en tu espacio de trabajo.
@@ -662,25 +932,33 @@ export default function Login() {
             )}
           </div>
 
-          {renderStep()}
+          {/* La key reinicia la entrada escalonada en cada cambio de paso. */}
+          <motion.div
+            key={recoveryOk ? 'recovery-ok' : step}
+            variants={variantesPaso}
+            initial="hidden"
+            animate="show"
+          >
+            {renderStep()}
+          </motion.div>
 
-          <div className="ll-bottom-icons">
-            <div className="ll-bottom-icon">
+          <motion.div className="ll-bottom-icons" variants={variantesIconos} initial="hidden" animate="show">
+            <motion.div className="ll-bottom-icon" variants={variantesIcono} whileHover={{ y: -4, scale: 1.1 }} whileTap={{ scale: 0.92 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
               </svg>
-            </div>
-            <div className="ll-bottom-icon">
+            </motion.div>
+            <motion.div className="ll-bottom-icon" variants={variantesIcono} whileHover={{ y: -4, scale: 1.1 }} whileTap={{ scale: 0.92 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
-            </div>
-            <div className="ll-bottom-icon">
+            </motion.div>
+            <motion.div className="ll-bottom-icon" variants={variantesIcono} whileHover={{ y: -4, scale: 1.1 }} whileTap={{ scale: 0.92 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {!instalado && (
             puedeInstalar ? (
@@ -704,8 +982,9 @@ export default function Login() {
               </p>
             )
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
+    </MotionConfig>
   )
 }

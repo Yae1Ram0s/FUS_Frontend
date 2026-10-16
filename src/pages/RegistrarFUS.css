@@ -8,6 +8,9 @@
   background-repeat: no-repeat;
   background-position: center;
   background-blend-mode: multiply;
+  /* Deja libre la franja de la barra flotante (.reg-guia) al hacer scroll
+     automático o con Tab, para que el campo enfocado no quede tapado. */
+  scroll-padding-bottom: 88px;
 }
 
 /* ── Scroll container ── */
@@ -841,6 +844,103 @@
 .btn-secondary:hover  { background: rgba(255, 255, 255, 0.85); border-color: rgba(35, 91, 78, 0.50); }
 .btn-secondary:active { background: rgba(255, 255, 255, 0.40); }
 
+/* ── Barra flotante "Siguiente" — recorrido guiado ──
+   Wrapper de altura 0 con position:sticky: se queda pegado al borde inferior
+   del área con scroll sin ocupar espacio en el flujo (la barra va absoluta
+   dentro), así mostrarla/ocultarla nunca mueve el formulario. */
+.reg-guia {
+  position: sticky;
+  bottom: 16px;
+  height: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.reg-guia-bar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100% - 16px);
+  padding: 7px 7px 7px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(195, 212, 207, 0.85);
+  box-shadow:
+    0 10px 28px rgba(10, 30, 20, 0.20),
+    0 3px 8px rgba(10, 30, 20, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  pointer-events: auto;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+/* Oculta: visibility:hidden (con retardo igual a la transición) la saca del
+   foco de teclado y de lectores de pantalla, y evita que tape los botones. */
+.reg-guia-oculta {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms;
+}
+
+.reg-guia-progreso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #235b4e;
+  white-space: nowrap;
+}
+
+.reg-guia-puntos { display: inline-flex; gap: 4px; }
+
+.reg-guia-punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(35, 91, 78, 0.20);
+  transition: background 200ms ease;
+}
+.reg-guia-punto-ok { background: #235b4e; }
+
+.reg-guia-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border: 1px solid rgba(35, 91, 78, 0.70);
+  border-radius: 999px;
+  background: rgba(35, 91, 78, 0.92);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(35, 91, 78, 0.30);
+  transition: background 150ms ease, transform 150ms ease;
+}
+.reg-guia-btn:hover  { background: rgba(28, 70, 60, 0.98); }
+.reg-guia-btn:active { transform: scale(0.97); }
+
+.reg-guia-flecha { animation: reg-guia-rebote 1.4s ease-in-out infinite; }
+@keyframes reg-guia-rebote {
+  0%, 100% { transform: translateY(-1px); }
+  50%      { transform: translateY(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reg-guia-bar,
+  .reg-guia-oculta { transition-duration: 1ms; transition-delay: 0s; }
+  .reg-guia-flecha { animation: none; }
+}
+
 /* ── Vidrio esmerilado: aro animado + brillo diagonal al pasar el cursor,
    sobre los mismos botones y colores de arriba (nada nuevo que mantener
    aparte — es aditivo, en CSS plano, sin cambiar el <button> ni sus
@@ -943,6 +1043,10 @@
     padding-bottom: calc(1rem + 90px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* La barra "Siguiente" va por encima del bottom-nav flotante (64px). */
+  .reg-bg    { scroll-padding-bottom: 150px; }
+  .reg-guia  { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+
   /* align-items: stretch hace que label e input llenen el ancho completo */
   .reg-row {
     flex-direction: column;
@@ -1010,6 +1114,8 @@
   .reg-row input[type="datetime-local"],
   .reg-row select,
   .reg-form textarea { font-size: .85rem; padding: 8px 11px; }
+  .reg-guia-progreso { font-size: 0; gap: 0; } /* solo los puntos: ahorra ancho */
+  .reg-guia-bar      { gap: 10px; padding-left: 12px; }
   .medios-quick   { padding: 8px 10px; gap: 5px; }
   .quick-opt      { padding: 4px 10px; font-size: 0.77rem; }
   .prioridad-pill { padding: 6px 12px; font-size: 0.78rem; }

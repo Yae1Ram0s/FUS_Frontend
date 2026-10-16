@@ -226,7 +226,83 @@ export default function RegistrarFUS() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const setPrioridad = (v) => setForm(f => ({ ...f, prioridad: v, criterios: [], otroCriterio: '' }))
+  const medioSeleccionado = medios.find(m => String(m.id) === String(form.idMedioRecepcion))
+  const medioEsOtro = medioSeleccionado?.nombreMedio === 'Otro'
+
+  // ── Recorrido guiado ──
+  // Lleva la vista (y opcionalmente el foco) a un campo. El retardo corto deja
+  // ver la selección antes de mover la pantalla, y da tiempo a que el destino
+  // se renderice en el mismo cambio de estado (ej. el input de "Otro").
+  const timerAvanceRef = useRef(null)
+  useEffect(() => () => clearTimeout(timerAvanceRef.current), [])
+
+  const irA = (id, { enfocar = false, block = 'center', retardo = 0 } = {}) => {
+    clearTimeout(timerAvanceRef.current)
+    const origen = document.activeElement
+    timerAvanceRef.current = setTimeout(() => {
+      const el = document.getElementById(id)
+      if (!el) return
+      // Si durante el retardo la persona pasó a escribir en otro campo, no se
+      // le quita el foco.
+      const activo = document.activeElement
+      const cambioDeCampo = activo !== origen && activo !== el
+        && activo?.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')
+      if (enfocar && cambioDeCampo) return
+      const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      el.scrollIntoView({ behavior: reducirMovimiento ? 'auto' : 'smooth', block })
+      if (enfocar) el.focus({ preventScroll: true })
+    }, retardo)
+  }
+
+  // Elegido el medio, pasa a lo siguiente que falta: la especificación si es
+  // "Otro", o la descripción mientras aún no esté completa (si ya lo está, no
+  // se mueve la pantalla para no estorbar a quien solo corrige el medio).
+  const elegirMedio = (id) => {
+    set('idMedioRecepcion', id)
+    const esOtro = medios.find(m => String(m.id) === String(id))?.nombreMedio === 'Otro'
+    if (esOtro) irA('reg-medio-otro', { enfocar: true, retardo: 150 })
+    else if (id && form.descripcion.length < 20) irA('reg-descripcion', { enfocar: true, retardo: 150 })
+  }
+
+  const setPrioridad = (v) => {
+    setForm(f => ({ ...f, prioridad: v, criterios: [], otroCriterio: '' }))
+    // La lista de criterios aparece debajo de las pastillas: se asegura que
+    // quede completa a la vista sin mover la pantalla de más.
+    irA('reg-prioridad-criterios', { block: 'nearest', retardo: 80 })
+  }
+
+  // Campos obligatorios en el orden en que aparecen en pantalla. Con un medio
+  // ya elegido, lo único que puede faltar de ese paso es la especificación de "Otro".
+  const obligatorios = [
+    {
+      ok: !!form.idMedioRecepcion && (!medioEsOtro || !!form.medioEspecificacion.trim()),
+      id: form.idMedioRecepcion ? 'reg-medio-otro' : 'reg-medio',
+      etiqueta: form.idMedioRecepcion ? 'Especifica el medio' : 'Medio de recepción',
+    },
+    { ok: form.descripcion.length >= 20, id: 'reg-descripcion',     etiqueta: 'Descripción' },
+    { ok: !!form.prioridad,              id: 'reg-prioridad-pills', etiqueta: 'Prioridad' },
+  ]
+  const siguiente   = obligatorios.find(c => !c.ok)
+  const completados = obligatorios.filter(c => c.ok).length
+  const destinoGuia = siguiente ? siguiente.id : 'reg-acciones'
+
+  // La barra flotante solo aparece cuando ni el siguiente campo ni los botones
+  // de guardar están a la vista — si ya se ven, no hace falta señalarlos.
+  const [guiaVisible, setGuiaVisible] = useState(false)
+  useEffect(() => {
+    if (cargandoFus || exito) return
+    const objetivo = document.getElementById(destinoGuia)
+    const acciones = document.getElementById('reg-acciones')
+    if (!objetivo || !acciones) return
+    const enVista = new Map()
+    const observer = new IntersectionObserver(entradas => {
+      entradas.forEach(e => enVista.set(e.target, e.isIntersecting))
+      setGuiaVisible(![...enVista.values()].some(Boolean))
+    })
+    observer.observe(objetivo)
+    observer.observe(acciones)
+    return () => observer.disconnect()
+  }, [destinoGuia, cargandoFus, exito])
 
   const prioridadOrden = ['Alta', 'Media', 'Baja']
   const prioridadIndex = prioridadOrden.indexOf(form.prioridad)
@@ -297,8 +373,7 @@ export default function RegistrarFUS() {
       return
     }
     if (!form.idMedioRecepcion) { setError('Selecciona un medio de recepción.'); return }
-    const medioSeleccionado = medios.find(m => String(m.id) === String(form.idMedioRecepcion))
-    if (medioSeleccionado?.nombreMedio === 'Otro' && !form.medioEspecificacion.trim()) {
+    if (medioEsOtro && !form.medioEspecificacion.trim()) {
       setError('Especifica el medio de recepción.')
       return
     }
@@ -319,7 +394,7 @@ export default function RegistrarFUS() {
       fd.append('descripcion',          form.descripcion)
       fd.append('contexto',             form.contexto)
       fd.append('idMedioRecepcion',     form.idMedioRecepcion)
-      fd.append('medioEspecificacion',  medioSeleccionado?.nombreMedio === 'Otro' ? form.medioEspecificacion.trim() : '')
+      fd.append('medioEspecificacion',  medioEsOtro ? form.medioEspecificacion.trim() : '')
       fd.append('prioridad',            form.prioridad)
       fd.append('criterios',            criteriosFinal.join(' | '))
       fd.append('fechaLimite', form.fechaLimite)
@@ -468,7 +543,7 @@ export default function RegistrarFUS() {
                   <select
                     id="reg-medio"
                     value={form.idMedioRecepcion}
-                    onChange={e => set('idMedioRecepcion', e.target.value)}
+                    onChange={e => elegirMedio(e.target.value)}
                     required
                   >
                     <option value="">Selecciona un medio</option>
@@ -485,20 +560,27 @@ export default function RegistrarFUS() {
                             name="medioQuick"
                             value={m.id}
                             checked={String(form.idMedioRecepcion) === String(m.id)}
-                            onChange={() => set('idMedioRecepcion', m.id)}
+                            onChange={() => elegirMedio(m.id)}
                           />
                           {m.nombreMedio}
                         </label>
                       ))}
                     </div>
                   )}
-                  {medios.find(m => String(m.id) === String(form.idMedioRecepcion))?.nombreMedio === 'Otro' && (
+                  {medioEsOtro && (
                     <input
+                      id="reg-medio-otro"
                       type="text"
                       className="medio-otro-input"
                       placeholder="Especifica el medio de recepción"
                       value={form.medioEspecificacion}
                       onChange={e => set('medioEspecificacion', e.target.value)}
+                      onKeyDown={e => {
+                        // Enter pasa a la descripción en vez de enviar el formulario.
+                        if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+                        e.preventDefault()
+                        if (form.medioEspecificacion.trim()) irA('reg-descripcion', { enfocar: true })
+                      }}
                     />
                   )}
                 </div>
@@ -650,7 +732,7 @@ export default function RegistrarFUS() {
               <div className="reg-row">
                 <label htmlFor="reg-prioridad">Seleccione la prioridad <span className="req">*</span></label>
                 <div className="prioridad-wrapper">
-                  <div className="prioridad-pills" style={{ '--prioridad-index': prioridadIndex >= 0 ? prioridadIndex : 0 }}>
+                  <div id="reg-prioridad-pills" className="prioridad-pills" style={{ '--prioridad-index': prioridadIndex >= 0 ? prioridadIndex : 0 }}>
                     <div className={`prioridad-glider${prioridadSeleccionada ? ` prioridad-${prioridadSeleccionada}` : ''}`} aria-hidden="true" />
                     {Object.entries(PRIORIDAD_INFO).map(([valor, info]) => (
                       <button
@@ -665,7 +747,7 @@ export default function RegistrarFUS() {
                     ))}
                   </div>
                   {form.prioridad && PRIORIDAD_INFO[form.prioridad] && (
-                    <div className={`prioridad-criterios prioridad-${PRIORIDAD_INFO[form.prioridad].color}`}>
+                    <div id="reg-prioridad-criterios" className={`prioridad-criterios prioridad-${PRIORIDAD_INFO[form.prioridad].color}`}>
                       <p className="criterios-hint">Selecciona los criterios que aplican:</p>
                       {PRIORIDAD_INFO[form.prioridad].criterios.map((texto) => {
                         const activo = form.criterios.includes(texto)
@@ -712,7 +794,7 @@ export default function RegistrarFUS() {
             {error && <p className="reg-error" role="alert">{error}</p>}
             {!enLinea && <p className="reg-error" role="alert">Sin conexión a internet — no se puede enviar en este momento.</p>}
 
-            <div className="reg-actions">
+            <div id="reg-acciones" className="reg-actions">
               <button type="button" className="btn-secondary" onClick={cancelar} disabled={loading || !hayAlgoQueLimpiar}>
                 Cancelar
               </button>
@@ -723,6 +805,31 @@ export default function RegistrarFUS() {
             </div>
           </form>}
         </div>
+
+        {/* Fuera de .reg-form-card a propósito: esa tarjeta tiene overflow:hidden,
+            que anularía el position:sticky respecto al scroll de la pantalla. */}
+        {!cargandoFus && !exito && (
+          <div className="reg-guia">
+            <div className={`reg-guia-bar${guiaVisible ? '' : ' reg-guia-oculta'}`}>
+              <span className="reg-guia-progreso">
+                <span className="reg-guia-puntos" aria-hidden="true">
+                  {obligatorios.map(c => <span key={c.id} className={`reg-guia-punto${c.ok ? ' reg-guia-punto-ok' : ''}`} />)}
+                </span>
+                {completados} de {obligatorios.length} obligatorios
+              </span>
+              <button
+                type="button"
+                className="reg-guia-btn"
+                onClick={() => irA(destinoGuia, { enfocar: !!siguiente })}
+              >
+                {siguiente ? `Siguiente: ${siguiente.etiqueta}` : 'Todo listo: ir a guardar'}
+                <svg className="reg-guia-flecha" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       </div>
     </AppLayout>

@@ -5,6 +5,7 @@ import ModalDescargarPDF from '../ModalDescargarPDF'
 import ComisionarModal from '../Comisionado/ComisionarModal'
 import AccionesValidacion from '../Comisionado/AccionesValidacion'
 import SeguimientoComisionadoFeed from '../Comisionado/SeguimientoComisionadoFeed'
+import ModalProrroga from './ModalProrroga'
 import PrioridadPills from './PrioridadPills'
 import { CampoDetalle as Row, ListaEvidencias as EvidenciaList } from './DetalleCampos'
 import PersonasYRespuestasCard from './PersonasYRespuestasCard'
@@ -41,8 +42,11 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onFusCha
   }, [ultimaNotifId, fusInicial.folio, fusInicial.id])
   const [mostrarModalPdf, setMostrarModalPdf] = useState(false)
   const [modalComisionar, setModalComisionar] = useState(false)
+  const [modalProrroga, setModalProrroga] = useState(false)
   const fus = fusData
   const esRolGestion = ['ROL1', 'EQUIPO_PARTICULAR'].includes(user?.rol)
+  // Solo el Particular dueño (el backend lo valida) y mientras el trámite siga abierto.
+  const puedeProrrogar = esRolGestion && fus.fechaLimite && fus.estatusParticular !== 'Concluido'
   const puedesTurnar = ['Registrado', 'Turnado'].includes(fus.estatusParticular)
   const puedesEditar = fus.estatusParticular === 'Registrado'
   const tieneActividad = fus.estatusParticular !== 'Registrado'
@@ -157,6 +161,14 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onFusCha
           <div className="det-section">
             <span className="det-section-legend det-section-legend-activity">Límite de respuesta</span>
             <div className="det-grid-2"><Row label="Fecha y hora" value={formatearFechaHora(fus.fechaLimite)} /></div>
+            {fus.estadoTemporalidad === 'Vencido' && (
+              <p className="det-vencido-aviso" role="alert">Esta solicitud está vencida.</p>
+            )}
+            {puedeProrrogar && (
+              <button type="button" className={`btn-prorroga${fus.estadoTemporalidad === 'Vencido' ? ' btn-prorroga-urgente' : ''}`} onClick={() => setModalProrroga(true)} data-analytics-event="INTERACTION" data-analytics-component="DETALLE_FUS_PRORROGA" data-analytics-action="OPEN">
+                Dar prórroga
+              </button>
+            )}
           </div>
         )}
 
@@ -192,6 +204,18 @@ export default function DetalleFUS({ fus: fusInicial, onTurnar, onBack, onFusCha
 
       {fus.idComisionado && !fus.tieneTurnado && <SeguimientoComisionadoFeed fusId={fus.id} folio={fus.folio} />}
       <AccionesValidacion user={user} fus={fus} setFusData={setFusData} tieneFacultad={puedeGestionarComisionados(user)} />
+      {modalProrroga && (
+        <ModalProrroga
+          fus={fus}
+          onClose={() => setModalProrroga(false)}
+          onConfirmado={data => {
+            setFusData(data)
+            onFusChange?.(data)
+            setModalProrroga(false)
+            toast.success('Prórroga registrada correctamente.')
+          }}
+        />
+      )}
       {modalComisionar && (
         <ComisionarModal
           fusId={fus.id}

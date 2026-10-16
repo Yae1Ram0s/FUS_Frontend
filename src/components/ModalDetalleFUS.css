@@ -183,6 +183,75 @@
 .mdet-seg-texto { margin: 0; font-size: .85rem; color: rgba(26, 47, 40, 0.80); line-height: 1.6; white-space: pre-wrap; }
 .mdet-seg-empty { font-size: .82rem; color: rgba(26, 47, 40, 0.45); margin: 0; }
 
+/* ── Modo resumen (con botón "Ver detalle completo") ── */
+.mdet-modal.com-modal.mdet-modal-resumen { width: 460px; }
+.mdet-resumen { display: flex; flex-direction: column; gap: 14px; }
+.mdet-resumen-solicitante { padding-bottom: 2px; }
+.mdet-resumen-pildoras { display: flex; flex-wrap: wrap; gap: 8px; }
+.mdet-pildora {
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+}
+.mdet-resumen .mdet-bloque { display: flex; flex-direction: column; gap: 6px; }
+.mdet-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.mdet-seg-texto.mdet-clamp { -webkit-line-clamp: 3; }
+.mdet-resumen-datos { display: flex; flex-wrap: wrap; gap: 8px; }
+.mdet-dato {
+  font-size: .78rem;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: rgba(26, 47, 40, 0.75);
+  background: rgba(35, 91, 78, 0.08);
+  border: 1px solid rgba(35, 91, 78, 0.14);
+}
+.mdet-dato b { color: #235b4e; font-weight: 800; }
+
+.mdet-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid rgba(35, 91, 78, 0.14);
+  background: rgba(255, 255, 255, 0.45);
+}
+.mdet-btn-secundario {
+  border: 1px solid rgba(35, 91, 78, 0.30);
+  background: transparent;
+  color: #235b4e;
+  border-radius: 999px;
+  padding: 10px 18px;
+  min-height: 42px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mdet-btn-secundario:hover { background: rgba(35, 91, 78, 0.08); }
+.mdet-btn-completo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: #9F2241;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 10px 20px;
+  min-height: 42px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(159, 34, 65, 0.30);
+}
+.mdet-btn-completo:hover { background: #82182f; }
+.mdet-btn-completo:focus-visible, .mdet-btn-secundario:focus-visible { outline: 2px solid #DDC9A3; outline-offset: 2px; }
+
 @media (max-width: 768px) {
   .mdet-modal.com-modal {
     width: 92vw;
@@ -200,6 +269,10 @@
 
   .mdet-seguimientos { margin-top: 14px; padding-top: 14px; }
   .mdet-seg-meta { flex-wrap: wrap; gap: 4px 10px; }
+
+  .mdet-modal.com-modal.mdet-modal-resumen { width: 92vw; }
+  .mdet-footer { padding: 10px 16px 14px; }
+  .mdet-btn-completo { flex: 1; justify-content: center; }
 }
 
 @media (max-width: 480px) {

@@ -41,7 +41,7 @@ async function instalarWebSocketFalso(page) {
 
 async function prepararSesion(page, responderNotificaciones) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, USUARIO)
   await instalarWebSocketFalso(page)
 

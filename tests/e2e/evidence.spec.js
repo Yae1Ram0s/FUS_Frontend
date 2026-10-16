@@ -10,7 +10,7 @@ const USUARIO = {
 
 async function prepararFormulario(page) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, USUARIO)
 
   await page.route(url => new URL(url).pathname.startsWith('/api/'), async route => {

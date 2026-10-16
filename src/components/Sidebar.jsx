@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { useAuth } from '../context/AuthContext'
 import PerfilModal from './PerfilModal'
 import './Sidebar.css'
@@ -151,8 +152,24 @@ const NAV_ADMIN = [
   { path: '/admin/otp', label: 'Códigos OTP', icon: ICON_SALUD },
 ]
 
+// El sidebar se vuelve a montar en cada pantalla (cada página trae su AppLayout):
+// la entrada animada solo se reproduce la primera vez de la sesión, no en
+// cada navegación.
+let sidebarYaAnimado = false
+
+const variantesMenu = {
+  hidden: {},
+  show: { transition: { delayChildren: 0.25, staggerChildren: 0.06 } },
+}
+const variantesOpcion = {
+  hidden: { opacity: 0, x: -18 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+}
+
 export default function Sidebar() {
   const { user } = useAuth()
+  const [animarEntrada] = useState(() => !sidebarYaAnimado)
+  useEffect(() => { sidebarYaAnimado = true }, [])
   const [perfilAbierto, setPerfilAbierto] = useState(false)
   const [perfilCerrando, setPerfilCerrando] = useState(false)
   const [perfilAncla, setPerfilAncla] = useState(null)
@@ -197,7 +214,12 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
+    <motion.aside
+      className="sidebar"
+      initial={animarEntrada ? { x: -48, opacity: 0 } : false}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
 
       {/* Usuario */}
       <button
@@ -210,7 +232,15 @@ export default function Sidebar() {
         data-analytics-component="SIDEBAR_PERFIL"
         data-analytics-action="OPEN"
       >
-        <div className="sidebar-avatar">{initials}</div>
+        <motion.div
+          className="sidebar-avatar"
+          initial={animarEntrada ? { scale: 0, rotate: -90 } : false}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 220, damping: 14, delay: animarEntrada ? 0.2 : 0 }}
+          whileHover={{ scale: 1.1, rotate: 6 }}
+        >
+          {initials}
+        </motion.div>
         <div className="sidebar-user-info">
           <span className="sidebar-user-name">{user?.nombre || user?.email}</span>
           <span className="sidebar-user-role">{user?.unidadAdministrativa || 'Sin unidad asignada'}</span>
@@ -218,16 +248,24 @@ export default function Sidebar() {
       </button>
 
       {/* Navegación */}
-      <nav className="sidebar-nav">
+      <motion.nav
+        className="sidebar-nav"
+        variants={variantesMenu}
+        initial={animarEntrada ? 'hidden' : false}
+        animate="show"
+      >
         <p className="sidebar-section-label">Menú principal</p>
         {items.map((item, idx) => {
           const isActive = item.consultar
             ? location.pathname === item.path && location.search.includes('modo=lista')
             : location.pathname === item.path
           return (
-          <button
+          <motion.button
             key={`${item.path}-${idx}`}
             className={`sidebar-item${isActive ? ' sidebar-item-active' : ''}`}
+            variants={variantesOpcion}
+            whileHover={{ x: 4 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => handleNav(item)}
             title={item.label}
             data-analytics-event="INTERACTION"
@@ -237,10 +275,10 @@ export default function Sidebar() {
           >
             <span className="sidebar-item-icon">{item.icon}</span>
             <span className="sidebar-item-label">{item.label}</span>
-          </button>
+          </motion.button>
           )
         })}
-      </nav>
+      </motion.nav>
 
       <PerfilModal
         abierto={perfilAbierto}
@@ -250,6 +288,6 @@ export default function Sidebar() {
         onClose={cerrarPerfil}
         onCierreCompleto={finalizarCierrePerfil}
       />
-    </aside>
+    </motion.aside>
   )
 }

@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import institutionalLogo from '../assets/Logos_P_Hacienda_ANAM.png'
 import NotificacionesBell from './NotificacionesBell'
 import { useAuth } from '../context/AuthContext'
 import './Header.css'
 
 const PROFILE_ANIMATION_MS = 220
+
+// El header se vuelve a montar en cada pantalla: la entrada solo se reproduce
+// la primera vez de la sesión.
+let headerYaAnimado = false
 
 export default function Header() {
   const [profileMounted, setProfileMounted] = useState(false)
@@ -13,6 +18,8 @@ export default function Header() {
   const profileRef = useRef(null)
   const closeTimerRef = useRef(null)
   const { user, logout } = useAuth()
+  const [animarEntrada] = useState(() => !headerYaAnimado)
+  useEffect(() => { headerYaAnimado = true }, [])
 
   const initials = (user?.nombre || user?.email || 'U')
     .split(' ')
@@ -68,7 +75,12 @@ export default function Header() {
   }
 
   return (
-    <header className="scs-header">
+    <motion.header
+      className="scs-header"
+      initial={animarEntrada ? { y: -24, opacity: 0 } : false}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="header-brand header-brand-mobile">
         <img src="/Logo SCS 2026_2.png" alt="" className="header-logo-img" />
         <span className="header-title">Sistema de Control de Solicitudes</span>
@@ -169,6 +181,6 @@ export default function Header() {
           </svg>
         </button>
       </div>
-    </header>
+    </motion.header>
   )
 }

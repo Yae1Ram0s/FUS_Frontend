@@ -14,9 +14,6 @@ import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
 const PRIORIDAD_COLORES = { Alta: '#b91c1c', Media: '#92400e', Baja: '#15803d' }
-// Todo lo que no sea "Concluido" — usado para que el KPI "Prioridad alta"
-// (que cuenta solo lo sin concluir) lleve exactamente a esos mismos folios.
-const ESTADOS_NO_CONCLUIDO = ['Registrado', 'Turnado', 'En_seguimiento', 'Atendido', 'Pendiente_validacion', 'Rechazado']
 
 const ICON_FOLDER = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -45,9 +42,24 @@ const ICON_ALARM = (
     <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3 2 6"/><path d="M22 6l-3-3"/>
   </svg>
 )
-const ICON_FLAG = (
+// Turnados — flecha que "reenvía" la solicitud al Titular.
+const ICON_FORWARD = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+    <polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
+  </svg>
+)
+// Por validar — portapapeles con palomita (falta la validación del Particular).
+const ICON_VALIDAR = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <path d="m9 14 2 2 4-4"/>
+  </svg>
+)
+// Rechazados — círculo con cruz.
+const ICON_RECHAZO = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
   </svg>
 )
 const ICON_HOURGLASS = (
@@ -69,24 +81,28 @@ const ICON_INFO = (
   </svg>
 )
 
-/** Trae todas las páginas de un listado paginado (el backend limita page_size a 100). */
+/** Trae todas las páginas de un listado paginado (el backend limita page_size a 100).
+ *  Devuelve también los `conteos` de la primera página: son los mismos que ven los
+ *  chips de Consultar FUS, así las tarjetas nunca se contradicen con ellos. */
 async function fetchAll(url, extraParams = {}, signal) {
   const page_size = 100
   let page = 1
   let all = []
   let total = Infinity
+  let conteos = null
   while (all.length < total) {
     const r = await api.get(url, {
       params: { ...extraParams, page, page_size },
       signal,
     })
     const results = r.data.results || []
+    if (page === 1) conteos = r.data.conteos ?? null
     total = r.data.total ?? results.length
     all = all.concat(results)
     if (results.length === 0) break
     page++
   }
-  return all
+  return { items: all, conteos }
 }
 
 function diasDesde(iso, ahora) {
@@ -198,15 +214,18 @@ export default function DashboardROL1() {
   const {
     // ahora:0 solo se usa antes de la primera carga, mientras fusData sigue
     // vacío y la pantalla muestra el Spinner — su valor real es irrelevante.
-    data: dashboard = { fusData: [], ahora: 0 },
+    data: dashboard = { fusData: [], conteos: null, ahora: 0 },
     isFetching: cargando,
     error: errorCarga,
     refetch: reintentar,
   } = useQuery({
     queryKey: ['dashboardRol1'],
-    queryFn: async ({ signal }) => ({ fusData: await fetchAll('/fus/', {}, signal), ahora: Date.now() }),
+    queryFn: async ({ signal }) => {
+      const { items, conteos } = await fetchAll('/fus/', {}, signal)
+      return { fusData: items, conteos, ahora: Date.now() }
+    },
   })
-  const { fusData, ahora } = dashboard
+  const { fusData, conteos, ahora } = dashboard
 
   // En vivo: cualquier notificación ligada a un FUS (turnar, atendido,
   // comisionar, concluir, rechazar, SLA por vencer, etc.) refresca el
@@ -223,26 +242,21 @@ export default function DashboardROL1() {
   }, [reintentar, ultimaNotifFolio, ultimaNotifId])
 
   const irAConsultar = (estatus) => navigate(`/rol1/consultar-fus?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
-  // "Prioridad alta" en el KPI cuenta solo lo que sigue sin concluir (ver
-  // prioridadAltaPendiente más abajo) — sin este mismo filtro de estatus, el
-  // clic llevaba a TODOS los de prioridad alta (incluyendo ya concluidos),
-  // mostrando más folios de los que el número de la tarjeta prometía.
-  const irAConsultarPrioridad = (prioridad) => navigate(
-    `/rol1/consultar-fus?modo=lista&prioridad=${encodeURIComponent(prioridad)}&filtro=${encodeURIComponent(ESTADOS_NO_CONCLUIDO.join(','))}`
-  )
   const irAlFus = (folio) => navigate(`/rol1/consultar-fus?folio=${encodeURIComponent(folio)}`)
 
-  /* ── 1. KPIs principales ── */
-  const totalFUS     = fusData.length
-  const pendientes   = fusData.filter(f => f.estatusParticular === 'Registrado').length
-  // KPI "En seguimiento" (tarjeta principal): cuenta nada más el estatus
-  // 'Atendido', para que el número coincida exactamente con lo que muestra
-  // el filtro al que lleva el clic.
-  const atendidos    = fusData.filter(f => f.estatusParticular === 'Atendido').length
-  const finalizados  = fusData.filter(f => f.estatusParticular === 'Concluido').length
+  /* ── 1. KPIs principales — una tarjeta por cada chip principal de Consultar FUS ── */
+  // Los números vienen del backend (`conteos` de /fus/, la misma fuente que
+  // los chips), no se recalculan aquí sobre `fusData`: cada FUS cuenta en un
+  // solo estatus (el que muestra su tarjeta), así que las tarjetas suman el
+  // total y tarjeta y chip siempre dicen lo mismo. Sin `conteos` (respuesta
+  // sin esa clave) se cae al total de lo cargado.
+  const conteoEstatus = conteos?.estatus ?? {}
+  const totalFUS     = conteos?.total ?? fusData.length
+  const finalizados  = conteoEstatus.Concluido ?? 0
 
-  const noConcluidos = fusData.filter(f => f.estatusParticular !== 'Concluido')
-  const prioridadAltaPendiente = noConcluidos.filter(f => f.prioridad === 'Alta').length
+  // "Concluido" según el estatus que muestra la tarjeta del FUS (estatusVisual),
+  // el mismo criterio de los chips.
+  const noConcluidos = fusData.filter(f => (f.estatusVisual || f.estatusParticular) !== 'Concluido')
 
   /* ── Antigüedad de solicitudes (equipo del particular) ── */
   const antiguedadBuckets = [
@@ -288,12 +302,18 @@ export default function DashboardROL1() {
 
   /* ── Rediseño "liquid glass" (ambos dashboards, ver JSX final) — misma lógica de
      datos, solo se reempaqueta para el nuevo layout visual. ── */
+  // Mismo orden y mismas etiquetas que los 7 chips principales de Consultar FUS
+  // (Todos · Registrado · Turnado · En seguimiento · Por validar · Rechazado ·
+  // Concluido); cada clic abre la lista con ese chip. Las claves son las del
+  // catálogo: el chip "En seguimiento" es 'Atendido'.
   const kpis2 = [
-    { icon: ICON_STACK,  label: 'Total de FUS',   sub: 'Todas las solicitudes',      value: totalFUS,              color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
-    { icon: ICON_FOLDER, label: 'Registrados',    sub: 'Registradas, sin turnar',    value: pendientes,            color: 'amber', onClick: () => irAConsultar('Registrado'), trackId: 'registrados' },
-    { icon: ICON_TARGET, label: 'En seguimiento', sub: 'En trámite, sin concluir',   value: atendidos,             color: 'blue',  onClick: () => irAConsultar('Atendido'), trackId: 'seguimiento' },
-    { icon: ICON_CHECK,  label: 'Concluidos',     sub: 'Atendidos y cerrados',       value: finalizados,           color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
-    { icon: ICON_FLAG,   label: 'Prioridad alta', sub: 'Sin concluir',               value: prioridadAltaPendiente, color: 'red',  onClick: () => irAConsultarPrioridad('Alta'), trackId: 'prioridad-alta' },
+    { icon: ICON_STACK,   label: 'Total de FUS',   sub: 'Todas las solicitudes',     value: totalFUS,                                color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
+    { icon: ICON_FOLDER,  label: 'Registrados',    sub: 'Registradas, sin turnar',   value: conteoEstatus.Registrado ?? 0,           color: 'amber', onClick: () => irAConsultar('Registrado'), trackId: 'registrados' },
+    { icon: ICON_FORWARD, label: 'Turnados',       sub: 'Sin primera respuesta',     value: conteoEstatus.Turnado ?? 0,              color: 'blue',  onClick: () => irAConsultar('Turnado'), trackId: 'turnados' },
+    { icon: ICON_TARGET,  label: 'En seguimiento', sub: 'En trámite, sin concluir',  value: conteoEstatus.Atendido ?? 0,             color: 'blue',  onClick: () => irAConsultar('Atendido'), trackId: 'seguimiento' },
+    { icon: ICON_VALIDAR, label: 'Por validar',    sub: 'Esperan tu validación',     value: conteoEstatus.Pendiente_validacion ?? 0, color: 'amber', onClick: () => irAConsultar('Pendiente_validacion'), trackId: 'por-validar' },
+    { icon: ICON_RECHAZO, label: 'Rechazados',     sub: 'Esperan nueva respuesta',   value: conteoEstatus.Rechazado ?? 0,            color: 'red',   onClick: () => irAConsultar('Rechazado'), trackId: 'rechazados' },
+    { icon: ICON_CHECK,   label: 'Concluidos',     sub: 'Atendidos y cerrados',      value: finalizados,                             color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
   ]
 
   /* Tendencia por unidad administrativa — cuenta real de FUS por la unidad del
@@ -398,7 +418,7 @@ export default function DashboardROL1() {
                 <p>Panorama ejecutivo del Sistema de Control de Solicitudes</p>
               </header>
 
-              <div className="kpi2-row">
+              <div className="kpi2-row kpi2-row--7">
                 {kpis2.map((k, i) => <Kpi2Card key={k.label} {...k} index={i} />)}
               </div>
 
@@ -536,7 +556,7 @@ export default function DashboardROL1() {
               <p>Panorama ejecutivo del Sistema de Control de Solicitudes</p>
             </header>
 
-            <div className="kpi2-row">
+            <div className="kpi2-row kpi2-row--7">
               {kpis2.map((k, i) => <Kpi2Card key={k.label} {...k} index={i} />)}
             </div>
 

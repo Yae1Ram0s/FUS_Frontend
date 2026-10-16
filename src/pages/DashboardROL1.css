@@ -358,6 +358,30 @@
 .kpi2-copy .kpi2-sub { margin-bottom: 0; }
 .kpi2-card:hover .kpi2-value { transform: scale(1.05); }
 
+/* Dashboards de ROL1 (7 tarjetas) y ROL2 (6): una tarjeta por cada chip
+   principal de su lista — Consultar FUS: Todos · Registrado · Turnado · En
+   seguimiento · Por validar · Rechazado · Concluido; Solicitudes turnadas:
+   Todos · Recibido · En seguimiento · Pendiente de validación · Rechazado ·
+   Concluido. Modificadores aparte: .kpi2-row lo comparten otros dashboards y
+   reportes con 5 tarjetas. El número va siempre al fondo, así que si algún
+   texto de apoyo ocupa dos líneas los números de la fila siguen alineados. */
+:is(.kpi2-row--7, .kpi2-row--6) .kpi2-card { display: flex; flex-direction: column; }
+:is(.kpi2-row--7, .kpi2-row--6) .kpi2-value { margin-top: auto; }
+@media (min-width: 769px) {
+  .kpi2-row--7 { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .kpi2-row--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  :is(.kpi2-row--7, .kpi2-row--6) .kpi2-card { padding: 16px; }
+  :is(.kpi2-row--7, .kpi2-row--6) .kpi2-link { top: 16px; right: 16px; }
+}
+@media (min-width: 769px) and (max-width: 1299px) {
+  /* Con 6 o 7 tarjetas, 3 columnas: las 6 reparten parejo 3 + 3; con 7,
+     "Total" ocupa la primera fila y los seis estatus se acomodan 3 + 3. */
+  :is(.kpi2-row--7, .kpi2-row--6) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi2-row--7 .kpi2-card:first-child { grid-column: 1 / -1; }
+  :is(.kpi2-row--7, .kpi2-row--6) .kpi2-card { padding: 20px; }
+  :is(.kpi2-row--7, .kpi2-row--6) .kpi2-link { top: 20px; right: 20px; }
+}
+
 .dash2-grid-tendencia { display: grid; grid-template-columns: 1fr 260px; gap: 14px; }
 .dash2-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .dash2-grid-bottom-single { grid-template-columns: minmax(0, 1fr); }

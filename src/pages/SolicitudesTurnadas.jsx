@@ -15,7 +15,6 @@ import EvidenciaItem from '../components/FUS/EvidenciaItem'
 import PrioridadPills from '../components/FUS/PrioridadPills'
 import FechaInput from '../components/FechaInput'
 import api from '../api/api'
-import { useEstatus } from '../hooks/useEstatus'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useToast } from '../context/ToastContext'
@@ -23,7 +22,6 @@ import { useAuth } from '../context/AuthContext'
 import { useAnalytics } from '../analytics'
 import { puedeGestionarComisionados, puedeComisionar } from '../utils/permisos'
 import { obtenerIniciales } from '../utils/personas'
-import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import {
   formatearFechaHora,
   formatearFechaISO as fmtFechaCorta,
@@ -35,6 +33,33 @@ import { truncarTexto } from '../utils/texto'
 import './SolicitudesTurnadas.css'
 
 const PAGE_SIZE = 30
+
+// Chips de estatus en orden de flujo (Recibido → … → Concluido). Cada turnado
+// cae en UNO solo — su estatusTitular, el mismo que muestra su tarjeta — así
+// que los chips suman el total. "Vencido" / "Por vencer" no son estatus sino
+// plazo: cruzan los estatus (un turnado rechazado también puede estar
+// vencido) y por eso son un grupo aparte.
+const CHIPS_ESTATUS = [
+  { clave: 'Recibido', nombre: 'Recibido' },
+  { clave: 'En_seguimiento', nombre: 'En seguimiento' },
+  { clave: 'Pendiente_validacion', nombre: 'Pendiente de validación' },
+  { clave: 'Rechazado', nombre: 'Rechazado' },
+  { clave: 'Concluido', nombre: 'Concluido' },
+]
+const PLAZOS = ['Vencido', 'PorVencer']
+
+// Orden de la bandeja — mismo criterio que el backend (MisTurnadosView):
+// prioridad Alta primero y, dentro de cada grupo, lo que cambió más
+// recientemente arriba. Un turnado que cambia en vivo se coloca al inicio de
+// su grupo (si es Alta, al inicio de la lista) sin esperar a recargar.
+function colocarAlInicioDeSuGrupo(items, turnado) {
+  const esAlta = t => t.idFus?.prioridad === 'Alta'
+  const resto = items.filter(item => item.id !== turnado.id)
+  if (esAlta(turnado)) return [turnado, ...resto]
+  const primerNoAlta = resto.findIndex(item => !esAlta(item))
+  const idx = primerNoAlta === -1 ? resto.length : primerNoAlta
+  return [...resto.slice(0, idx), turnado, ...resto.slice(idx)]
+}
 
 function combinarPaginasTurnadas(estadoAnterior, paginaNueva) {
   if (!paginaNueva.append) return paginaNueva
@@ -269,37 +294,6 @@ function EvidenciaList({ evidencias }) {
   return (
     <div className="ev-lista">
       {evidencias.map(ev => <EvidenciaItem key={ev.id} evidencia={ev} />)}
-    </div>
-  )
-}
-
-/* ── Prioridad — pills de solo lectura ── */
-/* ── Chip "Prioridad" — el chip visible es un .filtro-chip normal; el
-   catálogo Alta/Media/Baja lo abre un <select> nativo superpuesto e
-   invisible, así en móvil se ve el picker propio del dispositivo (100%
-   responsivo, no hay nada que mantener). Reusa PRIORIDAD_NIVELES. ── */
-// `conteos` (opcional): { Alta: n, Media: n, Baja: n } — cuántos de los ya
-// cargados coinciden con cada nivel, para mostrarlo junto a la etiqueta.
-function PrioridadFiltroChip({ valor, onChange, conteos }) {
-  return (
-    <div className="prioridad-filtro-wrap">
-      <button type="button" className={`filtro-chip filtro-chip-alta${valor ? ' filtro-chip-active' : ''}`} tabIndex={-1}>
-        {valor ? `Prioridad: ${valor}` : 'Prioridad'}
-        {conteos && <span className="filtro-chip-count">{valor ? (conteos[valor] || 0) : Object.values(conteos).reduce((a, b) => a + b, 0)}</span>}
-      </button>
-      <select
-        className="prioridad-filtro-select"
-        value={valor}
-        onChange={e => onChange(e.target.value)}
-        aria-label="Filtrar por prioridad"
-      >
-        <option value="">Prioridad</option>
-        {PRIORIDAD_NIVELES.map(p => (
-          <option key={p.valor} value={p.valor}>
-            {conteos ? `${p.valor} (${conteos[p.valor] || 0})` : p.valor}
-          </option>
-        ))}
-      </select>
     </div>
   )
 }
@@ -566,7 +560,9 @@ function TurnadoCard({ t, activo, onClick, highlight, onVerHistorial }) {
         <strong className="fus-folio">{fus.folio ? <FolioTexto folio={fus.folio} /> : `Turnado #${t.id}`}</strong>
         <span className="fus-card-badges">
           <Badge estatus={t.estatusTitular} />
-          {fus.estadoTemporalidad && <Badge estatus={fus.estadoTemporalidad} />}
+          {/* Si MI parte ya está concluida, el plazo del FUS deja de aplicarme
+              aunque otras personas sigan pendientes (igual que el chip Plazo). */}
+          {fus.estadoTemporalidad && t.estatusTitular !== 'Concluido' && <Badge estatus={fus.estadoTemporalidad} />}
         </span>
       </div>
       <p className="fus-meta">
@@ -608,15 +604,17 @@ export default function SolicitudesTurnadas() {
   const [searchParams, setSearchParams] = useSearchParams()
   const folioParam = searchParams.get('folio')
 
-  const { estatus: estatusROL2 } = useEstatus('TITULAR')
   const notifCtx = useNotificaciones()
   const toast = useToast()
 
   const [busqueda,     setBusqueda]     = useState('')
   // Varios chips de estatus a la vez (mismo criterio que ConsultarFUS): lista
-  // combinada con OR en el backend, viaja en la URL como un string con comas.
-  const [filtro,       setFiltro]       = useState(() => (searchParams.get('filtro') || '').split(',').filter(Boolean))
-  const [prioridadFiltro, setPrioridadFiltro] = useState(() => searchParams.get('prioridad') || '')
+  // combinada con OR en el backend, viaja en la URL como un string con comas
+  // que también puede traer Vencido/PorVencer (enlaces viejos): esos van
+  // aparte, al filtro de plazo.
+  const filtrosURL = () => (searchParams.get('filtro') || '').split(',').filter(Boolean)
+  const [filtro,       setFiltro]       = useState(() => filtrosURL().filter(f => !PLAZOS.includes(f)))
+  const [plazo,        setPlazo]        = useState(() => filtrosURL().find(f => PLAZOS.includes(f)) || '')
   const [seleccionado, setSeleccionado] = useState(null)
   // Móvil: turnado que quedó "en pausa" al abrir la barra rápida de lista
   // desde el detalle (ver panel-toggle) — si se cierra esa lista sin elegir
@@ -631,13 +629,13 @@ export default function SolicitudesTurnadas() {
   // Firma de "qué se está pidiendo": al ser parte de la queryKey, cambiar
   // cualquiera de estos valores aísla la consulta en su propia entrada de
   // caché (siempre arranca en página 1) — ya no hace falta el efecto manual
-  // que antes reiniciaba la paginación al cambiar filtros. Estatus y
-  // prioridad SÍ viajan al backend (ver construirParams) — filtrarlos en el
-  // cliente sobre `lista` solo filtraba lo ya cargado en la página actual:
-  // con más de una página de resultados, un chip podía mostrar "0
-  // resultados" aunque sí hubiera turnados con ese estatus/prioridad, solo
-  // que en otra página todavía sin cargar.
-  const queryKey = ['turnadosListado', { folioParam, busquedaDeb, filtro, prioridadFiltro }]
+  // que antes reiniciaba la paginación al cambiar filtros. Estatus y plazo
+  // SÍ viajan al backend (ver construirParams) — filtrarlos en el cliente
+  // sobre `lista` solo filtraba lo ya cargado en la página actual: con más
+  // de una página de resultados, un chip podía mostrar "0 resultados" aunque
+  // sí hubiera turnados con ese estatus/plazo, solo que en otra página
+  // todavía sin cargar.
+  const queryKey = ['turnadosListado', { folioParam, busquedaDeb, filtro, plazo }]
   const construirParams = useCallback((page) => {
     const params = { page, page_size: PAGE_SIZE }
     if (folioParam) {
@@ -645,10 +643,10 @@ export default function SolicitudesTurnadas() {
     } else {
       if (busquedaDeb) params.search = busquedaDeb
       if (filtro.length) params.estatusTitular = filtro.join(',')
-      if (prioridadFiltro) params.prioridad = prioridadFiltro
+      if (plazo) params.plazo = plazo
     }
     return params
-  }, [busquedaDeb, folioParam, filtro, prioridadFiltro])
+  }, [busquedaDeb, folioParam, filtro, plazo])
 
   const {
     data: resultado = { items: [], total: 0, page: 1, append: false, match: null, conteos: null },
@@ -672,7 +670,7 @@ export default function SolicitudesTurnadas() {
         conteos: respuesta.data.conteos || null,
       }
     },
-    // Cada combinación de busqueda/filtro/prioridad tiene su propia entrada
+    // Cada combinación de busqueda/filtro/plazo tiene su propia entrada
     // de caché (queryKey) — con más margen que el staleTime/gcTime global
     // (30s / 5min) para que volver a un término ya buscado (o retroceder el
     // texto a uno anterior) se sienta instantáneo, sin golpear el backend de
@@ -687,25 +685,26 @@ export default function SolicitudesTurnadas() {
   const pagina = resultado.page
   const totalItems = resultado.total
 
-  // El backend ya filtra por estatus/prioridad (ver construirParams) — no
+  // El backend ya filtra por estatus/plazo (ver construirParams) — no
   // hace falta volver a filtrar aquí, `lista` ya viene correcta. Se
   // mantiene el nombre `listaFiltrada` nada más para no tocar el JSX de
   // abajo que ya lo usa.
   const listaFiltrada = lista
 
-  // Conteos por chip: los calcula el backend sobre TODA la bandeja (mismo
-  // search/scope, pero sin el filtro de chip que esté activo) — antes se
-  // contaban aquí sobre `lista`, que ya viene filtrada por el chip
-  // seleccionado, así que en cuanto se elegía uno los DEMÁS chips se veían
-  // en 0 aunque sí hubiera resultados. `?? {}` cubre el primer render antes
-  // de que responda la API.
+  // Conteos por chip: los calcula el backend (mismo search/scope). Cada grupo
+  // cuenta sobre el filtro del OTRO, no sobre el suyo — antes se contaban
+  // aquí sobre `lista`, ya filtrada por el chip seleccionado, y los DEMÁS
+  // chips se veían en 0 aunque sí hubiera resultados. Los de estatus suman
+  // `total` (cada turnado está en uno solo); los de plazo cruzan estatus.
+  // `?? {}` cubre el primer render antes de que responda la API.
   const conteoEstatus = resultado.conteos?.estatus ?? {}
-  const conteoPrioridad = resultado.conteos?.prioridad ?? {}
+  const conteoPlazo = resultado.conteos?.plazo ?? {}
+  const conteoTotal = resultado.conteos?.total ?? lista.length
 
   const procesarCargaExitosa = useCallback(resultado => {
     if (resultado.match) {
       setFiltro([])
-      setPrioridadFiltro('')
+      setPlazo('')
       setBusqueda('')
       setSeleccionado(resultado.match)
       setHighlightId(resultado.match.id)
@@ -761,10 +760,7 @@ export default function SolicitudesTurnadas() {
       const idx = prev.items.findIndex(t => t.idFus?.folio === notif.fusFolio)
       if (idx === -1) return prev
       const item = { ...prev.items[idx], idFus: { ...prev.items[idx].idFus, slaPorVencer: true } }
-      return {
-        ...prev,
-        items: [item, ...prev.items.slice(0, idx), ...prev.items.slice(idx + 1)],
-      }
+      return { ...prev, items: colocarAlInicioDeSuGrupo(prev.items, item) }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs` usado en todo el proyecto
   }, [ultimaNotifId])
@@ -782,20 +778,21 @@ export default function SolicitudesTurnadas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ultimaNotifId` ya es el proxy primitivo estable de `notifCtx?.notifs`
   }, [ultimaNotifId])
 
-  // Selección única: elegir un chip reemplaza cualquier selección previa;
-  // volver a tocar el que ya está activo lo quita (vuelve a "Todos").
-  const toggleFiltro = f => setFiltro(prev => (
-    prev.length === 1 && prev[0] === f ? [] : [f]
-  ))
+  const limpiarFiltros = () => { setFiltro([]); setPlazo('') }
+
+  // Estatus: selección única — elegir un chip reemplaza cualquier selección
+  // previa; volver a tocar el que ya está activo lo quita. Plazo es un grupo
+  // independiente: se combina con el estatus elegido en vez de reemplazarlo.
+  const toggleFiltro = f => setFiltro(prev => (prev.length === 1 && prev[0] === f ? [] : [f]))
+  const togglePlazo = p => setPlazo(prev => (prev === p ? '' : p))
 
   /* ── Resize panel izquierdo ── */
-  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')) || Boolean(searchParams.get('prioridad')))
+  const [panelAbierto, setPanelAbierto] = useState(() => searchParams.get('modo') === 'lista' || Boolean(searchParams.get('filtro')))
 
   useEffect(() => {
-    if (searchParams.get('filtro') || searchParams.get('prioridad')) {
+    if (searchParams.get('filtro')) {
       const next = new URLSearchParams(searchParams)
       next.delete('filtro')
-      next.delete('prioridad')
       setSearchParams(next, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe ejecutarse una vez al montar, para limpiar los params iniciales de la URL
@@ -868,13 +865,13 @@ export default function SolicitudesTurnadas() {
 
             <div className="left-filtros">
               <button
-                className={`filtro-chip${filtro.length === 0 ? ' filtro-chip-active' : ''}`}
-                onClick={() => setFiltro([])}
+                className={`filtro-chip${filtro.length === 0 && !plazo ? ' filtro-chip-active' : ''}`}
+                onClick={limpiarFiltros}
               >
                 Todos
-                <span className="filtro-chip-count">{lista.length}</span>
+                <span className="filtro-chip-count">{conteoTotal}</span>
               </button>
-              {estatusROL2.map(e => (
+              {CHIPS_ESTATUS.map(e => (
                 <button
                   key={e.clave}
                   className={`filtro-chip filtro-chip-${e.clave.toLowerCase().replace('_', '-')}${filtro.includes(e.clave) ? ' filtro-chip-active' : ''}`}
@@ -884,38 +881,21 @@ export default function SolicitudesTurnadas() {
                   <span className="filtro-chip-count">{conteoEstatus[e.clave] || 0}</span>
                 </button>
               ))}
-              {/* Rechazado/Pendiente_validacion viven en FUS.estatusParticular, no en
-                  Turnado.estatusTitular (por eso no vienen en estatusROL2 = TITULAR) —
-                  MisTurnadosView los reconoce igual vía el mismo parámetro `estatusTitular`. */}
+              <span className="filtros-grupo-label" aria-hidden="true">Plazo</span>
               <button
-                className={`filtro-chip filtro-chip-pendiente-validacion${filtro.includes('Pendiente_validacion') ? ' filtro-chip-active' : ''}`}
-                onClick={() => toggleFiltro('Pendiente_validacion')}
-              >
-                Pendiente de validación
-                <span className="filtro-chip-count">{conteoEstatus.Pendiente_validacion || 0}</span>
-              </button>
-              <button
-                className={`filtro-chip filtro-chip-rechazado${filtro.includes('Rechazado') ? ' filtro-chip-active' : ''}`}
-                onClick={() => toggleFiltro('Rechazado')}
-              >
-                Rechazados
-                <span className="filtro-chip-count">{conteoEstatus.Rechazado || 0}</span>
-              </button>
-              <button
-                className={`filtro-chip filtro-chip-vencido${filtro.includes('Vencido') ? ' filtro-chip-active' : ''}`}
-                onClick={() => toggleFiltro('Vencido')}
+                className={`filtro-chip filtro-chip-vencido${plazo === 'Vencido' ? ' filtro-chip-active' : ''}`}
+                onClick={() => togglePlazo('Vencido')}
               >
                 Vencido
-                <span className="filtro-chip-count">{conteoEstatus.Vencido || 0}</span>
+                <span className="filtro-chip-count">{conteoPlazo.Vencido || 0}</span>
               </button>
               <button
-                className={`filtro-chip filtro-chip-porvencer${filtro.includes('PorVencer') ? ' filtro-chip-active' : ''}`}
-                onClick={() => toggleFiltro('PorVencer')}
+                className={`filtro-chip filtro-chip-porvencer${plazo === 'PorVencer' ? ' filtro-chip-active' : ''}`}
+                onClick={() => togglePlazo('PorVencer')}
               >
                 Por vencer
-                <span className="filtro-chip-count">{conteoEstatus.PorVencer || 0}</span>
+                <span className="filtro-chip-count">{conteoPlazo.PorVencer || 0}</span>
               </button>
-              <PrioridadFiltroChip valor={prioridadFiltro} onChange={setPrioridadFiltro} conteos={conteoPrioridad} />
             </div>
 
             {errorCarga && lista.length > 0 && (
@@ -943,7 +923,7 @@ export default function SolicitudesTurnadas() {
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                   </svg>
                   <p className="empty-state-title">Sin asignaciones</p>
-                  <p className="empty-state-sub">{busqueda || filtro.length > 0 ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
+                  <p className="empty-state-sub">{busqueda || filtro.length > 0 || plazo ? 'Ningún FUS coincide con tu búsqueda.' : 'No tienes solicitudes turnadas por atender.'}</p>
                 </div>
               )}
               {listaFiltrada.map(t => (

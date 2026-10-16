@@ -25,7 +25,7 @@ const CASOS = [
 
 async function prepararRol(page, rol) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, {
     id: 1000 + CASOS.findIndex(caso => caso.rol === rol),
     email: `prueba.${rol.toLowerCase()}@anam.gob.mx`,

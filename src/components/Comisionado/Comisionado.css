@@ -9,9 +9,7 @@
   align-items: center;
   justify-content: center;
   z-index: 20000;
-  animation: com-fade-in 150ms ease;
 }
-@keyframes com-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 .com-modal {
   width: 420px;
@@ -30,12 +28,7 @@
   box-shadow:
     0 24px 60px rgba(10, 30, 20, 0.30),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
-  animation: com-modal-in 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
   color: #1a2f28;
-}
-@keyframes com-modal-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .com-modal-top { display: flex; align-items: center; justify-content: space-between; }

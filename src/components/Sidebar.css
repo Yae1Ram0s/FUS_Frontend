@@ -106,7 +106,9 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: all 200ms ease-in-out;
+  /* Solo color/fondo/sombra: `transform` lo anima Motion (hover/entrada) y una
+     transición CSS encima lo haría ir con retraso. */
+  transition: color 200ms ease-in-out, background 200ms ease-in-out, box-shadow 200ms ease-in-out;
   box-shadow: none;
 }
 .sidebar-item:hover {

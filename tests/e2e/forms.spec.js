@@ -9,7 +9,7 @@ const USUARIO = {
 
 async function prepararFormulario(page, responderGuardado) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, USUARIO)
 
   await page.route(url => new URL(url).pathname.startsWith('/api/'), async route => {
@@ -78,6 +78,6 @@ test('un error del servidor conserva los campos y permite volver a intentar', as
   await expect(page.getByPlaceholder(/Antecedentes/)).toHaveValue(
     'Contexto que no debe perderse si falla el servidor.',
   )
-  await expect(page.getByPlaceholder('Nombre completo')).toHaveValue('Solicitante de prueba')
+  await expect(page.getByPlaceholder('Nombre completo')).toHaveValue('Solicitante De Prueba')
   await expect(page.getByRole('button', { name: 'Guardar solicitud' })).toBeEnabled()
 })

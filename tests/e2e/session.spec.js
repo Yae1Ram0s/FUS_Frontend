@@ -9,7 +9,7 @@ const USUARIO = {
 
 async function abrirSesionGuardada(page) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, USUARIO)
 }
 
@@ -77,6 +77,6 @@ test('un fallo temporal de renovación no expulsa al usuario', async ({ page }) 
   await expect(page.getByText('No se pudo cargar el dashboard.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible()
   await expect
-    .poll(() => page.evaluate(() => sessionStorage.getItem('scs_user')))
+    .poll(() => page.evaluate(() => localStorage.getItem('scs_user')))
     .not.toBeNull()
 })

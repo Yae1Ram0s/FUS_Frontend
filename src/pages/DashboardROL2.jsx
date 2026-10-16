@@ -13,11 +13,6 @@ import './DashboardROL1.css'
 
 const DIA_MS = 86_400_000
 
-// Todo lo que no sea "Concluido" — mismo criterio que DashboardROL1, usado
-// para que el KPI "Prioridad alta" (que solo cuenta lo aún sin concluir) y
-// el filtro al que lleva el clic muestren exactamente el mismo conjunto.
-const ESTADOS_NO_CONCLUIDO = ['Recibido', 'En_seguimiento', 'Pendiente_validacion', 'Rechazado']
-
 const ICON_INBOX = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
@@ -32,6 +27,20 @@ const ICON_ACTIVITY = (
 const ICON_CHECK = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+)
+// Pendiente de validación — portapapeles con palomita (falta la validación del Particular).
+const ICON_VALIDAR = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <path d="m9 14 2 2 4-4"/>
+  </svg>
+)
+// Rechazados — círculo con cruz.
+const ICON_RECHAZO = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
   </svg>
 )
 const ICON_FLAG = (
@@ -70,24 +79,28 @@ const ICON_TREND_UP = (
   </svg>
 )
 
-/** Trae todas las páginas de un listado paginado (el backend limita page_size a 100). */
+/** Trae todas las páginas de un listado paginado (el backend limita page_size a 100).
+ *  Devuelve también los `conteos` de la primera página: son los mismos que ven los
+ *  chips de Solicitudes turnadas, así las tarjetas nunca se contradicen con ellos. */
 async function fetchAll(url, extraParams = {}, signal) {
   const page_size = 100
   let page = 1
   let all = []
   let total = Infinity
+  let conteos = null
   while (all.length < total) {
     const r = await api.get(url, {
       params: { ...extraParams, page, page_size },
       signal,
     })
     const results = r.data.results || []
+    if (page === 1) conteos = r.data.conteos ?? null
     total = r.data.total ?? results.length
     all = all.concat(results)
     if (results.length === 0) break
     page++
   }
-  return all
+  return { items: all, conteos }
 }
 
 /* ── Tarjeta de KPI "liquid glass" — mismo patrón que DashboardROL1. ── */
@@ -127,7 +140,7 @@ export default function DashboardROL2() {
   const {
     // ahora:0 solo se usa antes de la primera carga, mientras turnados sigue
     // vacío y la pantalla muestra el Spinner — su valor real es irrelevante.
-    data: dashboard = { turnados: [], ahora: 0 },
+    data: dashboard = { turnados: [], conteos: null, ahora: 0 },
     isFetching: cargando,
     error: errorCarga,
     refetch: reintentar,
@@ -136,10 +149,13 @@ export default function DashboardROL2() {
     // ahora se recalcula con cada carga para mantener vigentes los tiempos
     // relativos; refetchInterval reemplaza el setInterval manual de abajo
     // que existía solo para mantener correcto el corte de semana.
-    queryFn: async ({ signal }) => ({ turnados: await fetchAll('/turnados/mis-turnados/', {}, signal), ahora: Date.now() }),
+    queryFn: async ({ signal }) => {
+      const { items, conteos } = await fetchAll('/turnados/mis-turnados/', {}, signal)
+      return { turnados: items, conteos, ahora: Date.now() }
+    },
     refetchInterval: 60_000,
   })
-  const { turnados, ahora } = dashboard
+  const { turnados, conteos, ahora } = dashboard
 
   // En vivo: cualquier notificación ligada a un FUS (turnado nuevo, respuesta,
   // concluir, etc.) refresca el dashboard completo — mismo patrón que
@@ -154,30 +170,29 @@ export default function DashboardROL2() {
   }, [reintentar, ultimaNotifFolio, ultimaNotifId])
 
   const irAConsultar = (estatus) => navigate(`/rol2/solicitudes?modo=lista${estatus ? `&filtro=${encodeURIComponent(estatus)}` : ''}`)
-  const irAConsultarPrioridad = (prioridad) => navigate(
-    `/rol2/solicitudes?modo=lista&prioridad=${encodeURIComponent(prioridad)}&filtro=${encodeURIComponent(ESTADOS_NO_CONCLUIDO.join(','))}`
-  )
   const irAlFus = (folio) => navigate(`/rol2/solicitudes?folio=${encodeURIComponent(folio)}`)
 
-  /* ── KPIs ── */
-  const misFus        = turnados.length
-  const misPendientes = turnados.filter(t => t.estatusTitular === 'Recibido').length
-  // "En proceso" = todo lo que sigue activo, ni Recibido (sin arrancar) ni
-  // Concluido (cerrado) — incluye Pendiente_validacion y Rechazado, que si no
-  // se quedan fuera de las 3 tarjetas y "Mis FUS" no cuadra con la suma
-  // (mismo criterio ya aplicado en DashboardROL1 para estatusParticular).
-  const ENPROCESO_ESTATUS = ['En_seguimiento', 'Pendiente_validacion', 'Rechazado']
-  const enProceso     = turnados.filter(t => ENPROCESO_ESTATUS.includes(t.estatusTitular)).length
-  const finalizadas   = turnados.filter(t => t.estatusTitular === 'Concluido').length
+  /* ── KPIs — una tarjeta por cada chip principal de Solicitudes turnadas ── */
+  // Los números vienen del backend (`conteos` de /turnados/mis-turnados/, la
+  // misma fuente que los chips), no se recalculan aquí sobre `turnados`: cada
+  // turnado cuenta en un solo estatus (su estatusTitular, el que muestra su
+  // tarjeta), así que las tarjetas suman el total y tarjeta y chip siempre
+  // dicen lo mismo. Sin `conteos` (respuesta sin esa clave) se cae al total
+  // de lo cargado.
+  const conteoEstatus = conteos?.estatus ?? {}
+  const misFus        = conteos?.total ?? turnados.length
   const noConcluidos  = turnados.filter(t => t.estatusTitular !== 'Concluido')
-  const prioridadAlta = noConcluidos.filter(t => t.idFus?.prioridad === 'Alta').length
 
+  // Mismo orden y mismas etiquetas que los 6 chips principales (Todos ·
+  // Recibido · En seguimiento · Pendiente de validación · Rechazado ·
+  // Concluido); cada clic abre la lista con ese chip.
   const kpisGlass = [
-    { icon: ICON_STACK,    label: 'Mis FUS',        sub: 'Asignados',   value: misFus,        color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
-    { icon: ICON_INBOX,    label: 'Recibidos',      sub: 'Por atender', value: misPendientes,  color: 'amber', onClick: () => irAConsultar('Recibido'), trackId: 'recibidos' },
-    { icon: ICON_ACTIVITY, label: 'En seguimiento', sub: 'Atendiendo',  value: enProceso,      color: 'blue',  onClick: () => irAConsultar('En_seguimiento'), trackId: 'seguimiento' },
-    { icon: ICON_CHECK,    label: 'Concluidos',     sub: 'Completados', value: finalizadas,    color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
-    { icon: ICON_FLAG,     label: 'Prioridad alta', sub: 'Sin concluir', value: prioridadAlta, color: 'red',   onClick: () => irAConsultarPrioridad('Alta'), trackId: 'prioridad-alta' },
+    { icon: ICON_STACK,    label: 'Mis FUS',                 sub: 'Asignados',     value: misFus,                                  color: 'blue',  onClick: () => irAConsultar(''), trackId: 'total' },
+    { icon: ICON_INBOX,    label: 'Recibidos',               sub: 'Por atender',   value: conteoEstatus.Recibido ?? 0,             color: 'amber', onClick: () => irAConsultar('Recibido'), trackId: 'recibidos' },
+    { icon: ICON_ACTIVITY, label: 'En seguimiento',          sub: 'Atendiendo',    value: conteoEstatus.En_seguimiento ?? 0,       color: 'blue',  onClick: () => irAConsultar('En_seguimiento'), trackId: 'seguimiento' },
+    { icon: ICON_VALIDAR,  label: 'Pendiente de validación', sub: 'En validación', value: conteoEstatus.Pendiente_validacion ?? 0, color: 'amber', onClick: () => irAConsultar('Pendiente_validacion'), trackId: 'por-validar' },
+    { icon: ICON_RECHAZO,  label: 'Rechazados',              sub: 'Por responder', value: conteoEstatus.Rechazado ?? 0,            color: 'red',   onClick: () => irAConsultar('Rechazado'), trackId: 'rechazados' },
+    { icon: ICON_CHECK,    label: 'Concluidos',              sub: 'Completados',   value: conteoEstatus.Concluido ?? 0,            color: 'green', onClick: () => irAConsultar('Concluido'), trackId: 'concluidos' },
   ]
 
   /* ── Próximos vencimientos — reales, ordenados por urgencia ── */
@@ -298,7 +313,7 @@ export default function DashboardROL2() {
               <p>Organiza tu trabajo del día</p>
             </header>
 
-            <div className="kpi2-row">
+            <div className="kpi2-row kpi2-row--6">
               {kpisGlass.map((k, i) => <Kpi2Card key={k.label} {...k} index={i} />)}
             </div>
 

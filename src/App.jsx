@@ -10,6 +10,7 @@ import ErrorBoundary              from './components/ErrorBoundary'
 import Spinner                    from './components/Spinner'
 import BannerSinConexion          from './components/BannerSinConexion'
 import { AnalyticsProvider }      from './analytics'
+import { instalarAnimacionModales } from './utils/animarModales'
 
 import './context/Toast.css'
 
@@ -49,6 +50,9 @@ export default function App() {
       window.visualViewport?.removeEventListener('resize', setAppVh)
     }
   }, [])
+
+  // Apertura/cierre animados de todos los modales (portales en <body>).
+  useEffect(() => instalarAnimacionModales(), [])
 
   return (
     <BrowserRouter>

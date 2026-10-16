@@ -366,3 +366,6 @@
   .notif-panel-count { display: none; }
   .notif-read-all { font-size: .68rem; }
 }
+
+.notif-icon-SLA_VENCIDO  { color: #FFB4B4; background: rgba(178,48,48,0.22); }
+.notif-icon-PRORROGA_FUS { color: #8EEFC8; background: rgba(45,158,114,0.18); }

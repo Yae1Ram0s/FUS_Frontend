@@ -20,7 +20,7 @@ function crearFus(id) {
 
 async function prepararPaginacion(page, responderFus) {
   await page.addInitScript(usuario => {
-    sessionStorage.setItem('scs_user', JSON.stringify(usuario))
+    localStorage.setItem('scs_user', JSON.stringify(usuario))
   }, USUARIO)
 
   await page.route(url => new URL(url).pathname.startsWith('/api/'), async route => {
@@ -61,12 +61,18 @@ test('cargar más conserva el orden y elimina registros repetidos', async ({ pag
 test('si falla cargar más mantiene la página anterior y permite reintentar', async ({ page }) => {
   const fus1 = crearFus(11)
   const fus2 = crearFus(12)
+  const fus3 = crearFus(13)
+  let intentosPaginaDos = 0
 
   await prepararPaginacion(page, (route, pagina) => {
     if (pagina === 1) {
       return route.fulfill({ json: { results: [fus1, fus2], total: 4 } })
     }
-    return route.fulfill({ status: 503, json: { detail: 'Falla temporal' } })
+    intentosPaginaDos += 1
+    if (intentosPaginaDos === 1) {
+      return route.fulfill({ status: 503, json: { detail: 'Falla temporal' } })
+    }
+    return route.fulfill({ json: { results: [fus3], total: 4 } })
   })
 
   await page.goto('/rol1/consultar-fus?modo=lista')
@@ -74,7 +80,10 @@ test('si falla cargar más mantiene la página anterior y permite reintentar', a
 
   await expect(page.getByText(fus1.folio)).toBeVisible()
   await expect(page.getByText(fus2.folio)).toBeVisible()
-  await expect(page.getByText(/mostrando la última información disponible/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveText(/No se pudieron cargar más solicitudes/)
   await expect(page.getByRole('button', { name: /Cargar más \(2 de 4\)/ })).toBeEnabled()
+
+  await page.getByRole('button', { name: /Cargar más \(2 de 4\)/ }).click()
+  await expect(page.getByText(fus3.folio)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Cargar más \(3 de 4\)/ })).toBeVisible()
 })

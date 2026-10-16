@@ -27,7 +27,7 @@
 /* ── Panel izquierdo — glassmorphism verde translúcido — ancho fijo, ya no
    se puede angostar/ensanchar arrastrando (antes tenía un resize-handle). ── */
 .st-left {
-  width: 530px;
+  width: 650px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -108,7 +108,7 @@
 @media (min-width: 769px) {
   .st-left,
   .st-left.panel-cerrado {
-    width: 530px;
+    width: 650px;
     margin-left: -20px;
     padding-left: 20px;
     transition: none;
@@ -222,8 +222,7 @@
 .st-left .filtro-chip-pendiente-validacion,
 .st-left .filtro-chip-rechazado,
 .st-left .filtro-chip-vencido,
-.st-left .filtro-chip-porvencer,
-.st-left .filtro-chip-alta           { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+.st-left .filtro-chip-porvencer      { color: #ecdcbd; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
 
 .st-left .filtro-chip:hover { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(195, 212, 207, 0.32) !important; }
 
@@ -268,22 +267,21 @@
 .st-left .filtro-chip-active.filtro-chip-pendiente-validacion,
 .st-left .filtro-chip-active.filtro-chip-rechazado,
 .st-left .filtro-chip-active.filtro-chip-vencido,
-.st-left .filtro-chip-active.filtro-chip-porvencer,
-.st-left .filtro-chip-active.filtro-chip-alta           { color: #f0dfc0; }
+.st-left .filtro-chip-active.filtro-chip-porvencer      { color: #f0dfc0; }
 
-/* Chip "Prioridad" — el .filtro-chip visible es decorativo; el <select>
-   nativo va encima, invisible, para abrir el picker del dispositivo. */
-.prioridad-filtro-wrap { position: relative; display: inline-flex; }
-.prioridad-filtro-select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  border: none;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
+/* Etiqueta del grupo "Plazo" (Vencido / Por vencer): son un filtro aparte de
+   los estatus, así que se separan visualmente en su propia fila. En móvil
+   (flex-wrap) ocupa una línea completa encima de sus chips. */
+.st-left .filtros-grupo-label {
+  flex-basis: 100%;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px 0 6px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 @media (min-width: 769px) {
@@ -319,17 +317,19 @@
     padding: 5px 13px;
     letter-spacing: 0.05em;
   }
-  .st-left .left-filtros > .filtro-chip:first-child { grid-column: span 2; order: 1; }
-  .st-left .filtro-chip-recibido { grid-column: span 2; order: 1; }
-  .st-left .filtro-chip-en-seguimiento { grid-column: span 3; order: 1; }
-  .st-left .filtro-chip-concluido { grid-column: span 3; order: 1; }
-  .st-left .filtro-chip-vencido { grid-column: span 2; order: 1; }
-  .st-left .filtro-chip-pendiente-validacion { grid-column: span 4; order: 2; }
+  /* Las filas siguen el orden del DOM (flujo del trámite) y cada una suma 12
+     columnas exactas: Todos + Recibido + En seguimiento / Pendiente de
+     validación + Rechazado + Concluido / etiqueta "Plazo" + Vencido + Por
+     vencer. */
+  .st-left .left-filtros > .filtro-chip:first-child { grid-column: span 3; }
+  .st-left .filtro-chip-recibido { grid-column: span 4; }
+  .st-left .filtro-chip-en-seguimiento { grid-column: span 5; }
+  .st-left .filtro-chip-pendiente-validacion { grid-column: span 6; }
   .st-left .filtro-chip-rechazado,
-  .st-left .filtro-chip-porvencer { grid-column: span 3; order: 2; }
-  .st-left .prioridad-filtro-wrap { grid-column: span 2; order: 2; }
-  .st-left .prioridad-filtro-wrap,
-  .st-left .prioridad-filtro-wrap .filtro-chip { width: 100%; }
+  .st-left .filtro-chip-concluido { grid-column: span 3; }
+  .st-left .filtros-grupo-label { grid-column: span 2; flex-basis: auto; padding-top: 0; }
+  .st-left .filtro-chip-vencido,
+  .st-left .filtro-chip-porvencer { grid-column: span 5; }
 }
 
 /* Lista */
@@ -441,7 +441,7 @@
   margin-bottom: 8px;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(10, 30, 20, 0.18);
-  transition: all 200ms ease-in-out;
+  transition: background 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
   min-width: 0;
   min-height: 132px;
 }

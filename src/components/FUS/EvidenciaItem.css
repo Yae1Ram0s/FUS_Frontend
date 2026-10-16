@@ -1,0 +1,110 @@
+/* Visor de imagen de evidencia (modal) */
+.ev-visor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 16, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 30000;
+}
+
+.ev-visor {
+  display: flex;
+  flex-direction: column;
+  max-width: min(94vw, 1100px);
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.ev-visor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(35, 91, 78, 0.14);
+}
+
+.ev-visor-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0d2218;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ev-visor-x {
+  border: none;
+  background: rgba(35, 91, 78, 0.10);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #235b4e;
+  flex-shrink: 0;
+}
+.ev-visor-x:hover { background: rgba(35, 91, 78, 0.18); }
+
+.ev-visor-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: auto;
+  background: rgba(35, 91, 78, 0.05);
+}
+
+.ev-visor-img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(92vh - 90px);
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* PDF: el modal ocupa casi toda la pantalla para poder leer el documento */
+.ev-visor-pdf {
+  width: min(94vw, 1100px);
+  height: 92vh;
+}
+.ev-visor-pdf .ev-visor-body {
+  flex: 1;
+  padding: 0;
+  min-height: 0;
+}
+.ev-visor-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Formatos sin vista previa (DOCX) */
+.ev-visor-otro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 36px;
+  font-size: 0.9rem;
+  color: rgba(10, 30, 20, 0.75);
+  text-align: center;
+}
+.ev-visor-otro p { margin: 0; }
+.ev-visor-descargar {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #235b4e;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ev-visor-descargar:hover { background: #1c4a40; }

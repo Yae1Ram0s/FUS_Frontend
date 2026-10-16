@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
+import { useCallback, useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AppLayout from '../components/AppLayout'
 import Spinner from '../components/Spinner'
@@ -8,6 +9,9 @@ import { useAuth } from '../context/AuthContext'
 import { useNotificaciones } from '../context/NotificacionesContext'
 import { useAnalytics } from '../analytics'
 import FusFolioPicker from '../components/Calendario/FusFolioPicker'
+import ModalDetalleFUS from '../components/ModalDetalleFUS'
+import { obtenerIniciales } from '../utils/personas'
+import { PRIORIDAD_NIVELES } from '../utils/prioridades'
 import FechaInput from '../components/FechaInput'
 import './CalendarioActividades.css'
 
@@ -16,6 +20,23 @@ const TIPO_INFO = {
   fus:           { label: 'FUS vinculado', color: '#4a9d6f', chipBg: '#4a9d6f', chipText: '#ffffff' },
   limite:        { label: 'Fecha límite',  color: '#dd9a3a', chipBg: '#dd9a3a', chipText: '#ffffff' },
 }
+
+// Límites ya vencidos (el backend marca `vencido`): rojo en todas las vistas
+const COLOR_VENCIDO = '#b23030'
+const INFO_VENCIDO = { label: 'Vencidos', color: COLOR_VENCIDO }
+const infoDe = (ev) => {
+  const base = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+  return ev.vencido ? { ...base, color: COLOR_VENCIDO, chipBg: COLOR_VENCIDO } : base
+}
+// Momento en que termina una actividad (hora local; en un límite, es la hora límite)
+const finDeActividad = (a) => new Date(`${a.fecha}T${a.horaFin}`)
+// El recordatorio automático dice "Vence FUS: …"; ya vencido se lee "Vencido FUS: …"
+const tituloDe = (ev) => (ev.vencido ? ev.titulo.replace(/^Vence(?=[\s:])/, 'Vencido') : ev.titulo)
+// Un folio como ANAM/PARTICULAR/FUS/0004/2026 solo puede partirse tras una "/"
+// (no a media palabra): se intercala <wbr> después de cada diagonal.
+const conCortes = (texto) => String(texto).split('/').flatMap((parte, i, partes) => (
+  i < partes.length - 1 ? [parte, '/', <wbr key={i} />] : [parte]
+))
 
 const DIAS_SEMANA      = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const DIAS_SEMANA_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -27,10 +48,23 @@ const ALTURA_HORA_DIA = 60
 
 const ACTIVIDADES_QUERY_KEY = ['actividades']
 
+// Campos obligatorios del modal de actividad, en el orden en que aparecen.
+const CAMPOS_OBLIGATORIOS = [
+  { clave: 'titulo',     nombre: 'Título',         mensaje: 'Escribe un título.' },
+  { clave: 'fecha',      nombre: 'Fecha',          mensaje: 'Elige la fecha.' },
+  { clave: 'horaInicio', nombre: 'Hora de inicio', mensaje: 'Elige la hora de inicio.' },
+  { clave: 'horaFin',    nombre: 'Hora de fin',    mensaje: 'Elige la hora de fin.' },
+]
+
+// Mezcla por id. Si una actividad ya estaba en caché, gana la versión recién
+// pedida: antes se conservaba la vieja, así que campos que cambian con el
+// tiempo o por ediciones ajenas (p. ej. `vencido`) se quedaban desactualizados
+// hasta recargar la página completa.
 function combinarActividades(anteriores, nuevas) {
+  const nuevasPorId = new Map(nuevas.map(actividad => [actividad.id, actividad]))
   const ids = new Set(anteriores.map(actividad => actividad.id))
   return [
-    ...anteriores,
+    ...anteriores.map(actividad => nuevasPorId.get(actividad.id) || actividad),
     ...nuevas.filter(actividad => !ids.has(actividad.id)),
   ]
 }
@@ -125,8 +159,271 @@ function MiniCalendario({ mesCursor, seleccionado, actividadesPorDia, onCambiarM
   )
 }
 
+/* ── Detalle flotante de una actividad de la agenda (al pasar el cursor) ──
+   Se pinta fuera del sidebar (portal, posición fija) porque la tarjeta recorta
+   su contenido: aparece a la derecha del sidebar, y si no cabe, debajo/encima
+   de la fila. Con FUS vinculado muestra un resumen de la solicitud; sin FUS,
+   la descripción y los participantes de la actividad. */
+const ESTADO_FUS = {
+  Registrado:           { label: 'Registrado',             color: '#9F2241' },
+  Turnado:              { label: 'Turnado',                color: '#7c5cd6' },
+  Recibido:             { label: 'Recibido',               color: '#9F2241' },
+  En_seguimiento:       { label: 'En seguimiento',         color: '#b7791f' },
+  Atendido:             { label: 'En seguimiento',         color: '#b7791f' },
+  Pendiente_validacion: { label: 'Pendiente de validación', color: '#7c5cd6' },
+  Concluido:            { label: 'Concluido',              color: '#2f855a' },
+  Rechazado:            { label: 'Rechazado',              color: '#b23030' },
+}
+
+const duracionTexto = (inicio, fin) => {
+  const total = minutos(fin) - minutos(inicio)
+  if (total <= 0) return ''
+  const h = Math.floor(total / 60), m = total % 60
+  return h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`
+}
+
+function DetalleActividadFlotante({ ev, rect, sidebar }) {
+  const { user } = useAuth()
+  const ref = useRef(null)
+  const info = infoDe(ev)
+  // El Comisionado no puede consultar el detalle de auditoría del FUS.
+  const puedeConsultarFus = Boolean(ev.fusFolio) && user?.rol !== 'COMISIONADO'
+  const { data: fus, isFetching } = useQuery({
+    queryKey: ['fusDetalleAuditoria', ev.fusFolio],
+    queryFn: ({ signal }) => api
+      .get(`/fus/detalle-auditoria/${ev.fusFolio.split('/').map(encodeURIComponent).join('/')}/`, { signal })
+      .then(respuesta => respuesta.data),
+    enabled: puedeConsultarFus,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+
+  // Posición: a la derecha del sidebar si cabe; si no, bajo (o sobre) la fila.
+  // Se ajusta directo en el DOM para no re-renderizar por cada medición.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const margen = 12
+    const ancho = el.offsetWidth
+    const alto = el.offsetHeight
+    let left, top
+    // Fila de la agenda: a la derecha del sidebar. Actividad del calendario
+    // grande: a la derecha de la propia actividad, o a su izquierda si no cabe.
+    const bordeDerecho = (sidebar || rect).right
+    if (bordeDerecho + margen + ancho <= window.innerWidth - margen) {
+      left = bordeDerecho + margen
+      top = rect.top - 6
+    } else if (!sidebar && rect.left - margen - ancho >= margen) {
+      left = rect.left - margen - ancho
+      top = rect.top - 6
+    } else {
+      left = Math.min(Math.max(rect.left, margen), window.innerWidth - ancho - margen)
+      top = rect.bottom + 8
+      if (top + alto > window.innerHeight - margen) top = rect.top - alto - 8
+    }
+    top = Math.max(margen, Math.min(top, window.innerHeight - alto - margen))
+    el.style.left = `${left}px`
+    el.style.top = `${top}px`
+    el.classList.add('cal-flotante-listo')
+  }, [rect, sidebar, fus, isFetching])
+
+  const [anio, mes, dia] = ev.fecha.split('-').map(Number)
+  const fecha = new Date(anio, mes - 1, dia)
+  const inicio = ev.horaInicio.slice(0, 5)
+  const fin = ev.horaFin.slice(0, 5)
+  const estado = fus ? (ESTADO_FUS[fus.estatusParticular] || { label: String(fus.estatusParticular || '').replace(/_/g, ' '), color: '#4a635b' }) : null
+  const prioridad = fus?.prioridad ? PRIORIDAD_NIVELES.find(p => p.valor === fus.prioridad) : null
+  const participantes = ev.participantesInfo || []
+  let avisoVencido = ''
+  if (ev.vencido) {
+    const hoy0 = new Date(); hoy0.setHours(0, 0, 0, 0)
+    const dias = Math.round((hoy0 - fecha) / 86400000)
+    avisoVencido = dias <= 0 ? 'Venció hoy' : `Venció hace ${dias} día${dias > 1 ? 's' : ''}`
+  }
+
+  return createPortal(
+    <div ref={ref} className={`cal-flotante${ev.vencido ? ' cal-flotante-vencido' : ''}`} role="tooltip" style={{ '--tipo': info.color }}>
+      <header className="cal-flotante-header">
+        <div className="cal-flotante-header-main">
+          <span className="cal-flotante-tipo"><span className="cal-flotante-punto" />{ev.vencido ? `${info.label} · Vencido` : info.label}</span>
+          <p className="cal-flotante-titulo">{conCortes(tituloDe(ev))}</p>
+          <p className="cal-flotante-hora">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+            {inicio} – {fin}{duracionTexto(inicio, fin) && <span className="cal-flotante-dur">{duracionTexto(inicio, fin)}</span>}
+          </p>
+        </div>
+        <span className="cal-flotante-hoja" aria-label={`${DIAS_SEMANA_FULL[fecha.getDay()]} ${dia} de ${MESES[mes - 1]}`}>
+          <span className="cal-flotante-hoja-dia">{DIAS_SEMANA[fecha.getDay()]}</span>
+          <b className="cal-flotante-hoja-num">{dia}</b>
+          <span className="cal-flotante-hoja-mes">{MESES[mes - 1].slice(0, 3)}</span>
+        </span>
+      </header>
+
+      {ev.vencido && (
+        <div className="cal-flotante-aviso" role="alert">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          {avisoVencido}
+        </div>
+      )}
+
+      <div className="cal-flotante-cuerpo">
+        {ev.fusFolio ? (
+          <section className="cal-flotante-bloque">
+            <p className="cal-flotante-seccion cal-flotante-seccion-fus">Solicitud vinculada</p>
+            <div className="cal-flotante-fus-top">
+              <span className="cal-flotante-folio">{ev.fusFolio}</span>
+              {estado && <span className="cal-flotante-pildora" style={{ '--c': estado.color }}>{estado.label}</span>}
+              {prioridad && <span className="cal-flotante-pildora" style={{ '--c': prioridad.color }}>Prioridad {prioridad.valor}</span>}
+            </div>
+            {puedeConsultarFus && isFetching && !fus && (
+              <div className="cal-flotante-esqueleto" aria-hidden="true"><span /><span /></div>
+            )}
+            {fus?.descripcion && <p className="cal-flotante-texto cal-flotante-clamp">{fus.descripcion}</p>}
+            {fus?.idSolicitanteInterno?.nombre && (
+              <p className="cal-flotante-meta">
+                <span className="cal-flotante-avatar">{obtenerIniciales(fus.idSolicitanteInterno.nombre, fus.idSolicitanteInterno.email)}</span>
+                <span>Solicitante · <b>{fus.idSolicitanteInterno.nombre}</b></span>
+              </p>
+            )}
+            {ev.descripcion && <p className="cal-flotante-nota"><b>Nota</b>{ev.descripcion}</p>}
+          </section>
+        ) : (
+          <section className="cal-flotante-bloque">
+            <p className="cal-flotante-seccion">Descripción</p>
+            {ev.descripcion
+              ? <p className="cal-flotante-texto cal-flotante-clamp">{ev.descripcion}</p>
+              : <p className="cal-flotante-texto cal-flotante-vacio">Sin descripción</p>}
+          </section>
+        )}
+
+        {participantes.length > 0 && (
+          <section className="cal-flotante-bloque">
+            <p className="cal-flotante-seccion">Participantes</p>
+            <div className="cal-flotante-personas">
+              {participantes.slice(0, 4).map(u => (
+                <span key={u.id} className="cal-flotante-persona" title={u.nombre || u.email}>
+                  <span className="cal-flotante-avatar">{obtenerIniciales(u.nombre, u.email)}</span>
+                  <span className="cal-flotante-persona-nombre">{(u.nombre || u.email || '').split(' ')[0]}</span>
+                </span>
+              ))}
+              {participantes.length > 4 && <span className="cal-flotante-mas">+{participantes.length - 4}</span>}
+            </div>
+          </section>
+        )}
+      </div>
+
+      <footer className="cal-flotante-pie">
+        <span><kbd className="cal-flotante-tecla">Clic</kbd> {ev.fusFolio ? 'editar' : 'ver o editar'}</span>
+        {ev.fusFolio && (
+          <span>
+            <kbd className="cal-flotante-tecla" aria-label="Ojo">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </kbd> ver solicitud
+          </span>
+        )}
+      </footer>
+    </div>,
+    document.body
+  )
+}
+
+/* ── Agenda: lista bajo el mini-calendario ──
+   Por defecto lista la semana en curso (dom–sáb), sin importar el mes que se
+   esté viendo en el mini-calendario; lo que ya pasó se atenúa. Si hay un día
+   seleccionado en el mini-calendario, lista las actividades de ese día. La
+   lista hace scroll dentro de su propia tarjeta. */
+function AgendaSemana({ actividades, diaSeleccionado, resaltadoId, onAbrir, onVerFus, onLimpiarDia, mostrarDetalle, ocultarDetalle }) {
+  const claveDia = diaSeleccionado ? toISODate(diaSeleccionado) : null
+  const { rango, lista } = useMemo(() => {
+    const inicio = startOfWeek(new Date())
+    const fin = new Date(inicio); fin.setDate(fin.getDate() + 6)
+    const dias = claveDia
+      ? new Set([claveDia])
+      : new Set(Array.from({ length: 7 }, (_, i) => { const d = new Date(inicio); d.setDate(d.getDate() + i); return toISODate(d) }))
+    const ordenadas = actividades
+      .filter(a => dias.has(a.fecha))
+      .sort((a, b) => `${a.fecha} ${a.horaInicio}`.localeCompare(`${b.fecha} ${b.horaInicio}`))
+    let etiqueta
+    if (diaSeleccionado) {
+      etiqueta = `${DIAS_SEMANA_FULL[diaSeleccionado.getDay()]} ${diaSeleccionado.getDate()} de ${MESES[diaSeleccionado.getMonth()]}`
+    } else if (inicio.getMonth() === fin.getMonth()) {
+      etiqueta = `${inicio.getDate()}–${fin.getDate()} de ${MESES[inicio.getMonth()]}`
+    } else {
+      etiqueta = `${inicio.getDate()} ${MESES[inicio.getMonth()].slice(0, 3)} – ${fin.getDate()} ${MESES[fin.getMonth()].slice(0, 3)}`
+    }
+    return { rango: etiqueta, lista: ordenadas }
+  }, [actividades, claveDia, diaSeleccionado])
+
+  const ahora = new Date()
+  const hoyISO = toISODate(ahora)
+  const ahoraTexto = `${hoyISO} ${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+
+  return (
+    <section className="cal-agenda" aria-label={diaSeleccionado ? 'Agenda del día' : 'Agenda de la semana'}>
+      <div className="cal-agenda-top">
+        <div className="cal-agenda-encabezado">
+          <p className="cal-agenda-title">{diaSeleccionado ? 'Día seleccionado' : 'Esta semana'}</p>
+          <span className="cal-agenda-rango">{rango}</span>
+        </div>
+        <span className="cal-agenda-total" title={diaSeleccionado ? 'Actividades del día' : 'Actividades en la semana'}>{lista.length}</span>
+      </div>
+
+      {lista.length === 0 ? (
+        <p className="cal-agenda-vacio">{diaSeleccionado ? 'Sin actividades este día.' : 'Sin actividades esta semana.'}</p>
+      ) : (
+        <ul className="cal-agenda-lista" onScroll={ocultarDetalle}>
+          {lista.map(ev => {
+            const info = infoDe(ev)
+            const [anio, mes, dia] = ev.fecha.split('-').map(Number)
+            const fecha = new Date(anio, mes - 1, dia)
+            const esHoyEv = ev.fecha === hoyISO
+            const yaPaso = `${ev.fecha} ${ev.horaFin}` < ahoraTexto
+            return (
+              <li
+                key={ev.id}
+                className="cal-agenda-fila"
+                onMouseEnter={e => mostrarDetalle(ev, e.currentTarget)}
+                onMouseLeave={ocultarDetalle}
+                onFocus={e => mostrarDetalle(ev, e.currentTarget)}
+                onBlur={ocultarDetalle}
+              >
+                <button type="button" className={`cal-agenda-item${yaPaso ? ' cal-agenda-item-pasada' : ''}${ev.vencido ? ' cal-agenda-item-vencido' : ''}${resaltadoId === ev.id ? ' cal-resaltado' : ''}`} onClick={() => { ocultarDetalle(); onAbrir(ev) }}>
+                  <span className={`cal-agenda-fecha${esHoyEv ? ' cal-agenda-fecha-hoy' : ''}`} style={{ borderColor: info.color }}>
+                    <span className="cal-agenda-fecha-dia">{DIAS_SEMANA[fecha.getDay()]}</span>
+                    <span className="cal-agenda-fecha-num">{fecha.getDate()}</span>
+                  </span>
+                  <span className="cal-agenda-info">
+                    <span className="cal-agenda-titulo">{tituloDe(ev)}</span>
+                    <span className="cal-agenda-meta">
+                      {esHoyEv ? 'Hoy · ' : ''}{ev.horaInicio.slice(0, 5)} – {ev.horaFin.slice(0, 5)} · {ev.vencido ? 'Vencido' : info.label}
+                    </span>
+                  </span>
+                </button>
+                {ev.fusFolio && (
+                  <button type="button" className="cal-agenda-fus" onClick={() => { ocultarDetalle(); onVerFus(ev.fusFolio) }} aria-label={`Ver solicitud ${ev.fusFolio}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {diaSeleccionado && (
+        <div className="cal-agenda-acciones">
+          <button type="button" className="cal-agenda-accion cal-agenda-accion-sec" onClick={onLimpiarDia}>Ver semana actual</button>
+        </div>
+      )}
+
+    </section>
+  )
+}
+
 /* ── Modal: nueva actividad / editar actividad ── */
-function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEliminado, onError }) {
+function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEliminado, onError, onVerFus }) {
   const [form, setForm] = useState({
     titulo: modal.titulo || '',
     fecha: modal.fecha,
@@ -139,6 +436,10 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   })
   const [fusEncontrado, setFusEncontrado] = useState(modal.fusFolio ? { id: modal.idFusRelacionado, folio: modal.fusFolio } : null)
   const [error, setError] = useState('')
+  const [faltantes, setFaltantes] = useState([])
+  const [busquedaParticipante, setBusquedaParticipante] = useState('')
+  const modalRef = useRef(null)
+  const descripcionRef = useRef(null)
   const [conflicto, setConflicto] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
@@ -148,7 +449,29 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const soloLectura = modal.mode === 'editar' && !esCreador
   const { startTask, completeTask, failTask } = useAnalytics({ componente: 'CALENDARIO_ACTIVIDAD' })
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  // La descripción crece con su contenido (sin esto quedaba recortada a 2 filas).
+  useLayoutEffect(() => {
+    const el = descripcionRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight + 2}px`
+  }, [form.descripcion])
+
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    setFaltantes(prev => (prev.includes(k) ? prev.filter(c => c !== k) : prev))
+  }
+  const invalido = (clave) => faltantes.includes(clave)
+
+  // Lleva la vista del modal al primer campo con problema y lo enfoca.
+  const irAlCampo = (clave) => {
+    requestAnimationFrame(() => {
+      const el = modalRef.current?.querySelector(`[data-campo="${clave}"]`)
+      if (!el) return
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.querySelector('input, textarea, select')?.focus({ preventScroll: true })
+    })
+  }
 
   const onFolioSeleccionado = (folio) => {
     set('folioFus', folio || '')
@@ -160,6 +483,15 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
     e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }
 
+  // Filtra por nombre o correo, sin distinguir mayúsculas ni acentos. Los ya
+  // marcados siguen en `form.participantes` aunque el filtro los oculte.
+  const usuariosFiltrados = useMemo(() => {
+    const normalizar = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    const q = normalizar(busquedaParticipante).trim()
+    if (!q) return usuarios
+    return usuarios.filter(u => normalizar(`${u.nombre} ${u.email}`).includes(q))
+  }, [usuarios, busquedaParticipante])
+
   const toggleParticipante = (id) => {
     setForm(f => ({
       ...f,
@@ -169,10 +501,18 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
     }))
   }
 
+  // Devuelve { mensaje, campos } con lo que falta o está mal, o null si todo bien.
   const validar = () => {
-    if (!form.titulo.trim()) return 'Completa todos los campos obligatorios para registrar la actividad.'
-    if (!form.fecha || !form.horaInicio || !form.horaFin) return 'Completa todos los campos obligatorios para registrar la actividad.'
-    if (form.horaFin <= form.horaInicio) return 'La fecha u hora seleccionada no es válida.'
+    const vacios = CAMPOS_OBLIGATORIOS.filter(c => !String(form[c.clave] || '').trim())
+    if (vacios.length) {
+      return {
+        mensaje: `Falta completar: ${vacios.map(c => c.nombre).join(', ')}.`,
+        campos: vacios.map(c => c.clave),
+      }
+    }
+    if (form.horaFin <= form.horaInicio) {
+      return { mensaje: 'La hora de fin debe ser posterior a la hora de inicio.', campos: ['horaFin'] }
+    }
     return null
   }
 
@@ -189,20 +529,27 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   })
 
   const guardar = async (forzar = false) => {
-    const msg = validar()
-    if (msg) { setError(msg); setConflicto(null); return }
+    const problema = validar()
+    if (problema) {
+      setError(problema.mensaje); setFaltantes(problema.campos); setConflicto(null)
+      irAlCampo(problema.campos[0])
+      return
+    }
     if (guardarEnCursoRef.current) return
     guardarEnCursoRef.current = true
-    setError(''); setGuardando(true)
+    setError(''); setFaltantes([]); setGuardando(true)
     const taskId = startTask({ accion: modal.mode === 'crear' ? 'CREATE' : 'UPDATE' })
     try {
-      if (modal.mode === 'crear') {
-        await api.post('/actividades/', construirPayload(forzar))
-      } else {
-        await api.patch(`/actividades/${modal.id}/`, construirPayload(forzar))
-      }
+      const respuesta = modal.mode === 'crear'
+        ? await api.post('/actividades/', construirPayload(forzar))
+        : await api.patch(`/actividades/${modal.id}/`, construirPayload(forzar))
       completeTask(taskId)
-      onGuardado()
+      // Si la API no devolviera la actividad, se usa lo que se acaba de capturar.
+      onGuardado({
+        id: modal.mode === 'crear' ? undefined : modal.id,
+        fecha: form.fecha, horaInicio: form.horaInicio, horaFin: form.horaFin, titulo: form.titulo,
+        ...(respuesta?.data || {}),
+      })
     } catch (e) {
       if (e.response?.status === 409) {
         failTask(taskId, { metadatos: { motivo: 'conflicto' } })
@@ -239,13 +586,15 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
 
   return createPortal(
     <div className="cal-modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="cal-modal" onClick={e => e.stopPropagation()}>
+      <div className="cal-modal" ref={modalRef} onClick={e => e.stopPropagation()}>
         <div className="cal-modal-top">
           <h3>{modal.mode === 'crear' ? 'Nueva actividad' : 'Editar actividad'}</h3>
           <button type="button" className="cal-modal-x" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
-        {error && <div className="cal-modal-alert cal-modal-alert-error">{error}</div>}
+        {error && <div className="cal-modal-alert cal-modal-alert-error" role="alert">{error}</div>}
+
+        {!soloLectura && <p className="cal-modal-hint">Los campos con <span className="cal-req">*</span> son obligatorios.</p>}
 
         {conflicto && (
           <div className="cal-modal-alert cal-modal-alert-conflicto">
@@ -259,33 +608,51 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           </div>
         )}
 
-        <input
-          className="cal-pill-input"
-          value={form.titulo}
-          onChange={e => set('titulo', e.target.value)}
-          onFocus={enfocarCampo}
-          placeholder="Título de la actividad"
-          disabled={soloLectura}
-        />
-
-        <div className="cal-pill-clip">
-          <FechaInput
+        <div className={`cal-campo${invalido('titulo') ? ' cal-campo-error' : ''}`} data-campo="titulo">
+          <input
             className="cal-pill-input"
-            wrapClassName="cal-pill-input-wrap"
-            type="date"
-            value={form.fecha}
-            onChange={e => set('fecha', e.target.value)}
+            value={form.titulo}
+            onChange={e => set('titulo', e.target.value)}
             onFocus={enfocarCampo}
+            placeholder="Título de la actividad *"
+            aria-label="Título de la actividad (obligatorio)"
+            aria-invalid={invalido('titulo')}
             disabled={soloLectura}
           />
+          {invalido('titulo') && <span className="cal-campo-msg">{CAMPOS_OBLIGATORIOS[0].mensaje}</span>}
+        </div>
+
+        <div className={`cal-campo${invalido('fecha') ? ' cal-campo-error' : ''}`} data-campo="fecha">
+          <label className="cal-campo-label">Fecha <span className="cal-req">*</span></label>
+          <div className="cal-pill-clip">
+            <FechaInput
+              className="cal-pill-input"
+              wrapClassName="cal-pill-input-wrap"
+              type="date"
+              value={form.fecha}
+              onChange={e => set('fecha', e.target.value)}
+              onFocus={enfocarCampo}
+              aria-invalid={invalido('fecha')}
+              disabled={soloLectura}
+            />
+          </div>
+          {invalido('fecha') && <span className="cal-campo-msg">{CAMPOS_OBLIGATORIOS[1].mensaje}</span>}
         </div>
 
         <div className="cal-modal-row2">
-          <div className="cal-pill-clip">
-            <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          <div className={`cal-campo${invalido('horaInicio') ? ' cal-campo-error' : ''}`} data-campo="horaInicio">
+            <label className="cal-campo-label">Inicio <span className="cal-req">*</span></label>
+            <div className="cal-pill-clip">
+              <input className="cal-pill-input" type="time" value={form.horaInicio} onChange={e => set('horaInicio', e.target.value)} onFocus={enfocarCampo} aria-invalid={invalido('horaInicio')} disabled={soloLectura} />
+            </div>
+            {invalido('horaInicio') && <span className="cal-campo-msg">{CAMPOS_OBLIGATORIOS[2].mensaje}</span>}
           </div>
-          <div className="cal-pill-clip">
-            <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} onFocus={enfocarCampo} disabled={soloLectura} />
+          <div className={`cal-campo${invalido('horaFin') ? ' cal-campo-error' : ''}`} data-campo="horaFin">
+            <label className="cal-campo-label">Fin <span className="cal-req">*</span></label>
+            <div className="cal-pill-clip">
+              <input className="cal-pill-input" type="time" value={form.horaFin} onChange={e => set('horaFin', e.target.value)} onFocus={enfocarCampo} aria-invalid={invalido('horaFin')} disabled={soloLectura} />
+            </div>
+            {invalido('horaFin') && <span className="cal-campo-msg">{form.horaInicio && form.horaFin && form.horaFin <= form.horaInicio ? 'Debe ser posterior al inicio.' : CAMPOS_OBLIGATORIOS[3].mensaje}</span>}
           </div>
         </div>
 
@@ -296,6 +663,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
         </select>
 
         <textarea
+          ref={descripcionRef}
           className="cal-pill-input cal-pill-textarea"
           value={form.descripcion}
           onChange={e => set('descripcion', e.target.value)}
@@ -312,11 +680,28 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           disabled={soloLectura}
         />
 
+        {form.folioFus && onVerFus && (
+          <button type="button" className="cal-btn-ver-fus" onClick={() => onVerFus(form.folioFus)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Ver solicitud {form.folioFus}
+          </button>
+        )}
+
         {user?.rol !== 'ROL2' && (
           <div className="cal-modal-participantes">
             <p className="cal-modal-label">Participantes</p>
+            <input
+              type="search"
+              className="cal-pill-input cal-participantes-buscar"
+              placeholder="Buscar participante…"
+              aria-label="Buscar participante"
+              value={busquedaParticipante}
+              onChange={e => setBusquedaParticipante(e.target.value)}
+            />
             <div className="cal-participantes-lista">
-              {usuarios.map(u => (
+              {usuariosFiltrados.map(u => (
                 <label key={u.id} className="cal-participante-item">
                   <input
                     type="checkbox"
@@ -328,6 +713,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
                 </label>
               ))}
               {usuarios.length === 0 && <p className="cal-participantes-vacio">Sin usuarios disponibles.</p>}
+              {usuarios.length > 0 && usuariosFiltrados.length === 0 && <p className="cal-participantes-vacio">Sin resultados.</p>}
             </div>
           </div>
         )}
@@ -363,6 +749,12 @@ export default function CalendarioActividades() {
   const [miniCursor, setMiniCursor] = useState(() => new Date())
   const [usuarios, setUsuarios] = useState([])
   const [modal, setModal]       = useState(null)
+  const [fusRapido, setFusRapido] = useState(null)
+  // Actividad recién guardada: se resalta y se lleva a la vista para mostrar dónde quedó.
+  const [resaltadoId, setResaltadoId] = useState(null)
+  const pendienteScrollRef = useRef(null)
+  const resaltadoTimeoutRef = useRef(null)
+  const navigate = useNavigate()
   const [toast, setToast]       = useState(null)
   const [compacto, setCompacto] = useState(() => window.innerWidth <= 768)
   const [ultraCompacto, setUltraCompacto] = useState(() => window.innerWidth < 640)
@@ -401,17 +793,86 @@ export default function CalendarioActividades() {
   // resultado en la caché por id — por eso useQuery va con `enabled: false`
   // (nunca dispara su propio fetch) y solo se usa para leer/reaccionar a lo
   // que `queryClient.setQueryData` va escribiendo.
-  const { data: actividades = [] } = useQuery({
+  const { data: actividadesBase = [] } = useQuery({
     queryKey: ACTIVIDADES_QUERY_KEY,
     queryFn: () => queryClient.getQueryData(ACTIVIDADES_QUERY_KEY) ?? [],
     enabled: false,
     initialData: [],
   })
+  // Un límite que vence con la página abierta pasa a "vencido" solo, sin sondear
+  // cada cierto tiempo: se programa UN temporizador hacia el próximo límite por
+  // vencer (en un recordatorio de límite, la hora de fin es la hora límite). Al
+  // llegar, se marca en rojo al instante con el cálculo local y se confirma con
+  // el servidor (por si ese FUS se concluyó o prorrogó mientras tanto). También
+  // se revisa al volver a la pestaña, por si el equipo estuvo suspendido o en
+  // segundo plano.
+  const [ahora, setAhora] = useState(() => new Date())
+
+  // Vuelve a pedir los meses ya cargados y REEMPLAZA lo que había de esos meses:
+  // así se corrigen vencidos que dejaron de serlo (prórroga) y desaparecen los
+  // FUS concluidos, cosa que el simple "mezclar por id" no hace.
+  const confirmarConServidor = useCallback(async () => {
+    const meses = [...mesesCargadosRef.current]
+    if (meses.length === 0) return
+    try {
+      const respuestas = await Promise.all(meses.map(mes => api.get('/actividades/', { params: { mes } })))
+      const nuevas = respuestas.flatMap(respuesta => respuesta.data || [])
+      const recargados = new Set(meses)
+      queryClient.setQueryData(ACTIVIDADES_QUERY_KEY, prev => [
+        ...(prev || []).filter(a => !recargados.has(a.fecha.slice(0, 7))),
+        ...nuevas,
+      ])
+    } catch {
+      // Sin conexión o error: se queda el cálculo local; la próxima carga lo corrige.
+    }
+  }, [queryClient])
+
+  const actividades = useMemo(
+    () => actividadesBase.map(a => (
+      !a.vencido && a.tipo === 'limite' && finDeActividad(a) <= ahora ? { ...a, vencido: true } : a
+    )),
+    [actividadesBase, ahora],
+  )
+  useEffect(() => {
+    let timer
+    const programar = () => {
+      clearTimeout(timer)
+      const ahoraReal = new Date()
+      let proximo = null
+      for (const a of actividadesBase) {
+        if (a.tipo !== 'limite' || a.vencido) continue
+        const fin = finDeActividad(a)
+        if (fin > ahoraReal && (!proximo || fin < proximo)) proximo = fin
+      }
+      if (!proximo) return
+      // Tope de ~23 días (setTimeout no admite más de 2^31 ms); si el límite es
+      // más lejano, al disparar simplemente se reprograma.
+      const espera = Math.min(proximo - ahoraReal + 500, 2_000_000_000)
+      timer = setTimeout(() => { setAhora(new Date()); confirmarConServidor(); programar() }, espera)
+    }
+    const alVolver = () => {
+      if (document.visibilityState !== 'visible') return
+      setAhora(new Date())
+      // Solo se consulta si, mientras estuvo oculta, algún límite ya pasó.
+      const ahoraReal = new Date()
+      if (actividadesBase.some(a => a.tipo === 'limite' && !a.vencido && finDeActividad(a) <= ahoraReal)) confirmarConServidor()
+      programar()
+    }
+    programar()
+    document.addEventListener('visibilitychange', alVolver)
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', alVolver) }
+  }, [actividadesBase, confirmarConServidor])
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState(null)
 
   const cargar = useCallback(async () => {
-    const meses = mesesNecesarios(vista, current)
+    // Además de la vista principal: el mes del mini-calendario (sus puntos) y
+    // la semana en curso (la agenda de abajo), que puede cruzar de mes.
+    const meses = [...new Set([
+      ...mesesNecesarios(vista, current),
+      toKeyMes(miniCursor),
+      ...mesesNecesarios('semana', new Date()),
+    ])]
     const faltantes = meses.filter(m => !mesesCargadosRef.current.has(m))
     if (faltantes.length === 0) { setCargando(false); return }
     setCargando(true)
@@ -428,7 +889,7 @@ export default function CalendarioActividades() {
     } finally {
       setCargando(false)
     }
-  }, [current, vista, queryClient])
+  }, [current, vista, miniCursor, queryClient])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- inicia la carga de los meses que falten para la vista actual
   useEffect(() => { cargar() }, [cargar])
@@ -459,7 +920,7 @@ export default function CalendarioActividades() {
     })
   }, [vista, current])
 
-  const irAHoy = () => { const d = new Date(); setCurrent(d); setMiniCursor(d) }
+  const irAHoy = () => { const d = new Date(); setCurrent(d); setMiniCursor(d); setDiaAgenda(null) }
   const avanzar = (dir) => {
     setCurrent(prev => {
       const d = new Date(prev)
@@ -473,7 +934,11 @@ export default function CalendarioActividades() {
 
   const flashDiaRef = useRef(null)
   const [flashTick, setFlashTick] = useState(0)
+  // Día elegido en el mini-calendario: la agenda de abajo lista ese día en
+  // lugar de la semana en curso. Volver a tocarlo lo deselecciona.
+  const [diaAgenda, setDiaAgenda] = useState(null)
   const seleccionarDiaMini = (d) => {
+    setDiaAgenda(prev => (prev && isSameDay(prev, d) ? null : d))
     setMiniCursor(d)
     setCurrent(d)
     setVista('mes')
@@ -495,6 +960,45 @@ export default function CalendarioActividades() {
 
   const abrirDia = (d) => { setCurrent(d); setVista('dia') }
 
+  // Detalle flotante al pasar el cursor por una actividad (agenda o calendario
+  // grande). Solo con puntero real; en táctil no aplica.
+  const [hover, setHover] = useState(null)
+  const hoverTimerRef = useRef(null)
+  const mostrarDetalle = (ev, el) => {
+    if (!window.matchMedia?.('(hover: hover)').matches) return
+    clearTimeout(hoverTimerRef.current)
+    hoverTimerRef.current = setTimeout(() => {
+      setHover({ ev, rect: el.getBoundingClientRect(), sidebar: el.closest('.cal-sidebar')?.getBoundingClientRect() || null })
+    }, 200)
+  }
+  const ocultarDetalle = () => { clearTimeout(hoverTimerRef.current); setHover(null) }
+  useEffect(() => {
+    // Cualquier scroll (lista, calendario o página) deja el detalle fuera de lugar
+    const ocultar = () => { clearTimeout(hoverTimerRef.current); setHover(null) }
+    window.addEventListener('scroll', ocultar, true)
+    return () => { window.removeEventListener('scroll', ocultar, true); clearTimeout(hoverTimerRef.current) }
+  }, [])
+
+  // Vista rápida del FUS ligado a una actividad, sin salir del calendario.
+  // El Comisionado no tiene acceso a ese detalle: se le lleva a su bandeja.
+  const verFus = (folio) => {
+    if (!folio) return
+    if (user?.rol === 'COMISIONADO') {
+      navigate(`/comisionado/fus-comisionados?folio=${encodeURIComponent(folio)}`)
+      return
+    }
+    setFusRapido(folio)
+  }
+
+  // Del resumen rápido al FUS completo, en la pantalla de consulta de cada rol.
+  const verFusCompleto = (folio) => {
+    setFusRapido(null)
+    const ruta = user?.rol === 'ROL2' ? '/rol2/solicitudes'
+      : user?.rol === 'COMISIONADO' ? '/comisionado/fus-comisionados'
+      : '/rol1/consultar-fus'
+    navigate(`${ruta}?folio=${encodeURIComponent(folio)}`)
+  }
+
   const abrirCrear = (fecha, hora) => {
     setModal({
       mode: 'crear',
@@ -507,11 +1011,46 @@ export default function CalendarioActividades() {
     setModal({ mode: 'editar', ...a })
   }
 
-  const onGuardado = () => {
+  const onGuardado = (guardada) => {
     setModal(null)
     refrescar()
-    mostrarToast('La actividad fue registrada correctamente.')
+    // Lleva el calendario al día guardado y resalta la actividad.
+    const [anio, mes, dia] = (guardada?.fecha || '').split('-').map(Number)
+    if (anio && mes && dia) {
+      const fecha = new Date(anio, mes - 1, dia)
+      setCurrent(fecha)
+      setMiniCursor(fecha)
+      mostrarToast(`Actividad guardada: ${DIAS_SEMANA_FULL[fecha.getDay()]} ${dia} de ${MESES[mes - 1]}, ${guardada.horaInicio?.slice(0, 5)} – ${guardada.horaFin?.slice(0, 5)}.`)
+    } else {
+      mostrarToast('La actividad fue registrada correctamente.')
+    }
+    if (guardada?.id) {
+      pendienteScrollRef.current = guardada.id
+      setResaltadoId(guardada.id)
+      if (resaltadoTimeoutRef.current) clearTimeout(resaltadoTimeoutRef.current)
+      resaltadoTimeoutRef.current = setTimeout(() => setResaltadoId(null), 5000)
+    }
   }
+  useEffect(() => () => { if (resaltadoTimeoutRef.current) clearTimeout(resaltadoTimeoutRef.current) }, [])
+
+  // Cuando la actividad guardada ya está pintada, se lleva a la vista. En la
+  // vista Mes, si cayó en el "+N más" de su celda, se resalta la celda del día.
+  useEffect(() => {
+    const id = pendienteScrollRef.current
+    if (!id || !actividades.some(a => a.id === id)) return
+    requestAnimationFrame(() => {
+      let el = document.querySelector(`.cal-main [data-actividad-id="${id}"]`)
+      if (!el) {
+        const guardada = actividades.find(a => a.id === id)
+        el = guardada && document.querySelector(`.cal-grid-celda[data-fecha="${guardada.fecha}"]`)
+        el?.classList.add('cell-flash')
+        setTimeout(() => el?.classList.remove('cell-flash'), 1000)
+      }
+      if (!el) return
+      pendienteScrollRef.current = null
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [actividades, current, vista])
   const onEliminado = () => {
     setModal(null)
     refrescar()
@@ -528,6 +1067,31 @@ export default function CalendarioActividades() {
     Object.values(map).forEach(lista => lista.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)))
     return map
   }, [actividades])
+
+  // Cuántas actividades de cada tipo hay en el periodo que se está viendo
+  // (mes, semana o día) — alimenta la leyenda de colores del encabezado.
+  const conteosPeriodo = useMemo(() => {
+    let dentro
+    if (vista === 'mes') {
+      const clave = toKeyMes(current)
+      dentro = fecha => fecha.startsWith(clave)
+    } else if (vista === 'semana') {
+      const inicio = startOfWeek(current)
+      const dias = new Set(Array.from({ length: 7 }, (_, i) => { const d = new Date(inicio); d.setDate(d.getDate() + i); return toISODate(d) }))
+      dentro = fecha => dias.has(fecha)
+    } else {
+      const clave = toISODate(current)
+      dentro = fecha => fecha === clave
+    }
+    const conteo = {}
+    actividades.forEach(a => {
+      if (!dentro(a.fecha)) return
+      const clave = a.vencido ? 'vencido' : a.tipo
+      conteo[clave] = (conteo[clave] || 0) + 1
+    })
+    return conteo
+  }, [actividades, vista, current])
+  const nombrePeriodo = vista === 'mes' ? 'este mes' : vista === 'semana' ? 'esta semana' : 'este día'
 
   const hoy = new Date()
   const hayDatos = actividades.length > 0
@@ -562,22 +1126,26 @@ export default function CalendarioActividades() {
                 Nueva actividad
               </button>
 
-              <MiniCalendario
-                mesCursor={miniCursor}
-                seleccionado={current}
-                actividadesPorDia={actividadesPorDia}
-                onCambiarMes={cambiarMesMini}
-                onSeleccionarDia={seleccionarDiaMini}
-              />
+              {/* Dos tarjetas separadas: mini-calendario y, debajo, la agenda */}
+              <div className="cal-mini-grupo">
+                <MiniCalendario
+                  mesCursor={miniCursor}
+                  seleccionado={current}
+                  actividadesPorDia={actividadesPorDia}
+                  onCambiarMes={cambiarMesMini}
+                  onSeleccionarDia={seleccionarDiaMini}
+                />
 
-              <div className="cal-leyenda">
-                <p className="cal-leyenda-title">Tipos de actividad</p>
-                {Object.entries(TIPO_INFO).map(([key, info]) => (
-                  <div key={key} className="cal-leyenda-item">
-                    <span className="cal-leyenda-dot" style={{ background: info.color }} />
-                    {info.label}
-                  </div>
-                ))}
+                <AgendaSemana
+                  actividades={actividades}
+                  diaSeleccionado={diaAgenda}
+                  resaltadoId={resaltadoId}
+                  mostrarDetalle={mostrarDetalle}
+                  ocultarDetalle={ocultarDetalle}
+                  onAbrir={abrirEditar}
+                  onVerFus={verFus}
+                  onLimpiarDia={() => setDiaAgenda(null)}
+                />
               </div>
 
               <div className="cal-hoy-label">
@@ -603,6 +1171,18 @@ export default function CalendarioActividades() {
               <button type="button" className="cal-btn-flecha" onClick={() => avanzar(-1)} aria-label="Anterior">‹</button>
               <button type="button" className="cal-btn-flecha" onClick={() => avanzar(1)} aria-label="Siguiente">›</button>
               <span className="cal-toolbar-titulo">{tituloHeader}</span>
+              <ul className="cal-toolbar-leyenda" aria-label="Tipos de actividad">
+                {[...Object.entries(TIPO_INFO), ['vencido', INFO_VENCIDO]].map(([key, info]) => {
+                  const total = conteosPeriodo[key] || 0
+                  return (
+                    <li key={key} className={`cal-toolbar-leyenda-item${key === 'vencido' ? ' cal-toolbar-leyenda-item-vencido' : ''}${total ? '' : ' cal-toolbar-leyenda-item-vacio'}`} title={`${info.label}: ${total} ${nombrePeriodo}`}>
+                      <span className="cal-leyenda-dot" style={{ background: info.color }} />
+                      {info.label}
+                      <span className="cal-leyenda-conteo">{total}</span>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
             <div className="cal-toolbar-right">
               <div className="cal-toggle-vista">
@@ -639,16 +1219,19 @@ export default function CalendarioActividades() {
                     </div>
                     <div className="cal-celda-eventos">
                       {mostrados.map(ev => {
-                        const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                        const info = infoDe(ev)
                         return (
                           <span
                             key={ev.id}
-                            className="cal-evento-chip"
+                            className={`cal-evento-chip${ev.vencido ? ' cal-evento-vencido' : ''}${resaltadoId === ev.id ? ' cal-resaltado' : ''}`}
+                            data-actividad-id={ev.id}
+                            onMouseEnter={e => mostrarDetalle(ev, e.currentTarget)}
+                            onMouseLeave={ocultarDetalle}
                             style={{ background: info.chipBg, color: info.chipText }}
-                            title={ev.titulo}
-                            onClick={e => { e.stopPropagation(); ultraCompacto ? setCurrent(c) : abrirEditar(ev) }}
+                            title={tituloDe(ev)}
+                            onClick={e => { e.stopPropagation(); ocultarDetalle(); ultraCompacto ? setCurrent(c) : abrirEditar(ev) }}
                           >
-                            {ev.titulo}
+                            {tituloDe(ev)}
                           </span>
                         )
                       })}
@@ -674,12 +1257,12 @@ export default function CalendarioActividades() {
               ) : (
                 <div className="cal-dia-panel-list" tabIndex="0" aria-label="Actividades del día">
                   {(actividadesPorDia[toISODate(current)] || []).map(ev => {
-                    const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                    const info = infoDe(ev)
                     return (
-                      <div key={ev.id} className="cal-dia-panel-item" onClick={() => abrirEditar(ev)}>
+                      <div key={ev.id} className={`cal-dia-panel-item${resaltadoId === ev.id ? ' cal-resaltado' : ''}`} data-actividad-id={ev.id} onClick={() => abrirEditar(ev)}>
                         <span className="cal-dia-panel-dot" style={{ background: info.color }} />
                         <div className="cal-dia-panel-info">
-                          <span className="cal-dia-panel-titulo">{ev.titulo}</span>
+                          <span className="cal-dia-panel-titulo">{tituloDe(ev)}</span>
                           <span className="cal-dia-panel-hora">{ev.horaInicio} – {ev.horaFin}</span>
                         </div>
                       </div>
@@ -712,17 +1295,20 @@ export default function CalendarioActividades() {
                     <div key={i} className="cal-semana-col" onClick={e => abrirCrear(d, horaDesdeClick(e, ALTURA_HORA))}>
                       {HORAS.map(h => <div key={h} className="cal-hora-slot" />)}
                       {eventos.map(ev => {
-                        const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                        const info = infoDe(ev)
                         const top = (minutos(ev.horaInicio) / 60) * ALTURA_HORA
                         const alto = Math.max(((minutos(ev.horaFin) - minutos(ev.horaInicio)) / 60) * ALTURA_HORA, 16)
                         return (
                           <div
                             key={ev.id}
-                            className="cal-semana-evento"
+                            className={`cal-semana-evento${ev.vencido ? ' cal-evento-vencido' : ''}${resaltadoId === ev.id ? ' cal-resaltado' : ''}`}
+                            data-actividad-id={ev.id}
+                            onMouseEnter={e => mostrarDetalle(ev, e.currentTarget)}
+                            onMouseLeave={ocultarDetalle}
                             style={{ top, height: alto, background: info.chipBg, borderLeftColor: info.color, color: info.chipText }}
-                            onClick={e => { e.stopPropagation(); abrirEditar(ev) }}
+                            onClick={e => { e.stopPropagation(); ocultarDetalle(); abrirEditar(ev) }}
                           >
-                            {ev.titulo}
+                            {tituloDe(ev)}
                           </div>
                         )
                       })}
@@ -742,17 +1328,20 @@ export default function CalendarioActividades() {
                 <div className="cal-dia-col" onClick={e => abrirCrear(current, horaDesdeClick(e, ALTURA_HORA_DIA))}>
                   {HORAS.map(h => <div key={h} className="cal-hora-slot-dia" />)}
                   {(actividadesPorDia[toISODate(current)] || []).map(ev => {
-                    const info = TIPO_INFO[ev.tipo] || TIPO_INFO.reunion
+                    const info = infoDe(ev)
                     const top = (minutos(ev.horaInicio) / 60) * ALTURA_HORA_DIA
                     const alto = Math.max(((minutos(ev.horaFin) - minutos(ev.horaInicio)) / 60) * ALTURA_HORA_DIA, 22)
                     return (
                       <div
                         key={ev.id}
-                        className="cal-dia-evento"
+                        className={`cal-dia-evento${ev.vencido ? ' cal-evento-vencido' : ''}${resaltadoId === ev.id ? ' cal-resaltado' : ''}`}
+                        data-actividad-id={ev.id}
+                        onMouseEnter={e => mostrarDetalle(ev, e.currentTarget)}
+                        onMouseLeave={ocultarDetalle}
                         style={{ top, height: alto, background: info.chipBg, borderLeftColor: info.color }}
-                        onClick={e => { e.stopPropagation(); abrirEditar(ev) }}
+                        onClick={e => { e.stopPropagation(); ocultarDetalle(); abrirEditar(ev) }}
                       >
-                        <div className="cal-dia-evento-titulo" style={{ color: info.chipText }}>{ev.titulo}</div>
+                        <div className="cal-dia-evento-titulo" style={{ color: info.chipText }}>{tituloDe(ev)}</div>
                         <div className="cal-dia-evento-hora" style={{ color: info.chipText }}>{ev.horaInicio} – {ev.horaFin}</div>
                       </div>
                     )
@@ -773,8 +1362,13 @@ export default function CalendarioActividades() {
           onGuardado={onGuardado}
           onEliminado={onEliminado}
           onError={onErrorModal}
+          onVerFus={verFus}
         />
       )}
+
+      {fusRapido && <ModalDetalleFUS folio={fusRapido} onClose={() => setFusRapido(null)} onVerCompleto={() => verFusCompleto(fusRapido)} />}
+
+      {hover && <DetalleActividadFlotante ev={hover.ev} rect={hover.rect} sidebar={hover.sidebar} />}
 
       <Toast toast={toast} sobreModal={!!modal} />
     </AppLayout>

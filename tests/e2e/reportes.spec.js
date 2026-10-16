@@ -20,6 +20,8 @@ const OPCIONES = {
   ],
   unidades: [{ id: 1, nombre: 'Unidad Jurídica' }],
   responsables: [{ id: 2, nombre: 'Responsable Uno' }],
+  estados: [{ id: 'Registrado', nombre: 'Registrado' }],
+  prioridades: [{ id: 'Alta', nombre: 'Alta' }],
 }
 const REPORTE = {
   periodo: { inicio: '2026-01-01', fin: '2026-07-30' },
@@ -35,7 +37,7 @@ const REPORTE = {
 }
 
 async function preparar(page) {
-  await page.addInitScript(usuario => sessionStorage.setItem('scs_user', JSON.stringify(usuario)), USUARIO)
+  await page.addInitScript(usuario => localStorage.setItem('scs_user', JSON.stringify(usuario)), USUARIO)
   await page.route(url => new URL(url).pathname.startsWith('/api/'), route => {
     const path = new URL(route.request().url()).pathname
     if (path === '/api/auth/token/refresh/') return route.fulfill({ json: { access: 'token-reportes' } })
@@ -58,18 +60,20 @@ test('muestra indicadores, análisis y aplica filtros', async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByText('Evolución mensual de FUS', { exact: true })).toBeVisible()
   await expect(page.getByText('Detalle de FUS por estado y tiempos', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Filtros avanzados' }).click()
-  await page.getByLabel('Prioridad').selectOption('Alta')
-  await expect(page.getByLabel('Prioridad')).toHaveValue('Alta')
+  const prioridad = page.locator('.rep-catalogo-label--prioridad')
+  await prioridad.getByRole('button').click()
+  await page.getByRole('dialog', { name: 'Prioridad' }).getByLabel('Alta').check()
+  await expect(prioridad.getByRole('button')).toContainText('Alta')
 })
 
 test('permite elegir contenido y descargar los tres formatos', async ({ page }) => {
   await preparar(page)
   await page.goto('/rol1/reportes')
-  await page.getByRole('button', { name: 'Filtros avanzados' }).click()
-  await page.getByText('Secciones del reporte (8)').click()
-  await page.getByLabel('Detalle de solicitudes').uncheck()
-  await expect(page.getByText('Secciones del reporte (7)')).toBeVisible()
+  const secciones = page.locator('.rep-grupo-exportar')
+  await secciones.getByRole('button').click()
+  const menuSecciones = page.getByRole('dialog', { name: 'Seleccionar reportes' })
+  await menuSecciones.getByLabel('Detalle de solicitudes').uncheck()
+  await expect(secciones.getByRole('button')).toContainText('7 seleccionados')
   for (const nombre of ['PDF', 'EXCEL', 'Presentación']) {
     const descarga = page.waitForEvent('download')
     await page.getByRole('button', { name: nombre }).click()
@@ -82,7 +86,7 @@ test('mantiene utilizable la vista en móvil', async ({ page }) => {
   await preparar(page)
   await page.goto('/rol1/reportes')
   await expect(page.getByRole('heading', { name: 'Reportes e inteligencia operativa' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Filtros avanzados' })).toBeVisible()
+  await expect(page.locator('.rep-filtros .rep-catalogo-label--prioridad')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Presentación' })).toBeVisible()
 })
 
