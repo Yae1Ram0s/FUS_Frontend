@@ -55,6 +55,9 @@ export default function ModalTimeline({ folio, onClose }) {
   }, [ultimaNotifId, folio, recargarTrazabilidad])
 
   const hayContenido = eventos.length > 0
+  // El API los entrega del más antiguo al más reciente; se muestran al revés,
+  // con el último evento (el "en vivo") hasta arriba.
+  const eventosRecientesPrimero = [...eventos].reverse()
 
   return createPortal(
     <div className="com-overlay" role="dialog" aria-modal="true" aria-label={`Historial — FUS ${folio}`} onClick={onClose}>
@@ -84,9 +87,9 @@ export default function ModalTimeline({ folio, onClose }) {
           {!cargando && !error && (
             hayContenido ? (
               <ul className="mtl-timeline">
-                {eventos.map((ev, i) => {
+                {eventosRecientesPrimero.map((ev, i) => {
                   const info    = TIPO_INFO[ev.tipo] || TIPO_INFO.respuesta
-                  const esUltimo = i === eventos.length - 1
+                  const esUltimo = i === 0
                   return (
                     <li key={i} className="mtl-evento">
                       <span className="mtl-punto-col">
@@ -94,7 +97,7 @@ export default function ModalTimeline({ folio, onClose }) {
                           className={esUltimo ? 'mtl-punto mtl-punto-live' : 'mtl-punto'}
                           style={{ background: info.color, '--live-color': info.color }}
                         />
-                        {i < eventos.length - 1 && <span className="mtl-linea" />}
+                        {i < eventosRecientesPrimero.length - 1 && <span className="mtl-linea" />}
                       </span>
                       <div className="mtl-card" style={{ '--tipo-color': info.color }}>
                         <div className="mtl-card-top">

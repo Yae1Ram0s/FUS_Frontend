@@ -446,7 +446,11 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
   const guardarEnCursoRef = useRef(false)
   const eliminarEnCursoRef = useRef(false)
   const { user } = useAuth()
-  const soloLectura = modal.mode === 'editar' && !esCreador
+  // El recordatorio "Vence FUS" (tipo límite con FUS ligado) lo crea el sistema
+  // al registrar/turnar con fecha límite: no se edita ni se desvincula; solo se
+  // consulta y se salta al FUS con "Ver solicitud".
+  const bloqueadoPorFus = modal.mode === 'editar' && modal.tipo === 'limite' && Boolean(modal.fusFolio)
+  const soloLectura = (modal.mode === 'editar' && !esCreador) || bloqueadoPorFus
   const { startTask, completeTask, failTask } = useAnalytics({ componente: 'CALENDARIO_ACTIVIDAD' })
 
   // La descripción crece con su contenido (sin esto quedaba recortada a 2 filas).
@@ -588,7 +592,7 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
     <div className="cal-modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="cal-modal" ref={modalRef} onClick={e => e.stopPropagation()}>
         <div className="cal-modal-top">
-          <h3>{modal.mode === 'crear' ? 'Nueva actividad' : 'Editar actividad'}</h3>
+          <h3>{modal.mode === 'crear' ? 'Nueva actividad' : bloqueadoPorFus ? 'Detalle de actividad' : 'Editar actividad'}</h3>
           <button type="button" className="cal-modal-x" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
@@ -673,12 +677,14 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
           disabled={soloLectura}
         />
 
-        <FusFolioPicker
-          value={form.folioFus || null}
-          onChange={onFolioSeleccionado}
-          onSelect={onFusSeleccionado}
-          disabled={soloLectura}
-        />
+        {!bloqueadoPorFus && (
+          <FusFolioPicker
+            value={form.folioFus || null}
+            onChange={onFolioSeleccionado}
+            onSelect={onFusSeleccionado}
+            disabled={soloLectura}
+          />
+        )}
 
         {form.folioFus && onVerFus && (
           <button type="button" className="cal-btn-ver-fus" onClick={() => onVerFus(form.folioFus)}>
@@ -692,29 +698,40 @@ function ModalActividad({ modal, usuarios, esCreador, onClose, onGuardado, onEli
         {user?.rol !== 'ROL2' && (
           <div className="cal-modal-participantes">
             <p className="cal-modal-label">Participantes</p>
-            <input
-              type="search"
-              className="cal-pill-input cal-participantes-buscar"
-              placeholder="Buscar participante…"
-              aria-label="Buscar participante"
-              value={busquedaParticipante}
-              onChange={e => setBusquedaParticipante(e.target.value)}
-            />
-            <div className="cal-participantes-lista">
-              {usuariosFiltrados.map(u => (
-                <label key={u.id} className="cal-participante-item">
-                  <input
-                    type="checkbox"
-                    checked={form.participantes.includes(u.id)}
-                    onChange={() => toggleParticipante(u.id)}
-                    disabled={soloLectura}
-                  />
-                  {u.nombre || u.email}
-                </label>
-              ))}
-              {usuarios.length === 0 && <p className="cal-participantes-vacio">Sin usuarios disponibles.</p>}
-              {usuarios.length > 0 && usuariosFiltrados.length === 0 && <p className="cal-participantes-vacio">Sin resultados.</p>}
-            </div>
+            {bloqueadoPorFus ? (
+              <div className="cal-participantes-lista">
+                {(modal.participantesInfo || []).map(p => (
+                  <span key={p.id} className="cal-participante-item cal-participante-solo">{p.nombre || p.email}</span>
+                ))}
+                {!modal.participantesInfo?.length && <p className="cal-participantes-vacio">Sin participantes.</p>}
+              </div>
+            ) : (
+              <>
+                <input
+                  type="search"
+                  className="cal-pill-input cal-participantes-buscar"
+                  placeholder="Buscar participante…"
+                  aria-label="Buscar participante"
+                  value={busquedaParticipante}
+                  onChange={e => setBusquedaParticipante(e.target.value)}
+                />
+                <div className="cal-participantes-lista">
+                  {usuariosFiltrados.map(u => (
+                    <label key={u.id} className="cal-participante-item">
+                      <input
+                        type="checkbox"
+                        checked={form.participantes.includes(u.id)}
+                        onChange={() => toggleParticipante(u.id)}
+                        disabled={soloLectura}
+                      />
+                      {u.nombre || u.email}
+                    </label>
+                  ))}
+                  {usuarios.length === 0 && <p className="cal-participantes-vacio">Sin usuarios disponibles.</p>}
+                  {usuarios.length > 0 && usuariosFiltrados.length === 0 && <p className="cal-participantes-vacio">Sin resultados.</p>}
+                </div>
+              </>
+            )}
           </div>
         )}
 
